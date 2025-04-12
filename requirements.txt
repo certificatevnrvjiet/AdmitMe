@@ -1,0 +1,30 @@
+# FastAPI and Server Dependencies
+fastapi==0.109.2
+uvicorn==0.27.1
+python-multipart==0.0.9
+pydantic==2.6.1
+pydantic[email]
+
+# Firebase Integration
+firebase-admin==6.4.0
+
+# Google APIs
+google-cloud-storage==2.14.0
+google-api-python-client==2.116.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
+# AI and Document Processing
+google-generativeai==0.3.2
+python-docx==1.1.0
+pdf2image==1.17.0
+pytesseract==0.3.10
+
+# Utility Libraries
+python-dotenv==1.0.1
+requests==2.31.0
+pillow==10.2.0
+
+# Testing
+pytest==8.0.0
+httpx==0.26.0
