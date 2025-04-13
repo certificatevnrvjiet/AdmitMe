@@ -4,11 +4,12 @@ import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name("your-credentials.json", scope)
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("your-service-account.json", scope)
 client = gspread.authorize(creds)
 
-sheet = client.open("Your Google Form Response Sheet").sheet1
+sheet = client.open("Your Sheet Name").sheet1 
+data = sheet.get_all_records()
 
 prompt_SSC = '''Extract the following structured data from the image:
 Candidate Name: Name of the candidate
@@ -125,35 +126,35 @@ Month_year: Month and year of passing (e.g., March 2020)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC,prompt_Inter_CBSE,prompt_SSC_Inter]
 
 prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter]
+
 def extract(linkstr,prompt):
     file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
     image_bytes = download_image_from_drive(file_id_match)
     gemini_response = json.loads(process_image_with_gemini(image_bytes, prompt).split("```")[1][5:])
     # print(f"Gemini Response for {file_id_match}: {gemini_response}")
         # data_dict = json.loads(response.text.split("```")[1][5:])\
-    # for i in gemini_response:
-    #     print(f"{i}: {gemini_response[i]}")
+    for i in gemini_response:
+        print(f"{i}: {gemini_response[i]}")
 
     return gemini_response
 
 
 #sample links
 
-responses = sheet.get_all_records()
+# responses = sheet.get_all_records()
 
-for response in responses:
-    board = response['12th Board']
-    if board == 'State':
-        extract(response['12th Marksheet'],prompt_SSC_Inter)
-    elif board == 'AS and A Level':
-        extract(response['12th Marksheet'],prompt_IGCSE_Inter)
-    elif board == 'ISC':
-        extract(response['12th Marksheet'],prompt_ISC_Inter)
-    elif board == 'CBSE':
-        extract(response['12th Marksheet'],prompt_CBSE_Inter)
+# for response in responses:
+#     board = response['12th Board']
+#     if board == 'State':
+#         extract(response['12th Marksheet'],prompt_SSC_Inter)
+#     elif board == 'AS and A Level':
+#         extract(response['12th Marksheet'],prompt_IGCSE_Inter)
+#     elif board == 'ISC':
+#         extract(response['12th Marksheet'],prompt_ISC_Inter)
+#     elif board == 'CBSE':
+#         extract(response['12th Marksheet'],prompt_CBSE_Inter)
 
 # extract("https://drive.google.com/open?id=1l52UOx3MHSZwO2VKhV1VtrDkLJ60ZIl1",prompt_SSC)
 
@@ -165,4 +166,4 @@ for response in responses:
 
 # extract("https://drive.google.com/open?id=1A1HRUMNNYU0jj7NiY-hW38dOtt9pqYf3",prompt_Inter_CBSE)
 
-# extract("https://drive.google.com/open?id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ",prompt_SSC_Inter)
+extract("https://drive.google.com/open?id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ",prompt_SSC_Inter)
