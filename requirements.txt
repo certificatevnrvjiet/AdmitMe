@@ -1,0 +1,30 @@
+# FastAPI and Server Dependencies
+fastapi
+uvicorn
+python-multipart
+pydantic
+pydantic[email]
+
+# Firebase Integration
+firebase-admin
+
+# Google APIs
+google-cloud-storage
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+
+# AI and Document Processing
+google-generativeai
+python-docx
+pdf2image
+pytesseract
+
+# Utility Libraries
+python-dotenv
+requests
+pillow
+
+# Testing
+pytest
+httpx

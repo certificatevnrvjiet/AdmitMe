@@ -1,6 +1,14 @@
 import re
 from GoogleAuthService import download_image_from_drive,process_image_with_gemini
 import json
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name("your-credentials.json", scope)
+client = gspread.authorize(creds)
+
+sheet = client.open("Your Google Form Response Sheet").sheet1
 
 prompt_SSC = '''Extract the following structured data from the image:
 Candidate Name: Name of the candidate
@@ -21,6 +29,52 @@ identification_marks2: Identification marks (if any)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.'''
 
+prompt_SSC_Inter = '''Extract the following structured data from the image:
+Board name: Name of the educational board (e.g., CBSE, ICSE, State Board)
+Hall ticket number: Hall ticket or registered number
+Maximum marks: 1000
+Total marks: Total marks obtained
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
+Subject scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are (M1, M2, P1, C1 from 1st year) and (M3, M4, P2, C2, P_practicals, C_Practicals are from 2nd year) ] and scores as values)
+Month and year of passing: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+
+prompt_IGCSE_Inter = '''Extract the following structured data from the image:
+Board Name: AS Level or IGCSE
+Hall Ticket Number: Centre/Candidate number
+Max Marks: 400
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are maths as M4, physics as P2, chemistry as C2, do not read anything else] and scores as values)
+Total Marks: sum of all subject scores
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
+Month_Passing: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+prompt_ISC_Inter = '''Extract the following structured data from the image:
+Board Name: ISC 
+Hall Ticket Number: Candidate ID
+Max Marks: 500
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are maths as M4, physics as P2, chemistry as C2, do not read anything else] and scores as values)
+Total Marks: sum of all subject scores
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
+Month_Passing: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+prompt_CBSE_Inter=''' Extract the following structured data from the image:
+Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
+Hall Ticket Number: Hall ticket or roll number
+Max Marks: 500
+Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
+Month_year: Month and year of passing (e.g., March 2020)
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are MATHS , PHYSICS , CHEMISTRY thats it no more needed] and scores as values)
+Total Marks: Total marks obtained(Sum of all 5 subjects) '''
+
 prompt_uidai = '''Extract the following structured data from the image:
 Number: Number of the Aadhar card
 Gender: Male/Female /Others
@@ -34,7 +88,6 @@ prompt_jee_and_eamcet = '''Extract the following structured data from the image:
 HT Number: Hall ticket number 
 Rank : Rank obtained
 
-
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
 
@@ -45,21 +98,36 @@ Religion: Religion of the student
 College Name: Name of the college
 Caste as per TC: Caste as per the Transfer Certificate (TC)
 
-
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
 
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC]
 
+prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter]
 def extract(linkstr,prompt):
     file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
     image_bytes = download_image_from_drive(file_id_match)
-    gemini_response = json.loads(process_image_with_gemini(image_bytes, prompt).split("```")[1][5:])
-    # print(f"Gemini Response for {file_id_match}: {gemini_response}")
+    # gemini_response = json.loads(process_image_with_gemini(image_bytes, prompt).split("```")[1][5:])
+    gemini_response = (process_image_with_gemini(image_bytes, prompt))
+    print(f"Gemini Response for {file_id_match}: {gemini_response}")
+    # for i in gemini_response:
+    #     print(i+":"+str(gemini_response[i]))
         # data_dict = json.loads(response.text.split("```")[1][5:])
     return gemini_response
 
 #sample links
+
+responses = sheet.get_all_records()
+
+for response in responses:
+    board = response['12th Board']
+    if board == 'State':
+        extract(response['12th Marksheet'],prompt_SSC_Inter)
+    elif board == 'AS and A Level':
+        extract(response['12th Marksheet'],prompt_IGCSE_Inter)
+    elif board == 'ISC':
+        extract(response['12th Marksheet'],prompt_ISC_Inter)
+    elif board == 'CBSE':
+        extract(response['12th Marksheet'],prompt_CBSE_Inter)
 
 # extract("https://drive.google.com/open?id=1l52UOx3MHSZwO2VKhV1VtrDkLJ60ZIl1",prompt_SSC)
 
@@ -68,3 +136,11 @@ def extract(linkstr,prompt):
 # extract("https://drive.google.com/open?id=1Fvt0dEOSyacvrsMcpyDBkw5vv5QeWRQi",prompt_jee_and_eamcet)
 
 # extract("https://drive.google.com/open?id=1nQPgkyfYhiM8Xix9NfbY7d8TXzNTfDO1",prompt_TC)
+
+# extract("https://drive.google.com/open?id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ",prompt_SSC_Inter)
+
+# extract("https://drive.google.com/open?id=1KhNVNZ2y_B_SHE9tosDF9vqAOaRqnVmW",prompt_IGCSE_Inter)
+
+# extract("https://drive.google.com/file/d/1smTqwxgq3AiTEDPuX5fZA6oAUM6ZBjRo/view?usp=sharing",prompt_IGCSE_Inter)
+
+# extract("https://drive.google.com/open?id=1IHG5qkmySqAfbugLueePfax-IQj16u8t",prompt_ISC_Inter)

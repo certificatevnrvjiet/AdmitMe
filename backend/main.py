@@ -19,6 +19,7 @@ async def receive_form_data(data: FormModel):
         eamcet_details = extract(form_data["tgEAPCETRank"],prompts[2])
         jee_details = extract(form_data["jeeMainRank"],prompts[2])
         tc_details = extract(form_data["transferCertificate"],prompts[3])
+        inter_details = extract(form_data["twelfthMarksMemo"],prompts[4])
         
         # Create Student object and map address fields
         student = Student(
@@ -61,6 +62,13 @@ async def receive_form_data(data: FormModel):
             caste_as_per_tc=tc_details["Caste as per TC"],
             nationality=tc_details["Nationality"],
             twelfth_college_name=tc_details["College Name"],
+            twelfth_board_name=inter_details["Board Name"],
+            twelfth_hall_ticket_no=inter_details["Hall Ticket Number"],
+            twelfth_max_marks=float(inter_details["Max Marks"]),
+            twelfth_total_marks=inter_details["Total Marks"],
+            twelfth_percentage=float(inter_details["Percentage"]),
+            twelfth_month_year=inter_details["Month_year"],
+            twelfth_subject_scores=inter_details["Subject Scores"],
         )
         
         
