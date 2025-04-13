@@ -15,7 +15,12 @@ function App() {
           <main className="flex-grow mt-16 mb-16 overflow-y-auto">
             <Routes>
               <Route path="/" element={<LoginPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/admin" element={<Dashboard department="admin" />} />
+              <Route path="/dashboard/cse" element={<Dashboard department="cse" />} />
+              <Route path="/dashboard/ece" element={<Dashboard department="ece" />} />
+              <Route path="/dashboard/eee" element={<Dashboard department="eee" />} />
+              <Route path="/dashboard/mech" element={<Dashboard department="mech" />} />
+              <Route path="/dashboard/civil" element={<Dashboard department="civil" />} />
             </Routes>
           </main>
           <Footer />

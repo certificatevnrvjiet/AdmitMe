@@ -80,3 +80,12 @@ class Student(BaseModel):
     # Special Status
     ph_status: Optional[bool] = None
     scribe_needed: Optional[bool] = None
+
+    # Verification Status
+    Status : Optional[str] = None 
+    tenth_memo_link: Optional[str] = None
+    twelfth_memo_link: Optional[str] = None
+    aadhaar_card_link: Optional[str] = None
+    eamcet_link: Optional[str] = None
+    jee_link: Optional[str] = None
+    tc_link: Optional[str] = None
