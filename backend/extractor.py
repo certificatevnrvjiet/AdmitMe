@@ -68,7 +68,7 @@ Please return the result in Dictionary format with exact field names as mentione
 just Dictionary no other stuff.
 '''
 prompt_CBSE_Inter=''' Extract the following structured data from the image:
-Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
+Board Name: CBSE
 Hall Ticket Number: Hall ticket or roll number
 Max Marks: 500
 Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
@@ -102,18 +102,6 @@ Caste as per TC: Caste as per the Transfer Certificate (TC)
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
 
-prompt_Inter_CBSE="""''Extract the following structured data from the image:
-Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
-Hall Ticket Number: Hall ticket or roll number
-Max Marks: 500
-Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
-Month_year: Month and year of passing (e.g., March 2020)
-Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are MATHS , PHYSICS , CHEMISTRY thats it no more needed] and scores as values)
-Total Marks: Total marks obtained(Sum of all 5 subjects)
-
-Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
-just Dictionary no other stuff. """
-
 prompt_SSC_Inter = '''Extract the following structured data from the image:
 Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
 Hall Ticket Number: Hall ticket or registered number
@@ -127,7 +115,7 @@ Please return the result in Dictionary format with exact field names as mentione
 just Dictionary no other stuff.
 '''
 
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter]
+prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
 
 def extract(linkstr,prompt):
     file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)

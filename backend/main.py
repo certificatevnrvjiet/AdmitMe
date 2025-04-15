@@ -33,6 +33,18 @@ async def receive_form_data(data: FormModel):
         jee_details = extract(form_data["jeeMainRank"],prompts[2])
         tc_details = extract(form_data["transferCertificate"],prompts[3])
         inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
+
+        board = form_data["12th Board"]
+        if board == "State":
+            inter_details = extract(form_data["twelfthMarksMemo"],prompts[4])
+        elif board == "AS and A Level":
+            inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
+        elif board == "ISC":
+            inter_details = extract(form_data["twelfthMarksMemo"],prompts[6])
+        elif board == "CBSE":
+            inter_details = extract(form_data["twelfthMarksMemo"],prompts[7])
+        else:
+            raise HTTPException(status_code=400, detail="Unknown board type")
         
         # Create a unique student ID using UUID
         student_id = str(uuid.uuid4())
