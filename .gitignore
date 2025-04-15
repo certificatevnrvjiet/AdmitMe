@@ -5,7 +5,7 @@ dist-ssr/
 *.local
 .vite/
 
-frontend/.env
+frontend/.env.local
 
 # Logs
 logs
