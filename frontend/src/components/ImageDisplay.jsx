@@ -54,7 +54,7 @@ function ImageFromDrive({ fileId }) {
   );
 }
 
-function App() {
+function ImageDisplay() {
   const [googleDriveFileId, setGoogleDriveFileId] = useState('');
 
   const handleInputChange = (event) => {
@@ -79,4 +79,4 @@ function App() {
   );
 }
 
-export default App;
+export default ImageDisplay;
