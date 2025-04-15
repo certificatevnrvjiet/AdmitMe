@@ -1,71 +1,71 @@
 {
-    "student" : [
+    "students" : [
     {
       "index": 1,
-      "student_name": "John Doe",
+      "name": "John Doe",
       "year_of_admission": 2023,
       "status": "Verified",
       "date": "2024-02-20"
     },
     {
       "index": 2,
-      "student_name": "Jane Smith",
+      "name": "Jane Smith",
       "year_of_admission": 2023,
       "status": "Pending",
       "date": "2024-02-19"
     },
     {
       "index": 3,
-      "student_name": "Alice Johnson",
+      "name": "Alice Johnson",
       "year_of_admission": 2022,
       "status": "Not Verified",
       "date": "2024-01-15"
     },
     {
       "index": 4,
-      "student_name": "Michael Brown",
+      "name": "Michael Brown",
       "year_of_admission": 2024,
       "status": "Not Verified",
       "date": "2024-03-01"
     },
     {
       "index": 5,
-      "student_name": "Emily Davis",
+      "name": "Emily Davis",
       "year_of_admission": 2023,
       "status": "Verified",
       "date": "2024-02-10"
     },
     {
       "index": 6,
-      "student_name": "Daniel Wilson",
+      "name": "Daniel Wilson",
       "year_of_admission": 2022,
       "status": "Pending",
       "date": "2024-01-28"
     },
     {
       "index": 7,
-      "student_name": "Olivia Martinez",
+      "name": "Olivia Martinez",
       "year_of_admission": 2024,
       "status": "Verified",
       "date": "2024-03-05"
     },
     {
       "index": 8,
-      "student_name": "Liam Anderson",
+      "name": "Liam Anderson",
       "year_of_admission": 2023,
       "status": "Pending",
       "date": "2024-02-22"
     },
     {
       "index": 9,
-      "student_name": "Sophia Thomas",
+      "name": "Sophia Thomas",
       "year_of_admission": 2022,
       "status": "Verified",
       "date": "2024-01-12"
     },
     {
       "index": 10,
-      "student_name": "Noah Taylor",
+      "name": "Noah Taylor",
       "year_of_admission": 2023,
       "status": "Pending",
       "date": "2024-02-18"

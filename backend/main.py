@@ -32,9 +32,9 @@ async def receive_form_data(data: FormModel):
         eamcet_details = extract(form_data["tgEAPCETRank"],prompts[2])
         jee_details = extract(form_data["jeeMainRank"],prompts[2])
         tc_details = extract(form_data["transferCertificate"],prompts[3])
-        inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
+        # inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
 
-        board = form_data["12th Board"]
+        board = form_data["twelfthBoard"]
         if board == "State":
             inter_details = extract(form_data["twelfthMarksMemo"],prompts[4])
         elif board == "AS and A Level":
@@ -103,6 +103,7 @@ async def receive_form_data(data: FormModel):
             eamcet_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["tgEAPCETRank"]).group(1),
             jee_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["jeeMainRank"]).group(1),
             tc_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["transferCertificate"]).group(1),
+            Status="Not Verified",
         )
         
         # Convert student object to dictionary

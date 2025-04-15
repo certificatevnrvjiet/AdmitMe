@@ -8,6 +8,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
     const [activeTab, setActiveTab] = useState('personal');
+    const [isSaving, setIsSaving] = useState(false); // Add this state
 
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
@@ -21,9 +22,32 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         }));
     };
 
-    const handleSave = () => {
-        onSave(editedStudent);
-        setIsEditing(false);
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            // Remove undefined or null values
+            const cleanedStudent = Object.fromEntries(
+                Object.entries(editedStudent).filter(([_, value]) => value !== null && value !== undefined)
+            );
+
+            // Convert date strings back to Firestore Timestamp if needed
+            if (cleanedStudent.date_of_birth) {
+                const dateObj = new Date(cleanedStudent.date_of_birth);
+                cleanedStudent.date_of_birth = {
+                    seconds: Math.floor(dateObj.getTime() / 1000),
+                    nanoseconds: 0
+                };
+            }
+
+            await onSave(cleanedStudent);
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Error saving student:', error);
+            // Optionally show an error message
+            alert('Failed to save changes. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -78,7 +102,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'personal':
                 return (
                     <div className="space-y-4">
-                        {renderField('Student ID', 'student_id', 'text', true)}
+                        {renderField('Student ID', 'student_id', 'text')}
                         {renderField('Name', 'name')}
                         {renderField('Father Name', 'father_name')}
                         {renderField('Mother Name', 'mother_name')}
@@ -89,7 +113,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Religion', 'religion')}
                         {renderField('Mother Tongue', 'mother_tongue')}
                         {renderField('Identification Mark 1', 'identification_mark_1')}
-                        {renderField('Identification Mark 2', 'identification_mark_2')}
+                        {renderField('Aadhaar Number', 'aadhaar_card_number')}
                     </div>
                 );
             case 'academic':
@@ -97,18 +121,19 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                     <div className="space-y-6">
                         <div>
                             <h5 className="font-medium mb-4">Basic Details</h5>
-                            {renderField('Degree Code', 'degree_code')}
+                            {renderField('College Code', 'college_code')}
                             {renderField('Branch Code', 'branch_code')}
-                            {renderField('Section', 'section')}
+                            {renderField('Admission Category', 'admission_category')}
+                            {renderField('UG Code', 'degree_code')}
                         </div>
                         <div>
                             <h5 className="font-medium mb-4">10th Details</h5>
                             {renderField('Board Name', 'tenth_board_name')}
                             {renderField('School Name', 'tenth_school_name')}
                             {renderField('Hall Ticket No', 'tenth_hall_ticket_no')}
-                            {renderField('Max Marks', 'tenth_max_marks', 'number')}
+                            {renderField('Max Marks', 'tenth_max_marks')}
                             {renderField('Total Marks', 'tenth_total_marks')}
-                            {renderField('Percentage', 'tenth_percentage', 'number')}
+                            {renderField('Percentage', 'tenth_percentage')}
                             {renderField('Month & Year', 'tenth_month_year')}
                         </div>
                         <div>
@@ -116,9 +141,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                             {renderField('Board Name', 'twelfth_board_name')}
                             {renderField('College Name', 'twelfth_college_name')}
                             {renderField('Hall Ticket No', 'twelfth_hall_ticket_no')}
-                            {renderField('Max Marks', 'twelfth_max_marks', 'number')}
+                            {renderField('Max Marks', 'twelfth_max_marks')}
                             {renderField('Total Marks', 'twelfth_total_marks')}
-                            {renderField('Percentage', 'twelfth_percentage', 'number')}
+                            {renderField('Percentage', 'twelfth_percentage')}
                             {renderField('Month & Year', 'twelfth_month_year')}
                         </div>
                     </div>
@@ -128,22 +153,19 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                     <div className="space-y-4">
                         {renderField('Student Phone', 'student_phone_no')}
                         {renderField('Parent Phone', 'parent_phone_no')}
-                        {renderField('VNR Email', 'vnr_email', 'email')}
-                        {renderField('Student Email', 'student_email', 'email')}
-                        {renderField('Parent Email', 'parent_email', 'email')}
+                        {renderField('Student Email', 'student_email')}
+                        {renderField('Parent Email', 'parent_email')}
                     </div>
                 );
             case 'address':
                 return (
                     <div className="space-y-4">
-                        {renderField('Door No', 'address_door_no')}
                         {renderField('Street', 'address_street')}
                         {renderField('Village/Town', 'address_village_town')}
                         {renderField('Mandal', 'address_mandal')}
                         {renderField('District', 'address_district')}
                         {renderField('State', 'address_state')}
                         {renderField('Pincode', 'address_pincode')}
-                        {renderField('Rural/Urban', 'rural_urban')}
                     </div>
                 );
             case 'category':
@@ -196,9 +218,32 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                             {isEditing && (
                                 <button
                                     onClick={handleSave}
+                                    disabled={isSaving}
                                     className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
-                                    <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                                    {isSaving ? (
+                                        <span className="inline-flex items-center">
+                                            <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                    fill="none"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                />
+                                            </svg>
+                                            Saving...
+                                        </span>
+                                    ) : (
+                                        <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                                    )}
                                 </button>
                             )}
                             <button
@@ -215,7 +260,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {/* Left Side - Photo */}
                         <div className="w-1/4 p-6 border-r border-gray-200">
                             <img
-                                src={'https://drive.google.com/uc?export=view&id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ'}
+                                src={`https://drive.google.com/uc?export=view&id=${student.twelfth_memo_link}`}
                                 alt="Student"
                                 className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
                             />

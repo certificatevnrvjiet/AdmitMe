@@ -1,15 +1,9 @@
 import re
 from GoogleAuthService import download_image_from_drive,process_image_with_gemini
 import json
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+# import gspread
+# from oauth2client.service_account import ServiceAccountCredentials
 
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("your-service-account.json", scope)
-client = gspread.authorize(creds)
-
-sheet = client.open("Your Sheet Name").sheet1 
-data = sheet.get_all_records()
 
 prompt_SSC = '''Extract the following structured data from the image:
 Candidate Name: Name of the candidate
@@ -123,8 +117,8 @@ def extract(linkstr,prompt):
     gemini_response = json.loads(process_image_with_gemini(image_bytes, prompt).split("```")[1][5:])
     # print(f"Gemini Response for {file_id_match}: {gemini_response}")
         # data_dict = json.loads(response.text.split("```")[1][5:])\
-    for i in gemini_response:
-        print(f"{i}: {gemini_response[i]}")
+    # for i in gemini_response:
+    #     print(f"{i}: {gemini_response[i]}")
 
     return gemini_response
 
@@ -154,4 +148,4 @@ def extract(linkstr,prompt):
 
 # extract("https://drive.google.com/open?id=1A1HRUMNNYU0jj7NiY-hW38dOtt9pqYf3",prompt_Inter_CBSE)
 
-extract("https://drive.google.com/open?id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ",prompt_SSC_Inter)
+# extract("https://drive.google.com/open?id=1Ow_5CWffrdOwvSQcmY5-n3GQYrDqbKmZ",prompt_SSC_Inter)

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IoSearchSharp, IoArrowUp, IoArrowDown } from "react-icons/io5";
 import { RiArrowDropDownLine } from "react-icons/ri";
-import { students } from '../assets/Studentsdata.json';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/config'; // Make sure this path matches your Firebase config file location
 
 const Dashboard = ({ department }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,11 +13,46 @@ const Dashboard = ({ department }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const studentsRef = collection(db, 'studentsdemo');
+        const snapshot = await getDocs(studentsRef);
+        const studentsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          // Convert Firestore Timestamp to Date string
+          if (data.date_of_birth && data.date_of_birth.seconds) {
+            data.date_of_birth = new Date(data.date_of_birth.seconds * 1000)
+              .toISOString()
+              .split('T')[0];
+          }
+          return {
+            id: doc.id,
+            ...data
+          };
+        });
+        setStudents(studentsData);
+        console.log('Fetched students:', studentsData);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching students:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, []);
+
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
-  const studentList = students.map((s) => s.data);
+  const studentList = students.map((s) => s.data || s);
 
   // Sort logic (based on name)
   const sortData = (data) => {
@@ -83,10 +119,44 @@ const Dashboard = ({ department }) => {
     setSelectedStudent(null);
   };
 
-  const handleSaveStudent = (updatedStudent) => {
-    console.log('Saving updated student:', updatedStudent);
-    handleCloseModal();
+  const handleSaveStudent = async (updatedStudent) => {
+    try {
+      const studentRef = doc(db, 'studentsdemo', updatedStudent.id);
+      await updateDoc(studentRef, updatedStudent);
+      
+      // Update the local state
+      setStudents(students.map(student => 
+        student.id === updatedStudent.id ? updatedStudent : student
+      ));
+      
+      console.log('Student updated successfully');
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error updating student:', error);
+      // Optionally show an error message to the user
+      alert('Failed to update student details. Please try again.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <p className={`text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <p className={`text-center text-red-500`}>Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -210,7 +280,7 @@ const Dashboard = ({ department }) => {
                   <tbody className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
                     {filteredStudents.map((s) => (
                       <tr
-                        key={s.student_id}
+                        key={s.id}
                         className={`${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'} cursor-pointer`}
                         onClick={() => handleStudentClick(s)}
                       >
