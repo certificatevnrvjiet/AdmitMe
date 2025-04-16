@@ -24,18 +24,7 @@ identification_marks2: Identification marks (if any)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.'''
 
-prompt_SSC_Inter = '''Extract the following structured data from the image:
-Board name: Name of the educational board (e.g., CBSE, ICSE, State Board)
-Hall ticket number: Hall ticket or registered number
-Maximum marks: 1000
-Total marks: Total marks obtained
-Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
-Subject scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are (M1, M2, P1, C1 from 1st year) and (M3, M4, P2, C2, P_practicals, C_Practicals are from 2nd year) ] and scores as values)
-Month and year of passing: Month and year of passing (e.g., March 2020)
 
-Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
-just Dictionary no other stuff.
-'''
 
 prompt_IGCSE_Inter = '''Extract the following structured data from the image:
 Board Name: AS Level or IGCSE

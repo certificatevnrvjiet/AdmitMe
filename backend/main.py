@@ -7,26 +7,11 @@ from extractor import extract,prompts
 import uuid
 import re
 from GoogleAuthService import authenticate_google_service, download_image_from_drive
-
-# Add this helper function at the top of the file
-def clean_student_data(student_dict: dict) -> dict:
-    """Clean the student data before saving to Firebase"""
-    for key, value in student_dict.items():
-        # Convert empty strings to None
-        if value == "":
-            student_dict[key] = None
-        # Convert string booleans to actual booleans
-        elif key in ['reservation', 'ebc_status', 'ews_status', 'minority_status', 'ph_status', 'scribe_needed']:
-            if isinstance(value, str):
-                student_dict[key] = value.lower() == 'true' if value else None
-        # Convert string numbers to integers
-        elif key in ['tenth_max_marks', 'twelfth_max_marks', 'eamcet_rank', 'jee_mains_rank', 'income']:
-            if isinstance(value, str) and value.isdigit():
-                student_dict[key] = int(value)
-    return student_dict
+from datetime import datetime  # Import datetime for date conversion
 
 app = FastAPI()
 
+print("Started")
 # Add after FastAPI initialization
 app.add_middleware(
     CORSMiddleware,
@@ -40,18 +25,21 @@ DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 @app.post("/submit")
 async def receive_form_data(data: FormModel):
+    print("Received data")
     try:
         # Convert FormModel to dict
         print("hi")
 
         form_data = data.dict()
+        print(form_data)
         tenth_details = extract(form_data["tenthMarksMemo"],prompts[0])
+        print(tenth_details)
         uidai_details = extract(form_data["aadhaarCard"],prompts[1])
         eamcet_details = extract(form_data["tgEAPCETRank"],prompts[2])
         jee_details = extract(form_data["jeeMainRank"],prompts[2])
         tc_details = extract(form_data["transferCertificate"],prompts[3])
         # inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
-        print("h1")
+        # print("h1")
         board = form_data["twelfthBoard"]
         if board == "State":
             inter_details = extract(form_data["twelfthMarksMemo"],prompts[4])
@@ -63,7 +51,7 @@ async def receive_form_data(data: FormModel):
             inter_details = extract(form_data["twelfthMarksMemo"],prompts[7])
         else:
             raise HTTPException(status_code=400, detail="Unknown board type")
-        print("h2")
+        # print("h2")
         # Create a uniqupre student ID using UUID
         student_id = str(uuid.uuid4())
         
@@ -72,7 +60,8 @@ async def receive_form_data(data: FormModel):
             name=tenth_details["Candidate Name"],
             father_name=tenth_details["Father Name"],
             mother_name=tenth_details["Mother Name"],
-            date_of_birth=tenth_details["Date of Birth"],
+            # Convert "Date of Birth" string to a date object
+            date_of_birth=datetime.strptime(tenth_details["Date of Birth"], "%d-%m-%Y").date(),
             identification_mark_1=tenth_details["identification_marks1"],
             identification_mark_2=tenth_details["identification_marks2"],
             tenth_board_name=tenth_details["tenth_board_name"],
@@ -123,15 +112,15 @@ async def receive_form_data(data: FormModel):
             tc_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["transferCertificate"]).group(1),
             Status="Not Verified",
         )
-        
+        print("h3")
         # Convert student object to dictionary
         student_dict = student.dict(exclude_none=True)
         print(f"Student Data: {student_dict}")
         try:
             # Store in Firestore
             doc_ref = db.collection('studentsdemo').document(student_id)
-            cleaned_data = clean_student_data(student_dict)
-            doc_ref.set(cleaned_data)
+            # cleaned_data = clean_student_data(student_dict)
+            doc_ref.set(student_dict)
             
             print("\n=== Student Details Stored in Firebase ===")
             print(f"Document ID: {student_id}")
@@ -140,7 +129,7 @@ async def receive_form_data(data: FormModel):
             return {
                 "message": "Data Processed and Stored successfully",
                 "student_id": student_id,
-                "data": cleaned_data
+                "data": student_dict
             }
             
         except Exception as firebase_error:

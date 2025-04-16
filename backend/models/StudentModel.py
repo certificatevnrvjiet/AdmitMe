@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, constr
 from typing import Optional, Union
+from datetime import date  # Import date type
 
 class Student(BaseModel):
     student_id: Optional[str] = ""
@@ -8,7 +9,7 @@ class Student(BaseModel):
     name: Optional[str] = ""
     father_name: Optional[str] = ""
     mother_name: Optional[str] = ""
-    date_of_birth: Optional[str] = ""  # Store as YYYY-MM-DD format
+    date_of_birth: Optional[date] = None  # Changed to date type
     gender: Optional[str] = ""
     identification_mark_1: Optional[str] = ""
     identification_mark_2: Optional[str] = ""
