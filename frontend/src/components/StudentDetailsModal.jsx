@@ -20,31 +20,17 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             ...prev,
             [field]: value,
         }));
+        console.log('Student prop updated:', editedStudent.twelfth_subject_scores);
     };
 
     const handleSave = async () => {
         try {
             setIsSaving(true);
-            // Remove undefined or null values
-            const cleanedStudent = Object.fromEntries(
-                Object.entries(editedStudent).filter(([_, value]) => value !== null && value !== undefined)
-            );
-
-            // Convert date strings back to Firestore Timestamp if needed
-            if (cleanedStudent.date_of_birth) {
-                const dateObj = new Date(cleanedStudent.date_of_birth);
-                cleanedStudent.date_of_birth = {
-                    seconds: Math.floor(dateObj.getTime() / 1000),
-                    nanoseconds: 0
-                };
-            }
-
-            await onSave(cleanedStudent);
+            await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
             console.error('Error saving student:', error);
-            // Optionally show an error message
-            alert('Failed to save changes. Please try again.');
+            alert(error.message || 'Failed to save changes. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -58,33 +44,17 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {label}:
                 </label>
-                {type === 'boolean' ? (
-                    <select
-                        value={editedStudent[field] ? 'true' : 'false'}
-                        onChange={(e) => handleInputChange(field, e.target.value === 'true')}
-                        disabled={!isEditing || readOnly}
-                        className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
-                            isDarkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'bg-white border-gray-300 text-gray-900'
-                        } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
-                    >
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                    </select>
-                ) : (
-                    <input
-                        type={type}
-                        value={editedStudent[field] || ''}
-                        onChange={(e) => handleInputChange(field, e.target.value)}
-                        readOnly={!isEditing || readOnly}
-                        className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
-                            isDarkMode
-                                ? 'bg-gray-700 border-gray-600 text-white'
-                                : 'bg-white border-gray-300 text-gray-900'
-                        } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
-                    />
-                )}
+                <input
+                    type="text"
+                    value={editedStudent[field] || ''}
+                    onChange={(e) => handleInputChange(field, e.target.value)}
+                    readOnly={!isEditing || readOnly}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                        isDarkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                    } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
+                />
             </div>
         );
     };
@@ -106,7 +76,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Name', 'name')}
                         {renderField('Father Name', 'father_name')}
                         {renderField('Mother Name', 'mother_name')}
-                        {renderField('Date of Birth', 'date_of_birth', 'date')}
+                        {renderField('Date of Birth', 'date_of_birth')}
                         {renderField('Gender', 'gender')}
                         {renderField('Blood Group', 'blood_group')}
                         {renderField('Nationality', 'nationality')}
@@ -173,13 +143,13 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                     <div className="space-y-4">
                         {renderField('Category', 'category_name')}
                         {renderField('Caste as per TC', 'caste_as_per_tc')}
-                        {renderField('Reservation', 'reservation', 'boolean')}
-                        {renderField('EBC Status', 'ebc_status', 'boolean')}
-                        {renderField('EWS Status', 'ews_status', 'boolean')}
-                        {renderField('Income', 'income', 'number')}
-                        {renderField('Minority Status', 'minority_status', 'boolean')}
-                        {renderField('PH Status', 'ph_status', 'boolean')}
-                        {renderField('Scribe Needed', 'scribe_needed', 'boolean')}
+                        {renderField('Reservation', 'reservation')}
+                        {renderField('EBC Status', 'ebc_status')}
+                        {renderField('EWS Status', 'ews_status')}
+                        {renderField('Income', 'income')}
+                        {renderField('Minority Status', 'minority_status')}
+                        {renderField('PH Status', 'ph_status')}
+                        {renderField('Scribe Needed', 'scribe_needed')}
                     </div>
                 );
             default:

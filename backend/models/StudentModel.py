@@ -1,18 +1,15 @@
 from pydantic import BaseModel, EmailStr, constr
-from typing import Optional, Union
-from datetime import date, datetime  # Import date and datetime types
-from google.cloud.firestore import SERVER_TIMESTAMP
-from pydantic import BaseModel, EmailStr, constr
-from typing import Optional
+from typing import Optional, Dict
 
 class Student(BaseModel):
+    # Basic Info
     student_id: Optional[str] = ""
     degree_code: Optional[str] = ""
     hall_ticket_no: Optional[str] = ""
     name: Optional[str] = ""
     father_name: Optional[str] = ""
     mother_name: Optional[str] = ""
-    date_of_birth: Optional[datetime] = None  # Store as YYYY-MM-DD format
+    date_of_birth: Optional[str] = ""
     gender: Optional[str] = ""
     identification_mark_1: Optional[str] = ""
     identification_mark_2: Optional[str] = ""
@@ -21,49 +18,49 @@ class Student(BaseModel):
     tenth_board_name: Optional[str] = ""
     tenth_school_name: Optional[str] = ""
     tenth_hall_ticket_no: Optional[str] = ""
-    tenth_max_marks: Optional[int] = ""
+    tenth_max_marks: Optional[str] = ""
     tenth_total_marks: Optional[str] = ""
-    tenth_percentage: Optional[float] = ""
+    tenth_percentage: Optional[str] = ""
     tenth_month_year: Optional[str] = ""
     
     # 12th Details
     twelfth_board_name: Optional[str] = ""
     twelfth_college_name: Optional[str] = ""
     twelfth_hall_ticket_no: Optional[str] = ""
-    twelfth_max_marks: Optional[int] = ""
+    twelfth_max_marks: Optional[str] = ""
     twelfth_total_marks: Optional[str] = ""
-    twelfth_percentage: Optional[float] = ""
-    twelfth_subject_scores: Optional[dict] = ""
+    twelfth_percentage: Optional[str] = ""
+    twelfth_subject_scores: Optional[Dict[str, int]] = {}  # Changed to Dict[str, str
     twelfth_month_year: Optional[str] = ""
     
     # Entrance Exams
     eamcet_hall_ticket_no: Optional[str] = ""
-    eamcet_rank: Optional[int] = ""
+    eamcet_rank: Optional[str] = ""
     jee_hall_ticket_no: Optional[str] = ""
-    jee_mains_rank: Optional[int] = ""
+    jee_mains_rank: Optional[str] = ""
     
     # Personal Info
     aadhaar_card_number: Optional[str] = ""
     mother_tongue: Optional[str] = ""
     student_phone_no: Optional[str] = ""
     parent_phone_no: Optional[str] = ""
-    vnr_email: Optional[EmailStr] = ""
-    student_email: Optional[EmailStr] = ""
-    parent_email: Optional[EmailStr] = ""
+    vnr_email: Optional[str] = ""  # Changed from EmailStr
+    student_email: Optional[str] = ""  # Changed from EmailStr
+    parent_email: Optional[str] = ""  # Changed from EmailStr
     
     # Reservation & Category
-    reservation: Optional[bool] = ""
+    reservation: Optional[str] = ""  # Changed from bool
     category_name: Optional[str] = ""
     caste_as_per_tc: Optional[str] = ""
-    ebc_status: Optional[bool] = ""
-    ews_status: Optional[bool] = ""
-    income: Optional[int] = ""
+    ebc_status: Optional[str] = ""  # Changed from bool
+    ews_status: Optional[str] = ""  # Changed from bool
+    income: Optional[str] = ""  # Changed from int
     
     # Medical & Nationality
     blood_group: Optional[str] = ""
     nationality: Optional[str] = ""
     religion: Optional[str] = ""
-    minority_status: Optional[bool] = ""
+    minority_status: Optional[str] = ""  # Changed from bool
     
     # Address
     address_door_no: Optional[str] = ""
@@ -82,11 +79,11 @@ class Student(BaseModel):
     college_code: Optional[str] = ""
     
     # Special Status
-    ph_status: Optional[bool] = ""
-    scribe_needed: Optional[bool] = ""
+    ph_status: Optional[str] = ""  # Changed from bool
+    scribe_needed: Optional[str] = ""  # Changed from bool
 
     # Verification Status
-    Status : Optional[str] = "" 
+    Status: Optional[str] = ""
     tenth_memo_link: Optional[str] = ""
     twelfth_memo_link: Optional[str] = ""
     aadhaar_card_link: Optional[str] = ""

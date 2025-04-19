@@ -4,8 +4,6 @@ import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config'; // Make sure this path matches your Firebase config file location
 
 const Dashboard = ({ department }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,12 +27,13 @@ const Dashboard = ({ department }) => {
             'Content-Type': 'application/json',
           },
         });
-
+        // console.log('Response:', response); // Debugging line
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        // console.log('Data:', data); // Debugging line
         setStudents(data.students || []);
         // console.log('Fetched students:', data.students);
       } catch (err) {
@@ -46,7 +45,11 @@ const Dashboard = ({ department }) => {
     };
 
     fetchStudents();
+     // Debugging line
+
   }, []);
+
+  // console.log('students:', students); 
 
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
@@ -118,20 +121,70 @@ const Dashboard = ({ department }) => {
 
   const handleSaveStudent = async (updatedStudent) => {
     try {
-      const studentRef = doc(db, 'studentsdemo', updatedStudent.id);
-      await updateDoc(studentRef, updatedStudent);
-      
-      // Update the local state
-      setStudents(students.map(student => 
-        student.id === updatedStudent.id ? updatedStudent : student
-      ));
-      
-      console.log('Student updated successfully');
-      handleCloseModal();
+        // const cleanedStudent = {
+        //     ...updatedStudent,
+        //     // Handle numeric fields with null fallback
+        //     tenth_max_marks: updatedStudent.tenth_max_marks ? parseInt(updatedStudent.tenth_max_marks) : null,
+        //     twelfth_max_marks: updatedStudent.twelfth_max_marks ? parseInt(updatedStudent.twelfth_max_marks) : null,
+        //     tenth_percentage: updatedStudent.tenth_percentage ? parseFloat(updatedStudent.tenth_percentage) : null,
+        //     twelfth_percentage: updatedStudent.twelfth_percentage ? parseFloat(updatedStudent.twelfth_percentage) : null,
+        //     eamcet_rank: updatedStudent.eamcet_rank ? parseInt(updatedStudent.eamcet_rank) : null,
+        //     jee_mains_rank: updatedStudent.jee_mains_rank ? parseInt(updatedStudent.jee_mains_rank) : null,
+        //     income: updatedStudent.income ? parseInt(updatedStudent.income) : null,
+
+        //     // Handle boolean fields
+        //     reservation: Boolean(updatedStudent.reservation),
+        //     ebc_status: Boolean(updatedStudent.ebc_status),
+        //     ews_status: Boolean(updatedStudent.ews_status),
+        //     minority_status: Boolean(updatedStudent.minority_status),
+        //     ph_status: Boolean(updatedStudent.ph_status),
+        //     scribe_needed: Boolean(updatedStudent.scribe_needed),
+
+        //     // Handle date_of_birth
+        //     date_of_birth: updatedStudent.date_of_birth ? 
+        //         new Date(updatedStudent.date_of_birth)
+        //             .toLocaleDateString('en-GB', {
+        //                 day: '2-digit',
+        //                 month: '2-digit',
+        //                 year: 'numeric'
+        //             }).split('/').join('/') : null,
+        // };
+
+        // // Remove empty values
+        // Object.keys(cleanedStudent).forEach(key => {
+        //     if (cleanedStudent[key] === undefined || cleanedStudent[key] === null || cleanedStudent[key] === '') {
+        //         delete cleanedStudent[key];
+        //     }
+        // });
+
+        console.log('Sending student data hii:', updatedStudent);
+        console.log('Scores :',updatedStudent.twelfth_subject_scores);
+
+        const response = await fetch(`http://localhost:8000/student/${updatedStudent.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedStudent),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to update student');
+        }
+
+        const result = await response.json();
+        
+        // Update local state
+        setStudents(students.map(student => 
+            student.id === updatedStudent.id ? { ...student, ...updatedStudent  } : student
+        ));
+        
+        console.log('Student updated successfully:', result);
+        handleCloseModal();
     } catch (error) {
-      console.error('Error updating student:', error);
-      // Optionally show an error message to the user
-      alert('Failed to update student details. Please try again.');
+        console.error('Error updating student:', error);
+        alert(error.message || 'Failed to update student details. Please try again.');
     }
   };
 

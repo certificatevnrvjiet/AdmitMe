@@ -56,16 +56,15 @@ async def receive_form_data(data: FormModel):
         # Create a unique student ID using UUID
         student_id = str(uuid.uuid4())
         
-        # Convert date string to datetime object
-        dob_str = tenth_details["Date of Birth"]
-        dob_datetime = datetime.strptime(dob_str, "%d/%m/%Y")
+        # Simply store the date string without conversion
+        dob_str = tenth_details["Date of Birth"]  # Already in DD/MM/YYYY format
 
         # Create Student object and map address fields
         student = Student(
             name=tenth_details["Candidate Name"],
             father_name=tenth_details["Father Name"],
             mother_name=tenth_details["Mother Name"],
-            date_of_birth=dob_datetime,  # Pass datetime object directly
+            date_of_birth=dob_str,  # Store as string directly
             identification_mark_1=tenth_details["identification_marks1"],
             identification_mark_2=tenth_details["identification_marks2"],
             tenth_board_name=tenth_details["tenth_board_name"],
@@ -102,9 +101,9 @@ async def receive_form_data(data: FormModel):
             twelfth_college_name=tc_details["College Name"],
             twelfth_board_name=inter_details["Board Name"],
             twelfth_hall_ticket_no=inter_details["Hall Ticket Number"],
-            twelfth_max_marks=(inter_details["Max Marks"]),
-            twelfth_total_marks=inter_details["Total Marks"],
-            twelfth_percentage=(inter_details["Percentage"]),
+            twelfth_max_marks=str(inter_details["Max Marks"]),
+            twelfth_total_marks=str(inter_details["Total Marks"]),
+            twelfth_percentage=str(inter_details["Percentage"]),
             twelfth_month_year=inter_details["Month_year"],
             twelfth_subject_scores=inter_details["Subject Scores"],
             tenth_memo_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["tenthMarksMemo"]).group(1),
@@ -123,9 +122,6 @@ async def receive_form_data(data: FormModel):
         doc_ref = db.collection('studentsdemo').document(student_id)
         doc_ref.set(student_dict)
         
-        # Convert datetime back to string format for response
-        student_dict['date_of_birth'] = dob_datetime.strftime("%d/%m/%Y")
-
         return {
             "message": "Data Processed and Stored successfully",
             "student_id": student_id,
@@ -143,19 +139,56 @@ async def get_student(student_id: str):
         
         if doc.exists:
             data = doc.to_dict()
-            # Convert Firestore Timestamp to ISO format string
-            if data.get('date_of_birth'):
-                timestamp = data['date_of_birth']
-                # Convert Firestore timestamp to datetime
-                if hasattr(timestamp, 'timestamp'):
-                    dt = datetime.fromtimestamp(timestamp.timestamp())
-                    data['date_of_birth'] = dt.strftime('%Y-%m-%d')
+            # No need to convert date_of_birth as it's already a string
             return {"data": data}
         else:
             raise HTTPException(status_code=404, detail="Student not found")
             
     except Exception as e:
-        print(f"Error retrieving student: {str(e)}")  # Add logging
+        print(f"Error retrieving student: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/student/{student_id}")
+async def update_student(student_id: str, student: Student):
+    try:
+        # Check if student exists
+        doc_ref = db.collection('studentsdemo').document(student_id)
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        # Convert student model to dict and exclude None values
+        student_dict = student.dict(exclude_none=True, exclude_unset=True)
+        
+        # Remove id field if present
+        student_dict.pop('id', None)
+        
+        # Handle date_of_birth format validation
+        if student_dict.get('date_of_birth'):
+            try:
+                # Validate date format without converting to datetime
+                if not re.match(r'^\d{2}/\d{2}/\d{4}$', student_dict['date_of_birth']):
+                    raise ValueError("Date format should be DD/MM/YYYY")
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid date format. Please use DD/MM/YYYY format: {str(e)}"
+                )
+        
+        # Update document in Firestore
+        doc_ref.update(student_dict)
+        
+        return {
+            "message": "Student updated successfully",
+            "student_id": student_id,
+            "data": student_dict
+        }
+        
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        print(f"Error updating student: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/students")
@@ -163,16 +196,23 @@ async def get_students():
     try:
         students_ref = db.collection('studentsdemo')
         docs = students_ref.stream()
-        
         students = []
         for doc in docs:
             data = doc.to_dict()
             # Convert Firestore Timestamp to string format
-            if data.get('date_of_birth'):
-                timestamp = data['date_of_birth']
-                if hasattr(timestamp, 'timestamp'):
-                    dt = datetime.fromtimestamp(timestamp.timestamp())
-                    data['date_of_birth'] = dt.strftime('%d/%m/%Y')
+            # if data.get('date_of_birth'):
+            #     timestamp = data['date_of_birth']
+            #     if hasattr(timestamp, 'timestamp'):
+            #         dt = datetime.fromtimestamp(timestamp.timestamp())
+            #         data['date_of_birth'] = dt.strftime('%d/%m/%Y')
+            
+            # Handle NaN values
+            # cleaned_data = {}
+            # for key, value in data.items():
+            #     if isinstance(value, float) and (value != value):  # Check for NaN
+            #         cleaned_data[key] = None
+            #     else:
+            #         cleaned_data[key] = value
             
             students.append({
                 'id': doc.id,
