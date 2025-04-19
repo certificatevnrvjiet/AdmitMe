@@ -8,6 +8,14 @@ import uuid
 import re
 from GoogleAuthService import authenticate_google_service, download_image_from_drive
 from datetime import datetime  # Import datetime for date conversion
+from google.cloud import firestore
+from google.cloud.firestore import SERVER_TIMESTAMP
+from pydantic import BaseModel
+
+# Add this model class at the top with other imports
+class DateTest(BaseModel):
+    test_date: str
+    description: str = "Test date entry"
 
 app = FastAPI()
 
@@ -25,21 +33,14 @@ DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 @app.post("/submit")
 async def receive_form_data(data: FormModel):
-    print("Received data")
     try:
         # Convert FormModel to dict
-        print("hi")
-
         form_data = data.dict()
-        print(form_data)
         tenth_details = extract(form_data["tenthMarksMemo"],prompts[0])
-        print(tenth_details)
         uidai_details = extract(form_data["aadhaarCard"],prompts[1])
         eamcet_details = extract(form_data["tgEAPCETRank"],prompts[2])
         jee_details = extract(form_data["jeeMainRank"],prompts[2])
         tc_details = extract(form_data["transferCertificate"],prompts[3])
-        # inter_details = extract(form_data["twelfthMarksMemo"],prompts[5])
-        # print("h1")
         board = form_data["twelfthBoard"]
         if board == "State":
             inter_details = extract(form_data["twelfthMarksMemo"],prompts[4])
@@ -51,17 +52,20 @@ async def receive_form_data(data: FormModel):
             inter_details = extract(form_data["twelfthMarksMemo"],prompts[7])
         else:
             raise HTTPException(status_code=400, detail="Unknown board type")
-        # print("h2")
-        # Create a uniqupre student ID using UUID
+
+        # Create a unique student ID using UUID
         student_id = str(uuid.uuid4())
         
+        # Convert date string to datetime object
+        dob_str = tenth_details["Date of Birth"]
+        dob_datetime = datetime.strptime(dob_str, "%d/%m/%Y")
+
         # Create Student object and map address fields
         student = Student(
             name=tenth_details["Candidate Name"],
             father_name=tenth_details["Father Name"],
             mother_name=tenth_details["Mother Name"],
-            # Convert "Date of Birth" string to a date object
-            date_of_birth=datetime.strptime(tenth_details["Date of Birth"], "%d-%m-%Y").date(),
+            date_of_birth=dob_datetime,  # Pass datetime object directly
             identification_mark_1=tenth_details["identification_marks1"],
             identification_mark_2=tenth_details["identification_marks2"],
             tenth_board_name=tenth_details["tenth_board_name"],
@@ -71,7 +75,6 @@ async def receive_form_data(data: FormModel):
             tenth_total_marks=tenth_details["tenth_total_marks/CGPA"],
             tenth_percentage=(tenth_details["tenth_percentage"]),
             tenth_month_year=tenth_details["tenth_month_year"],
-            # ...existing fields mapping...
             address_street=form_data["address"]["street"],
             address_village_town=form_data["address"]["village"],
             address_mandal=form_data["address"]["mandal"],
@@ -112,37 +115,26 @@ async def receive_form_data(data: FormModel):
             tc_link=re.search(r'id=([a-zA-Z0-9_-]+)', form_data["transferCertificate"]).group(1),
             Status="Not Verified",
         )
-        print("h3")
+        print(student)
         # Convert student object to dictionary
         student_dict = student.dict(exclude_none=True)
-        print(f"Student Data: {student_dict}")
-        try:
-            # Store in Firestore
-            doc_ref = db.collection('studentsdemo').document(student_id)
-            # cleaned_data = clean_student_data(student_dict)
-            doc_ref.set(student_dict)
-            
-            print("\n=== Student Details Stored in Firebase ===")
-            print(f"Document ID: {student_id}")
-            print("====================\n")
-            
-            return {
-                "message": "Data Processed and Stored successfully",
-                "student_id": student_id,
-                "data": student_dict
-            }
-            
-        except Exception as firebase_error:
-            print(f"Firebase Error: {firebase_error}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error storing data in Firebase: {str(firebase_error)}"
-            )
-            
+        print(student_dict)
+        # Store in Firestore (it will automatically convert datetime to Timestamp)
+        doc_ref = db.collection('studentsdemo').document(student_id)
+        doc_ref.set(student_dict)
+        
+        # Convert datetime back to string format for response
+        student_dict['date_of_birth'] = dob_datetime.strftime("%d/%m/%Y")
+
+        return {
+            "message": "Data Processed and Stored successfully",
+            "student_id": student_id,
+            "data": student_dict
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Add a new endpoint to retrieve student data
 @app.get("/student/{student_id}")
 async def get_student(student_id: str):
     try:
@@ -150,12 +142,52 @@ async def get_student(student_id: str):
         doc = doc_ref.get()
         
         if doc.exists:
-            return {"data": doc.to_dict()}
+            data = doc.to_dict()
+            # Convert Firestore Timestamp to ISO format string
+            if data.get('date_of_birth'):
+                timestamp = data['date_of_birth']
+                # Convert Firestore timestamp to datetime
+                if hasattr(timestamp, 'timestamp'):
+                    dt = datetime.fromtimestamp(timestamp.timestamp())
+                    data['date_of_birth'] = dt.strftime('%Y-%m-%d')
+            return {"data": data}
         else:
             raise HTTPException(status_code=404, detail="Student not found")
             
     except Exception as e:
+        print(f"Error retrieving student: {str(e)}")  # Add logging
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/students")
+async def get_students():
+    try:
+        students_ref = db.collection('studentsdemo')
+        docs = students_ref.stream()
+        
+        students = []
+        for doc in docs:
+            data = doc.to_dict()
+            # Convert Firestore Timestamp to string format
+            if data.get('date_of_birth'):
+                timestamp = data['date_of_birth']
+                if hasattr(timestamp, 'timestamp'):
+                    dt = datetime.fromtimestamp(timestamp.timestamp())
+                    data['date_of_birth'] = dt.strftime('%d/%m/%Y')
+            
+            students.append({
+                'id': doc.id,
+                **data
+            })
+        
+        return {
+            "status": "success",
+            "students": students
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching students: {str(e)}"
+        )
 
 @app.get("/api/drive/image/{file_id}")
 async def get_drive_image(file_id: str):
@@ -173,3 +205,54 @@ async def get_drive_image(file_id: str):
         return Response(content=image_bytes, media_type=content_type)
     else:
         raise HTTPException(status_code=404, detail="Image not found or could not be downloaded from Google Drive")
+
+@app.get("/test-connection")
+async def test_connection():
+    try:
+        # Try to read from Firestore
+        docs = db.collection('studentsdemo').limit(1).stream()
+        next(docs, None)
+        return {"status": "success", "message": "Firebase connection successful"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Firebase connection failed: {str(e)}"
+        )
+
+# Update the test_date endpoint
+@app.post("/test-date")
+async def test_date_handling(data: DateTest):
+    try:
+        # Convert string date to datetime object using DD/MM/YYYY format
+        date_obj = datetime.strptime(data.test_date, "%d/%m/%Y")
+        
+        # Create document data using datetime directly
+        doc_data = {
+            "test_date": date_obj,  # Firestore automatically converts datetime to Timestamp
+            "description": data.description,
+            "created_at": SERVER_TIMESTAMP
+        }
+        print(type(doc_data["test_date"]))
+        # Store in test collection
+        doc_ref = db.collection('date_tests').document()
+        doc_ref.set(doc_data)
+        
+        return {
+            "status": "success",
+            "message": "Date stored successfully",
+            "doc_id": doc_ref.id,
+            "data": {
+                "test_date": date_obj.strftime("%d/%m/%Y"),  # Return in same format
+                "description": data.description
+            }
+        }
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid date format. Please use DD/MM/YYYY format (e.g., 01/01/2005)"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error storing date: {str(e)}"
+        )

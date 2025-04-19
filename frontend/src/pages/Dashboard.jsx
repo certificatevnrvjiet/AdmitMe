@@ -4,7 +4,7 @@ import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config'; // Make sure this path matches your Firebase config file location
 
 const Dashboard = ({ department }) => {
@@ -23,23 +23,20 @@ const Dashboard = ({ department }) => {
     const fetchStudents = async () => {
       try {
         setLoading(true);
-        const studentsRef = collection(db, 'studentsdemo');
-        const snapshot = await getDocs(studentsRef);
-        const studentsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          // Convert Firestore Timestamp to Date string
-          if (data.date_of_birth && data.date_of_birth.seconds) {
-            data.date_of_birth = new Date(data.date_of_birth.seconds * 1000)
-              .toISOString()
-              .split('T')[0];
-          }
-          return {
-            id: doc.id,
-            ...data
-          };
+        const response = await fetch('http://localhost:8000/students', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-        setStudents(studentsData);
-        console.log('Fetched students:', studentsData);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setStudents(data.students || []);
+        // console.log('Fetched students:', data.students);
       } catch (err) {
         setError(err.message);
         console.error('Error fetching students:', err);
@@ -288,12 +285,12 @@ const Dashboard = ({ department }) => {
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            s.status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
-                            s.status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
+                            s.Status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
+                            s.Status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
                             (isDarkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800")
-                          }`}>{s.status}</span>
+                          }`}>{s.Status}</span>
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>{s.department}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>{s.branch_code}</td>
                       </tr>
                     ))}
                   </tbody>
