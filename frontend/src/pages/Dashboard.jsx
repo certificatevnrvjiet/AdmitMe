@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useContext , useEffect } from "react";
 import { IoSearchSharp, IoArrowUp, IoArrowDown } from "react-icons/io5";
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
+import { AuthContext } from "../auth/AuthContext";
+import { Navigate } from 'react-router-dom';
+import API from '../api';
 
-const Dashboard = ({ department }) => {
+
+
+
+
+const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -15,41 +22,52 @@ const Dashboard = ({ department }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isDarkMode } = useTheme();
+  const [user, setUser] = useState({"message":"Loading..." }); 
+  const { isAuthenticated, role: userRole } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [department, setdepartment] = useState("");
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/students', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      // console.log('Response:', response); // Debugging line
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // console.log('Data:', data); // Debugging line
+      setStudents(data.students || []);
+      // console.log('Fetched students:', data.students);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching students:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('http://localhost:8000/students', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        // console.log('Response:', response); // Debugging line
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+    if (!isAuthenticated) {
+      console.log("User is not authenticated, redirecting to login...");
+      return <Navigate to="/" replace />;
+    }
+    API.get('/me')
+      .then(res => {setUser(res.data);
 
-        const data = await response.json();
-        // console.log('Data:', data); // Debugging line
-        setStudents(data.students || []);
-        // console.log('Fetched students:', data.students);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching students:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+         setdepartment(res.data.role);
+        })
+      .catch(() => setUser(null));
     fetchStudents();
-     // Debugging line
-
   }, []);
 
-  // console.log('students:', students); 
 
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
@@ -121,45 +139,7 @@ const Dashboard = ({ department }) => {
 
   const handleSaveStudent = async (updatedStudent) => {
     try {
-        // const cleanedStudent = {
-        //     ...updatedStudent,
-        //     // Handle numeric fields with null fallback
-        //     tenth_max_marks: updatedStudent.tenth_max_marks ? parseInt(updatedStudent.tenth_max_marks) : null,
-        //     twelfth_max_marks: updatedStudent.twelfth_max_marks ? parseInt(updatedStudent.twelfth_max_marks) : null,
-        //     tenth_percentage: updatedStudent.tenth_percentage ? parseFloat(updatedStudent.tenth_percentage) : null,
-        //     twelfth_percentage: updatedStudent.twelfth_percentage ? parseFloat(updatedStudent.twelfth_percentage) : null,
-        //     eamcet_rank: updatedStudent.eamcet_rank ? parseInt(updatedStudent.eamcet_rank) : null,
-        //     jee_mains_rank: updatedStudent.jee_mains_rank ? parseInt(updatedStudent.jee_mains_rank) : null,
-        //     income: updatedStudent.income ? parseInt(updatedStudent.income) : null,
-
-        //     // Handle boolean fields
-        //     reservation: Boolean(updatedStudent.reservation),
-        //     ebc_status: Boolean(updatedStudent.ebc_status),
-        //     ews_status: Boolean(updatedStudent.ews_status),
-        //     minority_status: Boolean(updatedStudent.minority_status),
-        //     ph_status: Boolean(updatedStudent.ph_status),
-        //     scribe_needed: Boolean(updatedStudent.scribe_needed),
-
-        //     // Handle date_of_birth
-        //     date_of_birth: updatedStudent.date_of_birth ? 
-        //         new Date(updatedStudent.date_of_birth)
-        //             .toLocaleDateString('en-GB', {
-        //                 day: '2-digit',
-        //                 month: '2-digit',
-        //                 year: 'numeric'
-        //             }).split('/').join('/') : null,
-        // };
-
-        // // Remove empty values
-        // Object.keys(cleanedStudent).forEach(key => {
-        //     if (cleanedStudent[key] === undefined || cleanedStudent[key] === null || cleanedStudent[key] === '') {
-        //         delete cleanedStudent[key];
-        //     }
-        // });
-
-        console.log('Sending student data hii:', updatedStudent);
-        console.log('Scores :',updatedStudent.twelfth_subject_scores);
-
+            
         const response = await fetch(`http://localhost:8000/student/${updatedStudent.id}`, {
             method: 'PUT',
             headers: {

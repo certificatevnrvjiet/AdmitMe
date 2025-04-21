@@ -1,5 +1,5 @@
 from database import db
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from models.FormModel import FormModel
 from models.StudentModel import Student
@@ -11,6 +11,12 @@ from datetime import datetime  # Import datetime for date conversion
 from google.cloud import firestore
 from google.cloud.firestore import SERVER_TIMESTAMP
 from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
+import uvicorn
+from jose import JWTError, jwt
+
+
 
 # Add this model class at the top with other imports
 class DateTest(BaseModel):
@@ -18,6 +24,10 @@ class DateTest(BaseModel):
     description: str = "Test date entry"
 
 app = FastAPI()
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 10
 
 print("Started")
 # Add after FastAPI initialization
@@ -28,6 +38,53 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+fake_users_db = {
+    "admin@vnrvjiet.in": {
+        "username": "admin@vnrvjiet.in",
+        "password": "adminpass",
+        "role": "admin",
+    },
+    "normal_user": {
+        "username": "normal_user",
+        "password": "userpass",
+        "role": "user",
+    }
+}
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Helper to verify user credentials
+def authenticate_user(username: str, password: str):
+    user = fake_users_db.get(username)
+    if not user or user["password"] != password:
+        return None
+    return user
+
+# Create JWT token
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        role: str = payload.get("role")
+        if username is None or role is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    return {"username": username, "role": role}
 
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
@@ -296,3 +353,67 @@ async def test_date_handling(data: DateTest):
             status_code=500,
             detail=f"Error storing date: {str(e)}"
         )
+
+
+@app.post("/token")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    print(form_data)
+    user = authenticate_user(form_data.username, form_data.password)
+    print(form_data.username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token_data = {
+        "sub": user["username"],
+        "role": user["role"]
+    }
+    access_token = create_access_token(
+        data=token_data,
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    print(access_token)
+    return {"access_token": access_token, "token_type": "bearer", "role": user["role"]}
+
+
+@app.get("/api/verify-token")
+def verify_token(token: str = Depends(oauth2_scheme)):
+    try:
+        # Decode and verify the token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        # Check expiration
+        exp = payload.get("exp")
+        if not exp or datetime.fromtimestamp(exp) < datetime.utcnow():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+            )
+        
+        # Return user details along with validation status
+        return {
+            "valid": True,
+            "user": payload.get("sub"),
+            "role": payload.get("role"),
+            "expires": datetime.fromtimestamp(exp).isoformat()
+        }
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Token validation error: {str(e)}"
+        )
+    
+@app.get("/me")
+def read_users_me(current_user: dict = Depends(get_current_user)):
+    return {"message": current_user['username'],"role":current_user['role']}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
