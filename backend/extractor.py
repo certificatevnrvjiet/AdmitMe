@@ -1,6 +1,9 @@
 import re
 from GoogleAuthService import download_image_from_drive,process_image_with_gemini
 import json
+# import gspread
+# from oauth2client.service_account import ServiceAccountCredentials
+
 
 prompt_SSC = '''Extract the following structured data from the image:
 Candidate Name: Name of the candidate
@@ -21,6 +24,41 @@ identification_marks2: Identification marks (if any)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.'''
 
+
+
+prompt_IGCSE_Inter = '''Extract the following structured data from the image:
+Board Name: AS Level or IGCSE
+Hall Ticket Number: Centre/Candidate number
+Max Marks: 400
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are maths as M4, physics as P2, chemistry as C2, do not read anything else] and scores as values)
+Total Marks: sum of all subject scores
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
+Month_Passing: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+prompt_ISC_Inter = '''Extract the following structured data from the image:
+Board Name: ISC 
+Hall Ticket Number: Candidate ID
+Max Marks: 500
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are maths as M4, physics as P2, chemistry as C2, do not read anything else] and scores as values)
+Total Marks: sum of all subject scores
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
+Month_Passing: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+prompt_CBSE_Inter=''' Extract the following structured data from the image:
+Board Name: CBSE
+Hall Ticket Number: Hall ticket or roll number
+Max Marks: 500
+Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
+Month_year: Month and year of passing (e.g., March 2020)
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are MATHS , PHYSICS , CHEMISTRY thats it no more needed] and scores as values)
+Total Marks: Total marks obtained(Sum of all 5 subjects) '''
+
 prompt_uidai = '''Extract the following structured data from the image:
 Number: Number of the Aadhar card
 Gender: Male/Female /Others
@@ -34,7 +72,6 @@ prompt_jee_and_eamcet = '''Extract the following structured data from the image:
 HT Number: Hall ticket number 
 Rank : Rank obtained
 
-
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
 
@@ -45,21 +82,8 @@ Religion: Religion of the student
 College Name: Name of the college
 Caste as per TC: Caste as per the Transfer Certificate (TC)
 
-
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
-
-prompt_Inter_CBSE="""''Extract the following structured data from the image:
-Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
-Hall Ticket Number: Hall ticket or roll number
-Max Marks: 500
-Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
-Month_year: Month and year of passing (e.g., March 2020)
-Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are MATHS , PHYSICS , CHEMISTRY thats it no more needed] and scores as values)
-Total Marks: Total marks obtained(Sum of all 5 subjects)
-
-Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
-just Dictionary no other stuff. """
 
 prompt_SSC_Inter = '''Extract the following structured data from the image:
 Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
@@ -73,7 +97,8 @@ Month_year: Month and year of passing (e.g., March 2020)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC,prompt_Inter_CBSE,prompt_SSC_Inter]
+
+prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
 
 def extract(linkstr,prompt):
     file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
@@ -88,6 +113,19 @@ def extract(linkstr,prompt):
 
 
 #sample links
+
+# responses = sheet.get_all_records()
+
+# for response in responses:
+#     board = response['12th Board']
+#     if board == 'State':
+#         extract(response['12th Marksheet'],prompt_SSC_Inter)
+#     elif board == 'AS and A Level':
+#         extract(response['12th Marksheet'],prompt_IGCSE_Inter)
+#     elif board == 'ISC':
+#         extract(response['12th Marksheet'],prompt_ISC_Inter)
+#     elif board == 'CBSE':
+#         extract(response['12th Marksheet'],prompt_CBSE_Inter)
 
 # extract("https://drive.google.com/open?id=1l52UOx3MHSZwO2VKhV1VtrDkLJ60ZIl1",prompt_SSC)
 

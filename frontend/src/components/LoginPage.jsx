@@ -1,71 +1,44 @@
-import React, { useState } from "react";
+import { useState, useContext , useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import API from "../api"; // Adjust the import path as necessary
+import { useAuth, AuthContext } from "../auth/AuthContext";
+
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
+  const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const { isAuthenticated } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+
+      console.log("User is already authenticated, redirecting to dashboard...",isAuthenticated);
+      navigate("/dashboard"); // or any other route you want
+    }
+  }, [isAuthenticated, navigate]);
+
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    const form = new URLSearchParams();
+    form.append("username", username);
+    form.append("password", password);
+    // console.log(username);
 
-    // Check if email and password are provided
-    if (!email || !password) {
-      setError("Please enter both email and password");
-      return;
-    }
-
-    // Check if it's a valid email
-    if (!email.includes('@')) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    // Check if it's admin
-    if (email === "admin@vnrvjiet.in" && password === "admin123") {
-      navigate('/dashboard/admin');
-      return;
-    }
-
-    // Extract domain from email
-    const domain = email.split('@')[1];
-    
-    // Check if it's a valid VNRVJIET email
-    if (domain !== 'vnrvjiet.in') {
-      setError("Please use your VNRVJIET email");
-      return;
-    }
-
-    // Extract department from email
-    const username = email.split('@')[0];
-    let department = '';
-
-    if (username.includes('cse')) {
-      department = 'cse';
-    } else if (username.includes('ece')) {
-      department = 'ece';
-    } else if (username.includes('eee')) {
-      department = 'eee';
-    } else if (username.includes('mech')) {
-      department = 'mech';
-    } else if (username.includes('civil')) {
-      department = 'civil';
-    }
-
-    if (!department) {
-      setError("Invalid department email");
-      return;
-    }
-
-    // For demo purposes, using a simple password check
-    if (password === "password123") {
-      navigate(`/dashboard/${department}`);
-    } else {
-      setError("Invalid credentials");
+    try {
+      const res = await API.post("/token", form);
+      console.log("Login successful:", res.data);
+      login(res.data.access_token, res.data.role); // Assuming the token contains the role
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Login failed:", err);
+      alert("Invalid credentials");
     }
   };
 
@@ -85,7 +58,7 @@ const LoginPage = () => {
             {error}
           </div>
         )}
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
@@ -95,8 +68,8 @@ const LoginPage = () => {
                 id="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'} rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
                 placeholder="Email address"
               />

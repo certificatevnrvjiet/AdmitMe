@@ -5,6 +5,8 @@ dist-ssr/
 *.local
 .vite/
 
+frontend/.env.local
+
 # Logs
 logs
 *.log
@@ -63,3 +65,4 @@ credentials.json
 token.pickle
 drive_token.pickle
 *.json
+myenv/
