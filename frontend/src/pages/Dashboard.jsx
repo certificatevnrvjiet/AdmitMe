@@ -1,7 +1,7 @@
 import React from 'react';
 import { IoSearchSharp } from "react-icons/io5";
 import { IoArrowUp, IoArrowDown } from "react-icons/io5";
-import { students } from '../assets/Studentsdata.json';
+import { students } from '../assets/Students.json';
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
