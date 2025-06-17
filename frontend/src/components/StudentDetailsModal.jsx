@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { IoClose } from 'react-icons/io5';
 import { FiEdit2, FiSave } from 'react-icons/fi';
-<<<<<<< HEAD
 import { students } from '../assets/Students.json';
-=======
->>>>>>> 9cba563d71801145b9ec60c661bd266f8d407cab
 
 const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const { isDarkMode } = useTheme();

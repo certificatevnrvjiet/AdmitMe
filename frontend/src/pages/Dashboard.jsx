@@ -1,17 +1,11 @@
-import React from 'react';
-import { IoSearchSharp } from "react-icons/io5";
-import { IoArrowUp, IoArrowDown } from "react-icons/io5";
-import { students } from '../assets/Students.json';
-import { useState } from 'react';
-import { useState, useContext , useEffect } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { IoSearchSharp, IoArrowUp, IoArrowDown } from "react-icons/io5";
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
 import { AuthContext } from "../auth/AuthContext";
-import { Navigate } from 'react-router-dom';
-import API from '../api';
+// import API from '../api'
 
 
 
