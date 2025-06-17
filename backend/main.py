@@ -406,7 +406,7 @@ def verify_token(token: str = Depends(oauth2_scheme)):
     
 @app.get("/me")
 def read_users_me(current_user: dict = Depends(get_current_user)):
-    return {"message": current_user['username'],"role":current_user['role']}
+    return {"User": current_user['username'],"role":current_user['role']}
 
 
 if __name__ == "__main__":
