@@ -17,12 +17,6 @@ import uvicorn
 from jose import JWTError, jwt
 
 
-
-# Add this model class at the top with other imports
-class DateTest(BaseModel):
-    test_date: str
-    description: str = "Test date entry"
-
 app = FastAPI()
 
 SECRET_KEY = "your-secret-key"

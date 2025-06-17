@@ -24,8 +24,6 @@ identification_marks2: Identification marks (if any)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.'''
 
-
-
 prompt_IGCSE_Inter = '''Extract the following structured data from the image:
 Board Name: AS Level or IGCSE
 Hall Ticket Number: Centre/Candidate number
@@ -38,6 +36,7 @@ Month_Passing: Month and year of passing (e.g., March 2020)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
+
 prompt_ISC_Inter = '''Extract the following structured data from the image:
 Board Name: ISC 
 Hall Ticket Number: Candidate ID
@@ -50,6 +49,7 @@ Month_Passing: Month and year of passing (e.g., March 2020)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
+
 prompt_CBSE_Inter=''' Extract the following structured data from the image:
 Board Name: CBSE
 Hall Ticket Number: Hall ticket or roll number

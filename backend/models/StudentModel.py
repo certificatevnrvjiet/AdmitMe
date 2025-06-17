@@ -1,92 +1,80 @@
-from pydantic import BaseModel, EmailStr, constr
-from typing import Optional, Dict
+from typing import Optional
+from pydantic import BaseModel
 
-class Student(BaseModel):
-    # Basic Info
-    student_id: Optional[str] = ""
-    degree_code: Optional[str] = ""
-    hall_ticket_no: Optional[str] = ""
-    name: Optional[str] = ""
-    father_name: Optional[str] = ""
-    mother_name: Optional[str] = ""
-    date_of_birth: Optional[str] = ""
-    gender: Optional[str] = ""
-    identification_mark_1: Optional[str] = ""
-    identification_mark_2: Optional[str] = ""
-    
-    # 10th Details
-    tenth_board_name: Optional[str] = ""
-    tenth_school_name: Optional[str] = ""
-    tenth_hall_ticket_no: Optional[str] = ""
-    tenth_max_marks: Optional[str] = ""
-    tenth_total_marks: Optional[str] = ""
-    tenth_percentage: Optional[str] = ""
-    tenth_month_year: Optional[str] = ""
-    
-    # 12th Details
-    twelfth_board_name: Optional[str] = ""
-    twelfth_college_name: Optional[str] = ""
-    twelfth_hall_ticket_no: Optional[str] = ""
-    twelfth_max_marks: Optional[str] = ""
-    twelfth_total_marks: Optional[str] = ""
-    twelfth_percentage: Optional[str] = ""
-    twelfth_subject_scores: Optional[Dict[str, int]] = {}  # Changed to Dict[str, str
-    twelfth_month_year: Optional[str] = ""
-    
-    # Entrance Exams
-    eamcet_hall_ticket_no: Optional[str] = ""
-    eamcet_rank: Optional[str] = ""
-    jee_hall_ticket_no: Optional[str] = ""
-    jee_mains_rank: Optional[str] = ""
-    
-    # Personal Info
-    aadhaar_card_number: Optional[str] = ""
-    mother_tongue: Optional[str] = ""
-    student_phone_no: Optional[str] = ""
-    parent_phone_no: Optional[str] = ""
-    vnr_email: Optional[str] = ""  # Changed from EmailStr
-    student_email: Optional[str] = ""  # Changed from EmailStr
-    parent_email: Optional[str] = ""  # Changed from EmailStr
-    
-    # Reservation & Category
-    reservation: Optional[str] = ""  # Changed from bool
-    category_name: Optional[str] = ""
-    caste_as_per_tc: Optional[str] = ""
-    ebc_status: Optional[str] = ""  # Changed from bool
-    ews_status: Optional[str] = ""  # Changed from bool
-    income: Optional[str] = ""  # Changed from int
-    
-    # Medical & Nationality
-    blood_group: Optional[str] = ""
-    nationality: Optional[str] = ""
-    religion: Optional[str] = ""
-    minority_status: Optional[str] = ""  # Changed from bool
-    
-    # Address
-    address_door_no: Optional[str] = ""
-    address_street: Optional[str] = ""
-    address_village_town: Optional[str] = ""
-    address_mandal: Optional[str] = ""
-    address_district: Optional[str] = ""
-    address_state: Optional[str] = ""
-    address_pincode: Optional[str] = ""
-    rural_urban: Optional[str] = ""
-    
-    # College Details
-    admission_category: Optional[str] = ""
-    section: Optional[str] = ""
-    branch_code: Optional[str] = ""
-    college_code: Optional[str] = ""
-    
-    # Special Status
-    ph_status: Optional[str] = ""  # Changed from bool
-    scribe_needed: Optional[str] = ""  # Changed from bool
-
-    # Verification Status
-    Status: Optional[str] = ""
-    tenth_memo_link: Optional[str] = ""
-    twelfth_memo_link: Optional[str] = ""
-    aadhaar_card_link: Optional[str] = ""
-    eamcet_link: Optional[str] = ""
-    jee_link: Optional[str] = ""
-    tc_link: Optional[str] = ""
+class StudentAdmission(BaseModel):
+    degree_code: Optional[str] = None
+    ht_no: Optional[str] = None
+    student_name: Optional[str] = None
+    father_name: Optional[str] = None
+    mother_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    identification_mark_1: Optional[str] = None
+    identification_mark_2: Optional[str] = None
+    tenth_board_name: Optional[str] = None
+    tenth_school_name: Optional[str] = None
+    tenth_ht_no: Optional[str] = None
+    tenth_maximum_marks: Optional[str] = None
+    tenth_total_marks_cgpa: Optional[str] = None
+    tenth_percentage: Optional[str] = None
+    tenth_month_year: Optional[str] = None
+    twelfth_board_name: Optional[str] = None
+    twelfth_college_name: Optional[str] = None
+    twelfth_ht_no: Optional[str] = None
+    twelfth_maximum_marks: Optional[str] = None
+    twelfth_total_marks_cgpa: Optional[str] = None
+    twelfth_percentage: Optional[str] = None
+    m1: Optional[str] = None
+    m2: Optional[str] = None
+    m3: Optional[str] = None
+    m4: Optional[str] = None
+    p1: Optional[str] = None
+    p2: Optional[str] = None
+    ch1: Optional[str] = None
+    ch2: Optional[str] = None
+    plab: Optional[str] = None
+    chlab: Optional[str] = None
+    total: Optional[str] = None
+    twelfth_groups_percentage: Optional[str] = None
+    twelfth_month_year: Optional[str] = None
+    eapcet_ht_no: Optional[str] = None
+    eapcet_rank: Optional[str] = None
+    jee_ht_no: Optional[str] = None
+    jee_mains_rank: Optional[str] = None
+    aadhaar_card_number: Optional[str] = None
+    mother_tongue: Optional[str] = None
+    student_phone: Optional[str] = None
+    parent_phone: Optional[str] = None
+    vnr_email: Optional[str] = None
+    student_email: Optional[str] = None
+    parent_email: Optional[str] = None
+    reservation: Optional[str] = None
+    category_name: Optional[str] = None
+    caste_as_per_tc: Optional[str] = None
+    ebc_status: Optional[str] = None
+    ews_status: Optional[str] = None
+    income: Optional[str] = None
+    blood_group: Optional[str] = None
+    nationality: Optional[str] = None
+    religion: Optional[str] = None
+    minority: Optional[str] = None
+    address_dno: Optional[str] = None
+    address_street: Optional[str] = None
+    address_village_town: Optional[str] = None
+    address_mandal: Optional[str] = None
+    address_district: Optional[str] = None
+    address_state: Optional[str] = None
+    address_pincode: Optional[str] = None
+    rural_urban: Optional[str] = None
+    admission_category: Optional[str] = None
+    section: Optional[str] = None
+    branch_code: Optional[str] = None
+    college_code: Optional[str] = None
+    ph_status: Optional[str] = None
+    scribe: Optional[str] = None
+    aadhaar_link: Optional[str] = None
+    transfer_certificate_link: Optional[str] = None
+    tenth_memo_link: Optional[str] = None
+    twelfth_memo_link: Optional[str] = None
+    jee_rank_card_link: Optional[str] = None
+    eapcet_rank_card_link: Optional[str] = None
