@@ -1,8 +1,10 @@
 import re
-from GoogleAuthService import download_image_from_drive,process_image_with_gemini
+from GoogleService import download_image_from_drive,process_image_with_gemini
 import json
-# import gspread
-# from oauth2client.service_account import ServiceAccountCredentials
+from tenacity import retry, stop_after_attempt, wait_exponential
+import asyncio
+import logging
+import time
 
 
 prompt_SSC = '''Extract the following structured data from the image:
@@ -56,7 +58,7 @@ Hall Ticket Number: Hall ticket or roll number
 Max Marks: 500
 Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
 Month_year: Month and year of passing (e.g., March 2020)
-Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are MATHS , PHYSICS , CHEMISTRY thats it no more needed] and scores as values)
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are 'MATHS' , 'PHYSICS' , 'CHEMISTRY' thats it no more needed] and scores as values)
 Total Marks: Total marks obtained(Sum of all 5 subjects) '''
 
 prompt_uidai = '''Extract the following structured data from the image:
@@ -76,11 +78,9 @@ Please return the result in Dictionary format with exact field names as mentione
 just Dictionary no other stuff.'''
 
 prompt_TC = '''Extract the following structured data from the image:
-Mother Tongue: Mother tongue of the student(Give Only one)
 Nationality: Nationality of the student
 Religion: Religion of the student
 College Name: Name of the college
-Caste as per TC: Caste as per the Transfer Certificate (TC)
 
 Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
 just Dictionary no other stuff.'''
@@ -100,17 +100,38 @@ just Dictionary no other stuff.
 
 prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
 
-def extract(linkstr,prompt):
-    file_id_match = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
-    image_bytes = download_image_from_drive(file_id_match)
-    gemini_response = json.loads(process_image_with_gemini(image_bytes, prompt).split("```")[1][5:])
-    # print(f"Gemini Response for {file_id_match}: {gemini_response}")
-        # data_dict = json.loads(response.text.split("```")[1][5:])\
-    # for i in gemini_response:
-    #     print(f"{i}: {gemini_response[i]}")
 
-    return gemini_response
 
+
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
+async def extract(linkstr: str, prompt: str, drive_service) -> dict:
+    """Process single image with retry logic"""
+    try:
+        # Extract Google Drive file ID
+        # await rate_limited()
+        file_id = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
+        
+        # Download image
+        image_bytes = await download_image_from_drive(file_id,drive_service)
+        if not image_bytes:
+            raise ValueError("Empty image data from Drive")
+        
+        # Process with Gemini
+        response_text = await asyncio.to_thread(
+            process_image_with_gemini, 
+            image_bytes, 
+            prompt
+        )
+        
+        # Parse response
+        # print(f"\n\nResponse from Gemini: {response_text}\n\n")
+        return json.loads(response_text.split("```")[1][5:])
+    
+    except Exception as e:
+        logging.error(f"Extract failed: {linkstr} - {str(e)}")
+        return {"error": str(e), "link": linkstr}
 
 #sample links
 
