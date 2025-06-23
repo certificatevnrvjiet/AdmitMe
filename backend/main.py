@@ -39,9 +39,9 @@ app = FastAPI(lifespan=lifespan)
 
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:3000", FRONTEND_URL ]
+ORIGINS = ["http://localhost:5173", FRONTEND_URL ]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -66,8 +66,79 @@ fake_users_db = {
         "username": "normal_user",
         "password": "userpass",
         "role": "user",
+    },
+    "aidsadmin": {
+        "username": "aidsadmin",
+        "password": "aidspass",
+        "role": "aids"
+    },
+    "aeadmin": {
+        "username": "aeadmin",
+        "password": "aepass",
+        "role": "ae"
+    },
+    "ceadmin": {
+        "username": "ceadmin",
+        "password": "cepass",
+        "role": "ce"
+    },
+    "csbsadmin": {
+        "username": "csbsadmin",
+        "password": "csbspass",
+        "role": "csbs"
+    },
+    "cseadmin": {
+        "username": "cseadmin",
+        "password": "csepass",
+        "role": "cse"
+    },
+    "amladmin": {
+        "username": "amladmin",
+        "password": "amlpass",
+        "role": "aml"
+    },
+    "csedsadmin": {
+        "username": "csedsadmin",
+        "password": "csedspass",
+        "role": "cseds"
+    },
+    "csecysadmin": {
+        "username": "csecysadmin",
+        "password": "csecyspass",
+        "role": "csecys"
+    },
+    "cseiotadmin": {
+        "username": "cseiotadmin",
+        "password": "cseiotpass",
+        "role": "cseiot"
+    },
+    "eeeadmin": {
+        "username": "eeeadmin",
+        "password": "eeepass",
+        "role": "eee"
+    },
+    "eceadmin": {
+        "username": "eceadmin",
+        "password": "ecepass",
+        "role": "ece"
+    },
+    "eieadmin": {
+        "username": "eieadmin",
+        "password": "eiepass",
+        "role": "eie"
+    },
+    "itadmin": {
+        "username": "itadmin",
+        "password": "itpass",
+        "role": "it"
+    },
+    "meadmin": {
+        "username": "meadmin",
+        "password": "mepass",
+        "role": "me"
     }
 }
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -105,11 +176,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 
-async def process_student(student_data: SheetStudent, app: FastAPI):
+async def process_student(student_data: SheetStudent, branch: str, app: FastAPI):
     """Process 6 extract calls in parallel for one subtask"""
     print("\n\nstarted processing student", student_data.name_of_the_student)
     student_data=Student.from_flat_student(student_data)
-    
+    student_data.degree_code = branch.upper()
+    student_data.branch_code = branch.upper()
+    student_data.status="Not Viewed"
     board = student_data.twelfth_board_name
     print("Processing board:", board)
     prompt = prompts[4]  # Default prompt for most boards
@@ -131,24 +204,30 @@ async def process_student(student_data: SheetStudent, app: FastAPI):
             extract(link, prompt, app.state.drive_service)
             for link, prompt in links_prompts
         ], return_exceptions=True)
-        student_data.tenth_school_name = results[0].get("tenth_school_name", "")
-        student_data.identification_mark_1 = results[0].get("identification_marks1", "")
-        student_data.identification_mark_2 = results[0].get("identification_marks2", "")
-        student_data.tenth_ht_no = results[0].get("tenth_hall_ticket_no", "")
-        student_data.tenth_maximum_marks = results[0].get("tenth_max_marks/CGPA", "")
-        student_data.tenth_total_marks_cgpa = results[0].get("tenth_total_marks/CGPA", "")
-        student_data.tenth_month_year = results[0].get("tenth_month_year", "")
-        student_data.twelfth_college_name = results[2].get("College Name", "")
-        student_data.twelfth_ht_no= results[1].get("Hall Ticket Number", "")
-        student_data.twelfth_maximum_marks = results[1].get("Max Marks", "")
-        student_data.twelfth_total_marks = results[1].get("Total Marks", "")
-        student_data.twelfth_month_year = results[1].get("Month_year", "")
-        student_data.nationality = results[2].get("Nationality", "")
-        student_data.religion = results[2].get("Religion", "")
+        student_data.tenth_school_name = str(results[0].get("tenth_school_name") or "")
+        student_data.identification_mark_1 = str(results[0].get("identification_marks1") or "")
+        student_data.identification_mark_2 = str(results[0].get("identification_marks2") or "")
+        student_data.tenth_ht_no = str(results[0].get("tenth_hall_ticket_no") or "")
+        student_data.tenth_maximum_marks = str(results[0].get("tenth_max_marks/CGPA") or "")
+        student_data.tenth_total_marks_cgpa = str(results[0].get("tenth_total_marks/CGPA") or "")
+        student_data.tenth_month_year = str(results[0].get("tenth_month_year") or "")
+        student_data.twelfth_college_name = str(results[2].get("College Name") or "")
+        student_data.twelfth_ht_no = str(results[1].get("Hall Ticket Number") or "")
+        student_data.twelfth_maximum_marks = str(results[1].get("Max Marks") or "")
+        student_data.twelfth_total_marks = str(results[1].get("Total Marks") or "")
+        student_data.twelfth_month_year = str(results[1].get("Month_year") or "")
+        student_data.nationality = str(results[2].get("Nationality") or "")
+        student_data.religion = str(results[2].get("Religion") or "")
+
         # Convert exceptions to error objects
         print("Processing student:", student_data.model_dump_json(indent=2))
-        for i in results:
-            print(i)
+        student_dict = student_data.model_dump()
+
+        # Insert into Supabase
+        response = supabase.table("students").insert(student_dict).execute()
+
+        # Print the response
+        print("Insert response:", response)
 
 
 
@@ -159,18 +238,24 @@ async def sync(task_id: str, params: dict , app: FastAPI):
     try:
         # Update to processing status
         supabase.table("tasks").update({"status": "processing"}).eq("id", task_id).execute()
+        aadhaar_cards=supabase.table("students").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
         result = supabase.table('degree_code_counts').select('*').execute().data
         d={}
         for i in result:
             d[i['DEGREE_CODE']] = i['student_count']
         count_students_synced = d.get(params["branch"], 0)
         sheets_service=app.state.sheets_service
-        RANGE=f'{params["branch"]}!B{count_students_synced + 2}:BS4'
+        RANGE=f'{params["branch"]}!B2:BS1000'
         data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
+        # print("Data from sheets:", data_from_sheets[].index("557119422790"))
+        aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
+        print("\naadhaar cards in db",aadhaar_cards)
 
+        data_from_sheets= [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
         # Prepare subtasks (60-150 groups of 6)
+        print("Data from sheets:", data_from_sheets)
         no_of_students = len(data_from_sheets)
-        
+        # print(data_from_sheets["n"])
         # Process with concurrency control
         for i, student in enumerate(data_from_sheets):
             row = student
@@ -178,7 +263,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             flatstudent_dict = dict(zip(field_names, row))
             student = SheetStudent(**flatstudent_dict)
             async with SUBTASK_SEMAPHORE:
-                subtask_result = await process_student(student, app)
+                subtask_result = await process_student(student, params["branch"], app)
                 
                 # Update progress every 10% of tasks
                 if (i + 1) % max(1, no_of_students // 10) == 0:
@@ -203,7 +288,19 @@ async def sync(task_id: str, params: dict , app: FastAPI):
 
 
 @app.post("/sync/{branch}")
-async def start_syncing(branch: str, background_tasks: BackgroundTasks,request: Request):
+async def start_syncing(
+    branch: str, 
+    background_tasks: BackgroundTasks,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify if user has permission to sync this branch
+    if current_user["role"] != "admin" and current_user["role"] != branch:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to sync this branch"
+        )
+
     task_id = str(uuid4())
     
     # Initialize task in database
@@ -280,9 +377,50 @@ def verify_token(token: str = Depends(oauth2_scheme)):
             detail=f"Token validation error: {str(e)}"
         )
     
+
+@app.get("/students")
+async def get_students():
+    try:
+        response = supabase.table("students").select("*").execute()
+        return {"students": response.data}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.put("/student/{aadhaar_card_number}")
+def update_student(aadhaar_card_number: str, updated_student: Student):
+    # Convert to dict
+    student_dict = updated_student.model_dump()
+    print("student_dict", student_dict)
+    # Update in Supabase
+    try:
+        response = supabase.table("students").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
+        if response.data:
+            return {"message": "Student updated successfully", "data": response.data}
+        else:
+            raise HTTPException(status_code=404, detail="Student not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.get("/me")
 def read_users_me(current_user: dict = Depends(get_current_user)):
     return {"User": current_user['username'],"role":current_user['role']}
+
+@app.get("/students/{department}")
+async def get_students_by_department(department: str):
+    try:
+        if department.lower() == "admin":
+            response = supabase.table("students").select("*").execute()
+        else:
+            # Try both degree_code and branch_code for compatibility
+            response = supabase.table("students").select("*") \
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
+                .execute()
+        return {"students": response.data}
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

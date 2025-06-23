@@ -27,6 +27,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const handleSave = async () => {
         try {
             setIsSaving(true);
+            console.log('Saving student:', editedStudent.aadhaar_card_number);
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
@@ -73,18 +74,19 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'personal':
                 return (
                     <div className="space-y-4">
-                        {renderField('Student ID', 'student_id', 'text')}
-                        {renderField('Name', 'name')}
+                        {renderField('Student ID', 'ht_no', 'text')}
+                        {renderField('Name', 'student_name')}
                         {renderField('Father Name', 'father_name')}
                         {renderField('Mother Name', 'mother_name')}
                         {renderField('Date of Birth', 'date_of_birth')}
                         {renderField('Gender', 'gender')}
                         {renderField('Blood Group', 'blood_group')}
-                        {renderField('Nationality', 'nationality')}
-                        {renderField('Religion', 'religion')}
+                        {renderField('Nationality', 'Nationality')}
+                        {renderField('Religion', 'Religion')}
                         {renderField('Mother Tongue', 'mother_tongue')}
                         {renderField('Identification Mark 1', 'identification_mark_1')}
                         {renderField('Aadhaar Number', 'aadhaar_card_number')}
+                        {/* aadhaar_card_number */}
                     </div>
                 );
             case 'academic':
@@ -175,7 +177,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         }`}
                     >
                         <h3 className={`text-xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Student Details - {editedStudent.name}
+                            Student Details - {editedStudent.student_name}
                         </h3>
                         <div className="flex items-center space-x-2">
                             {!isEditing && (

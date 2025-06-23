@@ -34,6 +34,7 @@ const verifyToken = async (token) => {
 
 // ✅ Auth Provider Component
 export const AuthProvider = ({ children }) => {
+  console.log("AuthProvider initialized");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [role, setRole] = useState(null);
   const [token, setToken] = useState(null);

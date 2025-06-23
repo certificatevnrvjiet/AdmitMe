@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
 import { AuthContext } from "../auth/AuthContext";
-// import API from '../api'
+import API from '../api'
 
 
 
@@ -25,11 +25,14 @@ const Dashboard = () => {
   const { isAuthenticated, role: userRole } = useContext(AuthContext);
   const navigate = useNavigate();
   const [department, setdepartment] = useState("");
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const total_students_processed = students.length; // Assuming this is the total count of students fetched
 
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/students', {
+      const response = await fetch(`http://localhost:8000/students/${department}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +46,7 @@ const Dashboard = () => {
       const data = await response.json();
       // console.log('Data:', data); // Debugging line
       setStudents(data.students || []);
-      // console.log('Fetched students:', data.students);
+      console.log('Fetched students:', data.students);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching students:', err);
@@ -59,18 +62,22 @@ const Dashboard = () => {
       return <Navigate to="/" replace />;
     }
     API.get('/me')
-      .then(res => {setUser(res.data);
-
+      .then(res => {
+         setUser(res.data);
          setdepartment(res.data.role);
         })
       .catch(() => setUser(null));
-    fetchStudents();
-  }, []);
+  }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (department) {
+      fetchStudents();
+    }
+  }, [department]);
 
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
-
+  console.log('Student List:', studentList); // Debugging line
   // Sort logic (based on name)
   const sortData = (data) => {
     return [...data].sort((a, b) => {
@@ -79,16 +86,19 @@ const Dashboard = () => {
       return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   };
-
+  console.log('Student List 22:', studentList);
   // Filter students by department, search term, and status
   const filteredStudents = sortData(
     studentList.filter((s) => {
-      const matchesSearch = s.name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDepartment = department === 'admin' ? true : s.department === department;
+      const matchesSearch = s.student_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDepartment = department === 'admin' ? true : s.branch_code?.toLowerCase() === department;
       const matchesStatus = statusFilter === 'all' ? true : s.status?.toLowerCase() === statusFilter;
       return matchesSearch && matchesDepartment && matchesStatus;
     })
   );
+
+  console.log('Student List 33:', filteredStudents);
+
 
   const getDepartmentName = (dept) => {
     const deptNames = {
@@ -139,7 +149,7 @@ const Dashboard = () => {
   const handleSaveStudent = async (updatedStudent) => {
     try {
             
-        const response = await fetch(`http://localhost:8000/student/${updatedStudent.id}`, {
+        const response = await fetch(`http://localhost:8000/student/${updatedStudent.aadhaar_card_number}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -156,7 +166,7 @@ const Dashboard = () => {
         
         // Update local state
         setStudents(students.map(student => 
-            student.id === updatedStudent.id ? { ...student, ...updatedStudent  } : student
+            student.aadhaar_card_number === updatedStudent.aadhaar_card_number ? { ...student, ...updatedStudent  } : student
         ));
         
         console.log('Student updated successfully:', result);
@@ -164,6 +174,45 @@ const Dashboard = () => {
     } catch (error) {
         console.error('Error updating student:', error);
         alert(error.message || 'Failed to update student details. Please try again.');
+    }
+  };
+
+  // Handler for syncing students
+  const handleSyncStudents = async () => {
+    setSyncStatus(null);
+    setSyncLoading(true);
+    try {
+      // Get token from localStorage or AuthContext
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setSyncStatus('Not authenticated. Please login.');
+        setSyncLoading(false);
+        return;
+      }
+      // Use department as branch (skip if admin)
+      const branch = department;
+      if (!branch || branch === 'admin') {
+        setSyncStatus('Please select a department to sync.');
+        setSyncLoading(false);
+        return;
+      }
+      const response = await fetch(`http://localhost:8000/sync/${branch}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Sync failed');
+      }
+      const data = await response.json();
+      setSyncStatus(`Sync started! Task ID: ${data.task_id}`);
+    } catch (err) {
+      setSyncStatus(`Error: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -203,7 +252,7 @@ const Dashboard = () => {
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               {getDepartmentName(department)} Department Dashboard
             </h2>
-            <div className="relative">
+            {/* <div className="relative">
               <select
                 onChange={handleDepartmentChange}
                 className={`appearance-none bg-transparent border ${
@@ -224,7 +273,7 @@ const Dashboard = () => {
                 }`}
                 size={20}
               />
-            </div>
+            </div> */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -233,6 +282,16 @@ const Dashboard = () => {
               <div className="p-6">
                 <h3 className="text-lg font-medium text-indigo-400 mb-4">Quick Actions</h3>
                 <div className="space-y-4">
+                  <button
+                    className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'} ${syncLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={handleSyncStudents}
+                    disabled={syncLoading}
+                  >
+                    {syncLoading ? 'Syncing...' : 'Sync Students'}
+                  </button>
+                  {syncStatus && (
+                    <div className="text-sm mt-2 text-indigo-400">{syncStatus}</div>
+                  )}
                   <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Verify New Student</button>
                   <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>View Pending Verifications</button>
                   <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Generate Reports</button>
@@ -245,9 +304,9 @@ const Dashboard = () => {
               <div className="p-6">
                 <h3 className="text-lg font-medium text-indigo-400 mb-4">Verification Statistics</h3>
                 <div className="space-y-4">
-                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Pending Verifications</span><span className="text-indigo-400 font-semibold">25</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Pending Verifications</span><span className="text-indigo-400 font-semibold">{total_students_processed}</span></div>
                   <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Verified Today</span><span className="text-green-400 font-semibold">12</span></div>
-                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Total Processed</span><span className="text-indigo-400 font-semibold">150</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Total Processed</span><span className="text-indigo-400 font-semibold">{total_students_processed}</span></div>
                 </div>
               </div>
             </div>
@@ -309,18 +368,18 @@ const Dashboard = () => {
                   <tbody className={`divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
                     {filteredStudents.map((s) => (
                       <tr
-                        key={s.id}
+                        key={s.aadhaar_card_number}
                         className={`${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'} cursor-pointer`}
                         onClick={() => handleStudentClick(s)}
                       >
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_id}</td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.name}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            s.Status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
+                            s.status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
                             s.Status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
                             (isDarkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800")
-                          }`}>{s.Status}</span>
+                          }`}>{s.status}</span>
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>{s.branch_code}</td>
                       </tr>

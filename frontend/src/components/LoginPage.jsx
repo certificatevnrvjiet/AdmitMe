@@ -66,7 +66,7 @@ const LoginPage = () => {
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
