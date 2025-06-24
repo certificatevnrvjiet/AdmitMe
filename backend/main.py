@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from googleapiclient.discovery import build
 import asyncio
 import logging
+from typing import Optional
 
 
 @asynccontextmanager
@@ -150,7 +151,7 @@ def authenticate_user(username: str, password: str):
     return user
 
 # Create JWT token
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
@@ -165,8 +166,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        role: str = payload.get("role")
+        username = payload.get("sub")
+        role = payload.get("role")
         if username is None or role is None:
             raise credentials_exception
     except JWTError:
@@ -179,11 +180,11 @@ DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 async def process_student(student_data: SheetStudent, branch: str, app: FastAPI):
     """Process 6 extract calls in parallel for one subtask"""
     print("\n\nstarted processing student", student_data.name_of_the_student)
-    student_data=Student.from_flat_student(student_data)
-    student_data.degree_code = branch.upper()
-    student_data.branch_code = branch.upper()
-    student_data.status="Not Viewed"
-    board = student_data.twelfth_board_name
+    student = Student.from_flat_student(student_data)
+    student.degree_code = branch.upper()
+    student.branch_code = branch.upper()
+    student.status = "Not Viewed"
+    board = student.twelfth_board_name
     print("Processing board:", board)
     prompt = prompts[4]  # Default prompt for most boards
     if board in ("TG BIE", "AP BIE"):
@@ -195,33 +196,33 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
     elif board == "CBSE":
         prompt=prompts[7]
     links_prompts = [
-        (student_data.tenth_memo_link, prompts[0]),
-        (student_data.twelfth_memo_link, prompt),
-        (student_data.transfer_certificate_link, prompts[3]),
+        (student.tenth_memo_link, prompts[0]),
+        (student.twelfth_memo_link, prompt),
+        (student.transfer_certificate_link, prompts[3]),
     ]
     async with GEMINI_SEMAPHORE:
         results = await asyncio.gather(*[
             extract(link, prompt, app.state.drive_service)
-            for link, prompt in links_prompts
+            for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
-        student_data.tenth_school_name = str(results[0].get("tenth_school_name") or "")
-        student_data.identification_mark_1 = str(results[0].get("identification_marks1") or "")
-        student_data.identification_mark_2 = str(results[0].get("identification_marks2") or "")
-        student_data.tenth_ht_no = str(results[0].get("tenth_hall_ticket_no") or "")
-        student_data.tenth_maximum_marks = str(results[0].get("tenth_max_marks/CGPA") or "")
-        student_data.tenth_total_marks_cgpa = str(results[0].get("tenth_total_marks/CGPA") or "")
-        student_data.tenth_month_year = str(results[0].get("tenth_month_year") or "")
-        student_data.twelfth_college_name = str(results[2].get("College Name") or "")
-        student_data.twelfth_ht_no = str(results[1].get("Hall Ticket Number") or "")
-        student_data.twelfth_maximum_marks = str(results[1].get("Max Marks") or "")
-        student_data.twelfth_total_marks = str(results[1].get("Total Marks") or "")
-        student_data.twelfth_month_year = str(results[1].get("Month_year") or "")
-        student_data.nationality = str(results[2].get("Nationality") or "")
-        student_data.religion = str(results[2].get("Religion") or "")
+        student.tenth_school_name = safe_get(results[0], "tenth_school_name")
+        student.identification_mark_1 = safe_get(results[0], "identification_marks1")
+        student.identification_mark_2 = safe_get(results[0], "identification_marks2")
+        student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
+        student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
+        student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
+        student.tenth_month_year = safe_get(results[0], "tenth_month_year")
+        student.twelfth_college_name = safe_get(results[2], "College Name")
+        student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
+        student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
+        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
+        student.twelfth_month_year = safe_get(results[1], "Month_year")
+        student.nationality = safe_get(results[2], "Nationality")
+        student.religion = safe_get(results[2], "Religion")
 
         # Convert exceptions to error objects
-        print("Processing student:", student_data.model_dump_json(indent=2))
-        student_dict = student_data.model_dump()
+        print("Processing student:", student.model_dump_json(indent=2))
+        student_dict = student.model_dump()
 
         # Insert into Supabase
         response = supabase.table("students").insert(student_dict).execute()
@@ -230,7 +231,10 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         print("Insert response:", response)
 
 
-
+def safe_get(result, key):
+    if isinstance(result, Exception):
+        return ""
+    return str(result.get(key) or "")
 
 
 async def sync(task_id: str, params: dict , app: FastAPI):
@@ -251,7 +255,9 @@ async def sync(task_id: str, params: dict , app: FastAPI):
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
         print("\naadhaar cards in db",aadhaar_cards)
 
-        data_from_sheets= [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
+        if data_from_sheets is None:
+            data_from_sheets = []
+        data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
         # Prepare subtasks (60-150 groups of 6)
         print("Data from sheets:", data_from_sheets)
         no_of_students = len(data_from_sheets)
