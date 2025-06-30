@@ -10,6 +10,10 @@ from googleapiclient.errors import HttpError
 import asyncio
 from tenacity import retry, stop_after_attempt, wait_exponential
 import time
+import fitz  # PyMuPDF
+import mimetypes
+from google.auth.transport.requests import Request
+import os
 
 DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 
@@ -67,23 +71,44 @@ def read_google_sheet(service, spreadsheet_id, range_name):
         print(f"An unexpected error occurred: {e}")
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
-def download_drive_image_as_bytes(file_id, credentials):
-    """Downloads an image from Google Drive and returns it as bytes."""
+def download_drive_image_as_bytes(file_id, drive_service):
+    """Downloads an image or the first page of a PDF from Google Drive and returns it as PNG bytes."""
     try:
-        # service = build('drive', 'v3', credentials=credentials)
-        request = credentials.files().get_media(fileId=file_id)
+        # Get file metadata
+        file_metadata = drive_service.files().get(fileId=file_id, fields="mimeType, name").execute()
+        mime_type = file_metadata['mimeType']
+        file_name = file_metadata['name']
+        print(f"Downloading '{file_name}' with MIME type: {mime_type}")
+
+        # Download file content
+        request = drive_service.files().get_media(fileId=file_id)
         fh = BytesIO()
-        print(f"\nDownloading file with ID: {file_id}")
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while not done:
             status, done = downloader.next_chunk()
         fh.seek(0)
-        return fh.read()
+
+        # Handle PDF files
+        if mime_type == "application/pdf":
+            pdf_doc = fitz.open(stream=fh.read(), filetype="pdf")
+            page = pdf_doc[0]  # Get the first page
+            pix = page.get_pixmap()
+            image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        # Handle image files
+        elif mime_type.startswith("image/"):
+            image = Image.open(fh).convert("RGB")
+        else:
+            raise Exception(f"Unsupported MIME type: {mime_type}")
+
+        # Convert image to PNG bytes
+        image_byte_io = BytesIO()
+        image.save(image_byte_io, format="PNG")
+        return image_byte_io.getvalue()
+
     except Exception as e:
         print(f"Error downloading file from Drive: {e}")
         return None
-
 async def download_image_from_drive(file_id: str, cred) -> bytes:
     """Async wrapper for Drive download with credentials refresh"""
     async with DRIVE_SEMAPHORE:
@@ -102,7 +127,6 @@ async def download_image_from_drive(file_id: str, cred) -> bytes:
 
 
 def process_image_with_gemini(image_bytes, prompt):
-    """Processes an image (as bytes) with the Gemini API."""
     genai.configure(api_key=GOOGLE_API_KEY)
     model = genai.GenerativeModel('gemini-2.0-flash')
     try:

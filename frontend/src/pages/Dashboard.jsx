@@ -1,11 +1,13 @@
-import React, { useState, useContext, useEffect } from "react";
-import { IoSearchSharp, IoArrowUp, IoArrowDown } from "react-icons/io5";
+import React, { useState, useContext, useEffect, useRef } from "react";
+import { IoSearchSharp, IoArrowUp, IoArrowDown, IoDownload } from "react-icons/io5";
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
 import { AuthContext } from "../auth/AuthContext";
 import API from '../api'
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 
@@ -27,7 +29,9 @@ const Dashboard = () => {
   const [department, setdepartment] = useState("");
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const total_students_processed = students.length; // Assuming this is the total count of students fetched
+  const wsRef = useRef(null);
 
   const fetchStudents = async () => {
     try {
@@ -46,7 +50,7 @@ const Dashboard = () => {
       const data = await response.json();
       // console.log('Data:', data); // Debugging line
       setStudents(data.students || []);
-      console.log('Fetched students:', data.students);
+      // console.log('Fetched students:', data.students);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching students:', err);
@@ -58,7 +62,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      console.log("User is not authenticated, redirecting to login...");
+      // console.log("User is not authenticated, redirecting to login...");
       return <Navigate to="/" replace />;
     }
     API.get('/me')
@@ -75,9 +79,37 @@ const Dashboard = () => {
     }
   }, [department]);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Open WebSocket connection
+    const ws = new window.WebSocket(`ws://localhost:8000/ws/notifications?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "sync_complete") {
+        toast.success(data.message || "Sync completed!");
+        setSyncStatus(data.message);
+      } else if (data.type === "sync_failed") {
+        toast.error(data.message || "Sync failed!");
+        setSyncStatus(data.message);
+      }
+    };
+
+    ws.onclose = () => {
+      wsRef.current = null;
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
-  console.log('Student List:', studentList); // Debugging line
+  // console.log('Student List:', studentList); // Debugging line
   // Sort logic (based on name)
   const sortData = (data) => {
     return [...data].sort((a, b) => {
@@ -86,7 +118,7 @@ const Dashboard = () => {
       return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   };
-  console.log('Student List 22:', studentList);
+  // console.log('Student List 22:', studentList);
   // Filter students by department, search term, and status
   const filteredStudents = sortData(
     studentList.filter((s) => {
@@ -97,7 +129,7 @@ const Dashboard = () => {
     })
   );
 
-  console.log('Student List 33:', filteredStudents);
+  // console.log('Student List 33:', filteredStudents);
 
 
   const getDepartmentName = (dept) => {
@@ -216,6 +248,62 @@ const Dashboard = () => {
     }
   };
 
+  // Handler for downloading Excel file
+  const handleDownloadExcel = async () => {
+    setDownloadLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Not authenticated. Please login.');
+        return;
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search_term', searchTerm);
+      if (statusFilter !== 'all') params.append('status_filter', statusFilter);
+
+      const response = await fetch(`http://localhost:8000/export-students/${department}?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Export failed');
+      }
+
+      // Get filename from response headers
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'students_export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      alert(error.message || 'Failed to download Excel file. Please try again.');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -287,14 +375,22 @@ const Dashboard = () => {
                     onClick={handleSyncStudents}
                     disabled={syncLoading}
                   >
-                    {syncLoading ? 'Syncing...' : 'Sync Students'}
+                    {syncLoading ? 'Syncing...' : 'Extract and Fill 71 fields'}
                   </button>
                   {syncStatus && (
                     <div className="text-sm mt-2 text-indigo-400">{syncStatus}</div>
                   )}
-                  <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Verify New Student</button>
+                  {/* <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Verify New Student</button>
                   <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>View Pending Verifications</button>
-                  <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Generate Reports</button>
+                  <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Generate Reports</button> */}
+                  <button 
+                    className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${downloadLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                    onClick={handleDownloadExcel}
+                    disabled={downloadLoading}
+                  >
+                    <IoDownload className="w-4 h-4" />
+                    <span>{downloadLoading ? 'Downloading...' : 'Download Excel'}</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -391,6 +487,7 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+      <ToastContainer />
     </div>
   );
 };

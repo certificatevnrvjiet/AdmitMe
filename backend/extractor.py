@@ -58,8 +58,8 @@ Hall Ticket Number: Hall ticket or roll number
 Max Marks: 500
 Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
 Month_year: Month and year of passing (e.g., March 2020)
-Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are 'MATHS' , 'PHYSICS' , 'CHEMISTRY' thats it no more needed] and scores as values)
-Total Marks: Total marks obtained(Sum of all 5 subjects) '''
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are 'M4' , 'P2' , 'C2' thats it no more needed only 3] and scores as values)
+'Total Marks': Total marks obtained(Sum of all 5 subjects) '''
 
 prompt_uidai = '''Extract the following structured data from the image:
 Number: Number of the Aadhar card

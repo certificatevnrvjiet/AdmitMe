@@ -1,6 +1,6 @@
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from database import supabase
-from fastapi import FastAPI, HTTPException, Response, Depends, status, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Response, Depends, status, BackgroundTasks, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from models.SheetModel import SheetStudent
 from models.StudentModel import Student
@@ -17,7 +17,9 @@ from contextlib import asynccontextmanager
 from googleapiclient.discovery import build
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Dict
+from openpyxl import Workbook
+from io import BytesIO
 
 
 @asynccontextmanager
@@ -176,6 +178,36 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
+# Store active WebSocket connections: {username: websocket}
+active_connections: Dict[str, WebSocket] = {}
+
+@app.websocket("/ws/notifications")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    # Authenticate user from token
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            await websocket.close()
+            return
+    except Exception:
+        await websocket.close()
+        return
+
+    await websocket.accept()
+    active_connections[username] = websocket
+    try:
+        while True:
+            await websocket.receive_text()  # Keep alive
+    except WebSocketDisconnect:
+        if username in active_connections:
+            del active_connections[username]
+
+# Utility to send notification
+async def notify_user(username: str, message: dict):
+    websocket = active_connections.get(username)
+    if websocket:
+        await websocket.send_json(message)
 
 async def process_student(student_data: SheetStudent, branch: str, app: FastAPI):
     """Process 6 extract calls in parallel for one subtask"""
@@ -205,6 +237,8 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             extract(link, prompt, app.state.drive_service)
             for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
+        Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict) else {}
+        print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
         student.identification_mark_2 = safe_get(results[0], "identification_marks2")
@@ -219,6 +253,18 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         student.twelfth_month_year = safe_get(results[1], "Month_year")
         student.nationality = safe_get(results[2], "Nationality")
         student.religion = safe_get(results[2], "Religion")
+        student.m1=safe_get(Scores, "M1")
+        student.m2=safe_get(Scores, "M2")
+        student.m3=safe_get(Scores, "M3")
+        student.m4=safe_get(Scores, "M4")
+        student.p1=safe_get(Scores, "P1")
+        student.p2=safe_get(Scores, "P2")
+        student.ch1=safe_get(Scores, "C1")
+        student.ch2=safe_get(Scores, "C2")
+        student.plab=safe_get(Scores, "P_practicals")
+        student.chlab=safe_get(Scores, "C_practicals")
+        student.total=safe_get(results[1], "Total Marks")
+       
 
         # Convert exceptions to error objects
         print("Processing student:", student.model_dump_json(indent=2))
@@ -228,7 +274,7 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         response = supabase.table("students").insert(student_dict).execute()
 
         # Print the response
-        print("Insert response:", response)
+        # print("Insert response:", response)
 
 
 def safe_get(result, key):
@@ -249,7 +295,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             d[i['DEGREE_CODE']] = i['student_count']
         count_students_synced = d.get(params["branch"], 0)
         sheets_service=app.state.sheets_service
-        RANGE=f'{params["branch"]}!B2:BS1000'
+        RANGE=f'{params["branch"]}!B2:BS4'
         data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
         # print("Data from sheets:", data_from_sheets[].index("557119422790"))
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
@@ -284,13 +330,24 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             "result": f"{no_of_students} students processed",
             "progress": 100
         }).eq("id", task_id).execute()
-        
+        # Notify user
+        await notify_user(params["username"], {
+            "type": "sync_complete",
+            "task_id": task_id,
+            "message": f"Sync for {params['branch']} completed!"
+        })
     except Exception as e:
         supabase.table("tasks").update({
             "status": "failed",
             "error": str(e)
         }).eq("id", task_id).execute()
         logging.exception(f"Task {task_id} failed")
+        # Notify user
+        await notify_user(params["username"], {
+            "type": "sync_failed",
+            "task_id": task_id,
+            "message": f"Sync for {params['branch']} failed!"
+        })
 
 
 @app.post("/sync/{branch}")
@@ -310,7 +367,7 @@ async def start_syncing(
     task_id = str(uuid4())
     
     # Initialize task in database
-    params = {"branch": branch}
+    params = {"branch": branch, "username": current_user["username"]}
     supabase.table("tasks").insert({
         "id": task_id,
         "status": "queued",
@@ -427,6 +484,124 @@ async def get_students_by_department(department: str):
         return {"students": response.data}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/export-students/{department}")
+async def export_students_excel(
+    department: str,
+    search_term: str = "",
+    status_filter: str = "all",
+    current_user: dict = Depends(get_current_user)
+):
+    """Export filtered students as Excel file"""
+    try:
+        # Verify user permissions
+        if current_user["role"] != "admin" and current_user["role"] != department:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to export this department's data"
+            )
+        
+        # Get students from database
+        if department.lower() == "admin":
+            response = supabase.table("students").select("*").execute()
+        else:
+            response = supabase.table("students").select("*") \
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
+                .execute()
+        
+        students_data = response.data or []
+        
+        # Apply filters (same logic as frontend)
+        filtered_students = []
+        for student in students_data:
+            # Flatten student data if needed
+            student_data = student.get('data', student)
+            
+            # Apply search filter
+            if search_term and search_term.lower() not in student_data.get('student_name', '').lower():
+                continue
+                
+            # Apply department filter
+            if department != 'admin' and student_data.get('branch_code', '').lower() != department:
+                continue
+                
+            # Apply status filter
+            if status_filter != 'all' and student_data.get('status', '').lower() != status_filter:
+                continue
+                
+            filtered_students.append(student_data)
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        if ws:
+            ws.title = f"Students_{department}"
+        
+        # Get all field names from Student model
+        student_fields = list(Student.model_fields.keys())
+        
+        # Write headers
+        for col, field in enumerate(student_fields, 1):
+            if ws:
+                ws.cell(row=1, column=col, value=field.replace('_', ' ').title())
+        
+        # Write data
+        for row, student in enumerate(filtered_students, 2):
+            for col, field in enumerate(student_fields, 1):
+                if ws:
+                    ws.cell(row=row, column=col, value=student.get(field, ''))
+        
+        # Save to BytesIO
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"students_{department}_{timestamp}.xlsx"
+        
+        return Response(
+            content=excel_file.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+# In-memory cache for file_id to image bytes
+image_cache: Dict[str, bytes] = {}
+
+@app.get("/image/{file_id}")
+async def get_image(
+    file_id: str,
+    # current_user: dict = Depends(get_current_user)  # Require authentication
+):
+    """Serve images from Google Drive by file ID, with in-memory caching"""
+    try:
+        if not app.state.drive_service:
+            raise HTTPException(status_code=500, detail="Drive service not available")
+        
+        # Check cache first
+        if file_id in image_cache:
+            image_bytes = image_cache[file_id]
+        else:
+            # Download image from Google Drive
+            image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
+            if image_bytes:
+                image_cache[file_id] = image_bytes  # Cache the result
+        
+        if not image_bytes:
+            raise HTTPException(status_code=404, detail="Image not found or could not be downloaded")
+        
+        return Response(
+            content=image_bytes,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve image: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

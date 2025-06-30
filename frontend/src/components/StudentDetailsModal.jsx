@@ -3,6 +3,9 @@ import { useTheme } from '../context/ThemeContext';
 import { IoClose } from 'react-icons/io5';
 import { FiEdit2, FiSave } from 'react-icons/fi';
 import { students } from '../assets/Students.json';
+import { getImageUrl } from '../api';
+import API from '../api'
+
 
 const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const { isDarkMode } = useTheme();
@@ -10,10 +13,14 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
     const [activeTab, setActiveTab] = useState('personal');
     const [isSaving, setIsSaving] = useState(false); // Add this state
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
         setEditedStudent(student || {});
+        setImageError(false);
+        setImageLoading(true); // Set loading to true when student changes
     }, [student]);
 
     const handleInputChange = (field, value) => {
@@ -37,6 +44,57 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             setIsSaving(false);
         }
     };
+
+    const handleImageLoad = () => {
+        setImageLoading(false);
+        setImageError(false);
+    };
+
+    const handleImageError = () => {
+        setImageLoading(false);
+        setImageError(true);
+    };
+
+    const getImageSource = () => {
+        // Define image fields based on active tab
+        let imageFields = [];
+        
+        switch (activeTab) {
+            case 'personal':
+                imageFields = ['tenth_memo_link'];
+                break;
+            case 'academic':
+                imageFields = [ 'twelfth_memo_link'];
+                break;
+            case 'address':
+                imageFields = ['aadhaar_link'];
+                break;
+            case 'category':
+                imageFields = ['transfer_certificate_link'];
+                break;
+            default:
+                imageFields = ['aadhaar_link'];
+        }
+        
+        for (const field of imageFields) {
+            if (editedStudent[field]) {
+                const linkstr = editedStudent[field];
+                const match = linkstr.match(/id=([a-zA-Z0-9_-]+)/);
+                const fileId = match ? match[1] : null;
+                const imageUrl = getImageUrl(fileId);
+                console.log('Image URL:', imageUrl);
+                console.log('Image Source:', activeTab);
+                return imageUrl;
+            }
+        }
+        return null;
+    };
+
+    // Update image loading state when tab changes
+    React.useEffect(() => {
+        setImageError(false);
+        setImageLoading(true);
+    }, [activeTab, editedStudent]);
 
     if (!isOpen) return null;
 
@@ -232,11 +290,58 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                     <div className="flex h-[75vh]">
                         {/* Left Side - Photo */}
                         <div className="w-1/4 p-6 border-r border-gray-200">
-                            <img
-                                src={`https://drive.google.com/uc?export=view&id=${student.twelfth_memo_link}`}
-                                alt="Student"
-                                className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
-                            />
+                            {getImageSource() ? (
+                                <>
+                                    {imageLoading && (
+                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                                            <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                    fill="none"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                />
+                                            </svg>
+                                        </div>
+                                    )}
+                                    {imageError ? (
+                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                            <div className="text-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <p className="mt-2 text-sm">Image not available</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={getImageSource()}
+                                            alt="Student Document"
+                                            className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
+                                            onLoad={handleImageLoad}
+                                            onError={handleImageError}
+                                            style={{ display: imageLoading ? 'none' : 'block' }}
+                                        />
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                    <div className="text-center">
+                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <p className="mt-2 text-sm">No document available</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Right Side - Content */}
