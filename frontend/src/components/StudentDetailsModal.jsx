@@ -5,17 +5,26 @@ import { FiEdit2, FiSave } from 'react-icons/fi';
 import { students } from '../assets/Students.json';
 import { getImageUrl } from '../api';
 import API from '../api'
+import ScrollableTabs from './ScrollableTabs';
 
 
 const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
-    const [activeTab, setActiveTab] = useState('personal');
+    const [activeTab, setActiveTab] = useState('Personal Information');
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     console.log('Initial student prop:', student);
+
+
+
+
+
+
+
+
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
         setEditedStudent(student || {});
@@ -71,40 +80,34 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     };
 
     const getImageSource = () => {
-        // Define image fields based on active tab
         let imageFields = [];
-        
         switch (activeTab) {
-            case 'personal':
+            case 'Personal Information':
                 imageFields = ['tenth_memo_link'];
                 break;
-            case 'academic':
-                imageFields = [ 'twelfth_memo_link'];
+            case 'Academic Information':
+                imageFields = ['twelfth_memo_link'];
                 break;
-            case 'contact':
+            case 'Contact Details':
                 imageFields = ['aadhaar_link'];
                 break;
-            case 'address':
+            case 'Address':
                 imageFields = ['aadhaar_link'];
                 break;
-            case 'category':
+            case 'Category & Status':
                 imageFields = ['transfer_certificate_link'];
                 break;
             default:
                 imageFields = ['aadhaar_link'];
                 break;
         }
-        
         for (const field of imageFields) {
             if (editedStudent[field]) {
                 const linkstr = editedStudent[field];
                 const match = linkstr.match(/id=([a-zA-Z0-9_-]+)/);
                 const fileId = match ? match[1] : null;
                 const imageUrl = getImageUrl(fileId);
-                console.log('Image URL:', imageUrl);
-                console.log('Image Source:', activeTab);
                 return imageUrl;
-
             }
         }
         return null;
@@ -139,17 +142,18 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         );
     };
 
+    // Rollback: use simple string array for tabs
     const tabs = [
-        { id: 'personal', label: 'Personal Information' },
-        { id: 'academic', label: 'Academic Information' },
-        { id: 'contact', label: 'Contact Details' },
-        { id: 'category', label: 'Category & Status' },
-        { id: 'address', label: 'Address' },
+        'Personal Information',
+        'Academic Information',
+        'Contact Details',
+        'Category & Status',
+        'Address',
     ];
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'personal':
+            case 'Personal Information':
                 return (
                     <div className="space-y-4">
                         {renderField('Student ID', 'ht_no', 'text')}
@@ -167,7 +171,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {/* aadhaar_card_number */}
                     </div>
                 );
-            case 'academic':
+            case 'Academic Information':
                 return (
                     <div className="space-y-6">
                         <div>
@@ -232,7 +236,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         </div>
                     </div>
                 );
-            case 'contact':
+            case 'Contact Details':
                 return (
                     <div className="space-y-4">
                         {renderField('Student Phone', 'student_phone')}
@@ -241,7 +245,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Parent Email', 'parent_email')}
                     </div>
                 );
-            case 'address':
+            case 'Address':
                 return (
                     <div className="space-y-4">
                         {renderField('Street', 'address_street')}
@@ -252,7 +256,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Pincode', 'address_pincode')}
                     </div>
                 );
-            case 'category':
+            case 'Category & Status':
                 return (
                     <div className="space-y-4">
                         {renderField('Category', 'category_name')}
@@ -271,158 +275,160 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         }
     };
 
-    return isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Blurry Backdrop */}
-            <div
-                className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            />
-            {/* Modal */}
-            <div className="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-4xl w-full mx-4 flex flex-col"
-                 style={{ maxHeight: '80vh' }}>
-              <div className="flex flex-row h-full">
-                {/* Left: Image (scrollable) */}
-                <div className="w-1/3 p-4 overflow-y-auto" style={{ maxHeight: '60vh' }}>
-                  {getImageSource() ? (
-                      <>
-                        {imageLoading && (
-                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                              <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
-                                <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                    fill="none"
-                                />
-                                <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                />
-                              </svg>
-                            </div>
-                        )}
-                        {imageError ? (
-                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                              <div className="text-center">
-                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <p className="mt-2 text-sm">Image not available</p>
-                              </div>
-                            </div>
-                        ) : (
-                            <img
-                                src={getImageSource()}
-                                alt="Student Document"
-                                className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
-                                onLoad={handleImageLoad}
-                                onError={handleImageError}
-                                style={{ display: imageLoading ? 'none' : 'block' }}
-                            />
-                        )}
-                      </>
-                  ) : (
-                      <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                        <div className="text-center">
-                          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="mt-2 text-sm">No document available</p>
-                        </div>
-                      </div>
-                  )}
-                </div>
+   return isOpen ? (
+  <div className="fixed top-[64px] bottom-[90px] left-0 right-0 z-50 flex items-center justify-center">
+    {/* Blurry Backdrop */}
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+      onClick={onClose}
+    />
+    
+    {/* Modal */}
+    <div
+      className="relative z-10 bg-white rounded-lg shadow-lg max-w-6xl w-full flex flex-col"
+      style={{ maxHeight: 'calc(100vh - 128px)' }}
+    >
+      {/* Top Action Bar */}
+      <div className=" w-full bg-white rounded-lg  border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
+                        
+                        
+         <h3
+            className={`text-xl font-medium ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}
+          >
+            Student Details - {editedStudent.student_name}
+          </h3>
+        <div className="flex items-center space-x-2">
+          
 
-                {/* Right: Tabs and Content */}
-                <div className="w-2/3 p-4 flex flex-col">
-                  {/* Tabs (horizontal scroll) */}
-                  <div className="flex space-x-4 overflow-x-auto pb-2">
-                    {tabs.map(tab => (
-                      <button
-                        key={tab.id}
-                        className={`px-4 py-2 whitespace-nowrap rounded-md ${activeTab === tab.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
-                        onClick={() => setActiveTab(tab.id)}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Tab Content */}
-                  <div className="flex-1 overflow-y-auto mt-4">
-                    {renderTabContent()}
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+            </button>
+          )}
+          {isEditing && (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {isSaving ? (
+                  <span className="inline-flex items-center">
+                    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                )}
+              </button>
+              <button
+                onClick={handleDraft}
+                disabled={isSaving}
+                className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
+                title="Save as Draft"
+              >
+                <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Draft</span>
+              </button>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-row ">
+        {/* Left: Image */}
+        <div className="w-2/3 p-4 overflow-y-auto border-r" style={{ maxHeight: 'calc(100vh - 200px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {getImageSource() ? (
+            <>
+              {imageLoading && (
+                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                  <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                </div>
+              )}
+              {imageError ? (
+                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                  <div className="text-center">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="mt-2 text-sm">Image not available</p>
                   </div>
                 </div>
-              </div>
-              {/* Fixed Footer */}
-              <div className="sticky bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end space-x-2">
-                <div className="flex items-center space-x-2">
-                  {!isEditing && (
-                      <button
-                          onClick={() => setIsEditing(true)}
-                          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-                      </button>
-                  )}
-                  {isEditing && (
-                      <>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          {isSaving ? (
-                              <span className="inline-flex items-center">
-                                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                                  <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                      fill="none"
-                                  />
-                                  <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  />
-                                </svg>
-                                Saving...
-                              </span>
-                          ) : (
-                              <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-                          )}
-                        </button>
-                        <button
-                            onClick={handleDraft}
-                            disabled={isSaving}
-                            className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
-                            title="Save as Draft"
-                        >
-                          <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>
-                            Draft
-                          </span>
-                        </button>
-                      </>
-                  )}
-                  <button
-                      onClick={onClose}
-                      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
-                  </button>
-                </div>
+              ) : (
+                <img
+                    src={getImageSource()}
+                    alt="Student Document"
+                    className="w-full  object-contain rounded-lg shadow-lg"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
+                    style={{ display: imageLoading ? 'none' : 'block' }}
+                    />
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+              <div className="text-center">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="mt-2 text-sm">No document available</p>
               </div>
             </div>
+          )}
         </div>
-    ) : null;
+
+        {/* Right: Tabs */}
+        <div className="w-1/3 p-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)'  }}>
+          
+          <ScrollableTabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}  >{renderTabContent()}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+) : null;
+
 };
 
 export default StudentDetailsModal;
