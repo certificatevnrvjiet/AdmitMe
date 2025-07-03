@@ -32,6 +32,10 @@ const Dashboard = () => {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const total_students_processed = students.length; // Assuming this is the total count of students fetched
   const wsRef = useRef(null);
+  const not_viewed_students = students.filter(s => s.status === 'Not Viewed').length;
+  const verified_students = students.filter(s => s.status === 'Verified').length;
+  const pending_students = students.filter(s => s.status === 'Pending').length;
+  const [branchFilter, setBranchFilter] = useState('all');
 
   const fetchStudents = async () => {
     try {
@@ -92,9 +96,11 @@ const Dashboard = () => {
       if (data.type === "sync_complete") {
         toast.success(data.message || "Sync completed!");
         setSyncStatus(data.message);
+        fetchStudents(); // Refresh students after sync complete
       } else if (data.type === "sync_failed") {
         toast.error(data.message || "Sync failed!");
         setSyncStatus(data.message);
+        fetchStudents(); // Optionally refresh students after sync failed
       }
     };
 
@@ -125,7 +131,8 @@ const Dashboard = () => {
       const matchesSearch = s.student_name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDepartment = department === 'admin' ? true : s.branch_code?.toLowerCase() === department;
       const matchesStatus = statusFilter === 'all' ? true : s.status?.toLowerCase() === statusFilter;
-      return matchesSearch && matchesDepartment && matchesStatus;
+      const matchesBranch = branchFilter === 'all' ? true : s.branch_code?.toLowerCase() === branchFilter;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch;
     })
   );
 
@@ -155,6 +162,10 @@ const Dashboard = () => {
     setStatusFilter(e.target.value);
   };
 
+  const handleBranchFilterChange = (e) => {
+    setBranchFilter(e.target.value);
+  };
+
   const handleSort = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -180,7 +191,6 @@ const Dashboard = () => {
 
   const handleSaveStudent = async (updatedStudent) => {
     try {
-            
         const response = await fetch(`http://localhost:8000/student/${updatedStudent.aadhaar_card_number}`, {
             method: 'PUT',
             headers: {
@@ -338,7 +348,7 @@ const Dashboard = () => {
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {getDepartmentName(department)} Department Dashboard
+              {department.toUpperCase()} Department Dashboard
             </h2>
             {/* <div className="relative">
               <select
@@ -400,9 +410,10 @@ const Dashboard = () => {
               <div className="p-6">
                 <h3 className="text-lg font-medium text-indigo-400 mb-4">Verification Statistics</h3>
                 <div className="space-y-4">
-                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Pending Verifications</span><span className="text-indigo-400 font-semibold">{total_students_processed}</span></div>
-                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Verified Today</span><span className="text-green-400 font-semibold">12</span></div>
-                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Total Processed</span><span className="text-indigo-400 font-semibold">{total_students_processed}</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Not viewed</span><span className="text-indigo-400 font-semibold">{not_viewed_students}</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Pending Students</span><span className="text-yellow-400 font-semibold">{pending_students}</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Verified Students</span><span className="text-green-400 font-semibold">{verified_students}</span></div>
+                  <div className="flex justify-between"><span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Total Students</span><span className="text-indigo-400 font-semibold">{total_students_processed}</span></div>
                 </div>
               </div>
             </div>
@@ -425,11 +436,10 @@ const Dashboard = () => {
                       <option value="all">All Status</option>
                       <option value="verified">Verified</option>
                       <option value="pending">Pending</option>
-                      <option value="not verified">Not Verified</option>
+                      <option value="not viewed">Not Viewed</option>
                     </select>
                     <RiArrowDropDownLine className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                    isDarkMode ? 'text-white' : 'text-gray-700'}`}
-                    size={20}/>
+                      isDarkMode ? 'text-white' : 'text-gray-700'}`} size={20}/>
                   </div>
                   <div className="relative">
                     <input
@@ -443,6 +453,36 @@ const Dashboard = () => {
                     />
                     <IoSearchSharp className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   </div>
+                  {department === 'admin' && (
+                    <div className="relative">
+                      <select
+                        onChange={handleBranchFilterChange}
+                        className={`appearance-none bg-transparent border ${
+                          isDarkMode ? 'border-gray-600 text-white bg-gray-700' : 'border-gray-300 text-gray-700 bg-white'
+                        } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                        value={branchFilter}
+                      >
+                        <option value="all">All Branches</option>
+                        <option value="aids">AIDS</option>
+                        <option value="ae">AE</option>
+                        <option value="ce">CE</option>
+                        <option value="csbs">CSBS</option>
+                        <option value="cse">CSE</option>
+                        <option value="aml">AML</option>
+                        <option value="cseds">CSE-DS</option>
+                        <option value="csecys">CSE-CYS</option>
+                        <option value="cseiot">CSE-IOT</option>
+                        <option value="eee">EEE</option>
+                        <option value="ece">ECE</option>
+                        <option value="eie">EIE</option>
+                        <option value="it">IT</option>
+                        <option value="me">ME</option>
+                      </select>
+                      <RiArrowDropDownLine className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                        isDarkMode ? 'text-white' : 'text-gray-700'
+                      }`} size={20}/>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -468,12 +508,12 @@ const Dashboard = () => {
                         className={`${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'} cursor-pointer`}
                         onClick={() => handleStudentClick(s)}
                       >
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_id}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.ht_no}</td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_name}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             s.status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
-                            s.Status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
+                            s.status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
                             (isDarkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800")
                           }`}>{s.status}</span>
                         </td>

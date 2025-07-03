@@ -63,12 +63,7 @@ fake_users_db = {
     "admin@vnrvjiet.in": {
         "username": "admin@vnrvjiet.in",
         "password": "adminpass",
-        "role": "admin",
-    },
-    "normal_user": {
-        "username": "normal_user",
-        "password": "userpass",
-        "role": "user",
+        "role": "admin"
     },
     "aidsadmin": {
         "username": "aidsadmin",
@@ -237,7 +232,10 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             extract(link, prompt, app.state.drive_service)
             for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
-        Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict) else {}
+        print("Results:", results[1])
+        Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict)  else {}
+        if Scores is None or not isinstance(Scores, dict):
+            Scores = {}
         print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
@@ -261,8 +259,8 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         student.p2=safe_get(Scores, "P2")
         student.ch1=safe_get(Scores, "C1")
         student.ch2=safe_get(Scores, "C2")
-        student.plab=safe_get(Scores, "P_practicals")
-        student.chlab=safe_get(Scores, "C_practicals")
+        student.plab=safe_get(Scores, "P_Practicals")
+        student.chlab=safe_get(Scores, "C_Practicals")
         student.total=safe_get(results[1], "Total Marks")
        
 

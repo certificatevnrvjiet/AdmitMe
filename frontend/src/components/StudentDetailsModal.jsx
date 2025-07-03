@@ -15,7 +15,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
-
+    console.log('Initial student prop:', student);
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
         setEditedStudent(student || {});
@@ -35,11 +35,26 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         try {
             setIsSaving(true);
             console.log('Saving student:', editedStudent.aadhaar_card_number);
+            editedStudent.status = 'Verified'; // Set status to Verified
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
             console.error('Error saving student:', error);
             alert(error.message || 'Failed to save changes. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDraft = async () => {
+        try {
+            setIsSaving(true);
+            editedStudent.status = 'Pending'; // Set status to Draft
+            await onSave(editedStudent);
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            alert(error.message || 'Failed to save draft. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -66,6 +81,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'academic':
                 imageFields = [ 'twelfth_memo_link'];
                 break;
+            case 'contact':
+                imageFields = ['aadhaar_link'];
+                break;
             case 'address':
                 imageFields = ['aadhaar_link'];
                 break;
@@ -74,6 +92,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                 break;
             default:
                 imageFields = ['aadhaar_link'];
+                break;
         }
         
         for (const field of imageFields) {
@@ -85,6 +104,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                 console.log('Image URL:', imageUrl);
                 console.log('Image Source:', activeTab);
                 return imageUrl;
+
             }
         }
         return null;
@@ -94,7 +114,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     React.useEffect(() => {
         setImageError(false);
         setImageLoading(true);
-    }, [activeTab, editedStudent]);
+    }, [activeTab]);
 
     if (!isOpen) return null;
 
@@ -123,8 +143,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         { id: 'personal', label: 'Personal Information' },
         { id: 'academic', label: 'Academic Information' },
         { id: 'contact', label: 'Contact Details' },
-        { id: 'address', label: 'Address' },
         { id: 'category', label: 'Category & Status' },
+        { id: 'address', label: 'Address' },
     ];
 
     const renderTabContent = () => {
@@ -139,8 +159,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Date of Birth', 'date_of_birth')}
                         {renderField('Gender', 'gender')}
                         {renderField('Blood Group', 'blood_group')}
-                        {renderField('Nationality', 'Nationality')}
-                        {renderField('Religion', 'Religion')}
+                        {renderField('Nationality', 'nationality')}
+                        {renderField('Religion', 'religion')}
                         {renderField('Mother Tongue', 'mother_tongue')}
                         {renderField('Identification Mark 1', 'identification_mark_1')}
                         {renderField('Aadhaar Number', 'aadhaar_card_number')}
@@ -161,9 +181,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                             <h5 className="font-medium mb-4">10th Details</h5>
                             {renderField('Board Name', 'tenth_board_name')}
                             {renderField('School Name', 'tenth_school_name')}
-                            {renderField('Hall Ticket No', 'tenth_hall_ticket_no')}
-                            {renderField('Max Marks', 'tenth_max_marks')}
-                            {renderField('Total Marks', 'tenth_total_marks')}
+                            {renderField('Hall Ticket No', 'tenth_ht_no')}
+                            {renderField('Max Marks', 'tenth_maximum_marks')}
+                            {renderField('Total Marks', 'tenth_total_marks_cgpa')}
                             {renderField('Percentage', 'tenth_percentage')}
                             {renderField('Month & Year', 'tenth_month_year')}
                         </div>
@@ -171,8 +191,41 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                             <h5 className="font-medium mb-4">12th Details</h5>
                             {renderField('Board Name', 'twelfth_board_name')}
                             {renderField('College Name', 'twelfth_college_name')}
-                            {renderField('Hall Ticket No', 'twelfth_hall_ticket_no')}
-                            {renderField('Max Marks', 'twelfth_max_marks')}
+                            {renderField('Hall Ticket No', 'twelfth_ht_no')}
+                            {/* 5x2 grid for subject scores */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    {renderField('M1', 'm1')}
+                                </div>
+                                <div>
+                                    {renderField('M2', 'm2')}
+                                </div>
+                                <div>
+                                    {renderField('M3', 'm3')}
+                                </div>
+                                <div>
+                                    {renderField('M4', 'm4')}
+                                </div>
+                                <div>
+                                    {renderField('P1', 'p1')}
+                                </div>
+                                <div>
+                                    {renderField('P2', 'p2')}
+                                </div>
+                                <div>
+                                    {renderField('C1', 'ch1')}
+                                </div>
+                                <div>
+                                    {renderField('C2', 'ch2')}
+                                </div>
+                                <div>
+                                    {renderField('CLAB', 'chlab')}
+                                </div>
+                                <div>
+                                    {renderField('PLAB', 'plab')}
+                                </div>
+                            </div>
+                            {renderField('Max Marks', 'twelfth_maximum_marks')}
                             {renderField('Total Marks', 'twelfth_total_marks')}
                             {renderField('Percentage', 'twelfth_percentage')}
                             {renderField('Month & Year', 'twelfth_month_year')}
@@ -182,8 +235,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'contact':
                 return (
                     <div className="space-y-4">
-                        {renderField('Student Phone', 'student_phone_no')}
-                        {renderField('Parent Phone', 'parent_phone_no')}
+                        {renderField('Student Phone', 'student_phone')}
+                        {renderField('Parent Phone', 'parent_phone')}
                         {renderField('Student Email', 'student_email')}
                         {renderField('Parent Email', 'parent_email')}
                     </div>
@@ -208,9 +261,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('EBC Status', 'ebc_status')}
                         {renderField('EWS Status', 'ews_status')}
                         {renderField('Income', 'income')}
-                        {renderField('Minority Status', 'minority_status')}
+                        {renderField('Minority Status', 'minority')}
                         {renderField('PH Status', 'ph_status')}
-                        {renderField('Scribe Needed', 'scribe_needed')}
+                        {renderField('Scribe Needed', 'scribe')}
                     </div>
                 );
             default:
@@ -218,170 +271,158 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="flex items-center justify-center min-h-screen p-4">
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-                <div
-                    className={`relative w-[95vw] max-w-7xl mx-auto rounded-lg shadow-xl ${
-                        isDarkMode ? 'bg-gray-800' : 'bg-white'
-                    }`}
-                >
-                    {/* Header */}
-                    <div
-                        className={`flex justify-between items-center px-6 py-4 border-b ${
-                            isDarkMode ? 'border-gray-700' : 'border-gray-200'
-                        }`}
-                    >
-                        <h3 className={`text-xl font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Student Details - {editedStudent.student_name}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                            {!isEditing && (
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                    <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-                                </button>
-                            )}
-                            {isEditing && (
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                    {isSaving ? (
-                                        <span className="inline-flex items-center">
-                                            <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="4"
-                                                    fill="none"
-                                                />
-                                                <path
-                                                    className="opacity-75"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                />
-                                            </svg>
-                                            Saving...
-                                        </span>
-                                    ) : (
-                                        <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-                                    )}
-                                </button>
-                            )}
-                            <button
-                                onClick={onClose}
-                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                            >
-                                <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Main Content Area */}
-                    <div className="flex h-[75vh]">
-                        {/* Left Side - Photo */}
-                        <div className="w-1/4 p-6 border-r border-gray-200">
-                            {getImageSource() ? (
-                                <>
-                                    {imageLoading && (
-                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                                            <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="4"
-                                                    fill="none"
-                                                />
-                                                <path
-                                                    className="opacity-75"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                />
-                                            </svg>
-                                        </div>
-                                    )}
-                                    {imageError ? (
-                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                                            <div className="text-center">
-                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                <p className="mt-2 text-sm">Image not available</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <img
-                                            src={getImageSource()}
-                                            alt="Student Document"
-                                            className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
-                                            onLoad={handleImageLoad}
-                                            onError={handleImageError}
-                                            style={{ display: imageLoading ? 'none' : 'block' }}
-                                        />
-                                    )}
-                                </>
-                            ) : (
-                                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                                    <div className="text-center">
-                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <p className="mt-2 text-sm">No document available</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Right Side - Content */}
-                        <div className="w-3/4 flex flex-col">
-                            {/* Tabs */}
-                            <div
-                                className={`flex space-x-1 px-6 py-3 border-b ${
-                                    isDarkMode ? 'border-gray-700' : 'border-gray-200'
-                                } bg-inherit`}
-                            >
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                                            ${
-                                                activeTab === tab.id
-                                                    ? isDarkMode
-                                                        ? 'bg-gray-700 text-white'
-                                                        : 'bg-gray-100 text-gray-900'
-                                                    : isDarkMode
-                                                    ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
+    return isOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Blurry Backdrop */}
+            <div
+                className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            />
+            {/* Modal */}
+            <div className="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-4xl w-full mx-4 flex flex-col"
+                 style={{ maxHeight: '80vh' }}>
+              <div className="flex flex-row h-full">
+                {/* Left: Image (scrollable) */}
+                <div className="w-1/3 p-4 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+                  {getImageSource() ? (
+                      <>
+                        {imageLoading && (
+                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                              <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
+                                <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                    fill="none"
+                                />
+                                <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                              </svg>
                             </div>
-
-                            {/* Scrollable Content */}
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="p-6 pb-20">{renderTabContent()}</div>
+                        )}
+                        {imageError ? (
+                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                              <div className="text-center">
+                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p className="mt-2 text-sm">Image not available</p>
+                              </div>
                             </div>
+                        ) : (
+                            <img
+                                src={getImageSource()}
+                                alt="Student Document"
+                                className="w-full rounded-lg shadow-lg object-cover aspect-[3/4]"
+                                onLoad={handleImageLoad}
+                                onError={handleImageError}
+                                style={{ display: imageLoading ? 'none' : 'block' }}
+                            />
+                        )}
+                      </>
+                  ) : (
+                      <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                        <div className="text-center">
+                          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="mt-2 text-sm">No document available</p>
                         </div>
-                    </div>
+                      </div>
+                  )}
                 </div>
+
+                {/* Right: Tabs and Content */}
+                <div className="w-2/3 p-4 flex flex-col">
+                  {/* Tabs (horizontal scroll) */}
+                  <div className="flex space-x-4 overflow-x-auto pb-2">
+                    {tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        className={`px-4 py-2 whitespace-nowrap rounded-md ${activeTab === tab.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                        onClick={() => setActiveTab(tab.id)}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Tab Content */}
+                  <div className="flex-1 overflow-y-auto mt-4">
+                    {renderTabContent()}
+                  </div>
+                </div>
+              </div>
+              {/* Fixed Footer */}
+              <div className="sticky bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end space-x-2">
+                <div className="flex items-center space-x-2">
+                  {!isEditing && (
+                      <button
+                          onClick={() => setIsEditing(true)}
+                          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                      </button>
+                  )}
+                  {isEditing && (
+                      <>
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          {isSaving ? (
+                              <span className="inline-flex items-center">
+                                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                                  <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                      fill="none"
+                                  />
+                                  <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  />
+                                </svg>
+                                Saving...
+                              </span>
+                          ) : (
+                              <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                          )}
+                        </button>
+                        <button
+                            onClick={handleDraft}
+                            disabled={isSaving}
+                            className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
+                            title="Save as Draft"
+                        >
+                          <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>
+                            Draft
+                          </span>
+                        </button>
+                      </>
+                  )}
+                  <button
+                      onClick={onClose}
+                      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
+                  </button>
+                </div>
+              </div>
             </div>
         </div>
-    );
+    ) : null;
 };
 
 export default StudentDetailsModal;

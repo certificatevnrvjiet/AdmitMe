@@ -91,7 +91,7 @@ Hall Ticket Number: Hall ticket or registered number
 Max Marks: 1000
 Total Marks: Total marks obtained
 Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
-Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are (M1, M2, P1, C1 from 1st year) and (M3, M4, P2, C2, P_practicals, C_Practicals are from 2nd year) *Thats it no other marks needed needed] and scores as values)
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are ('M1', 'M2', 'P1', 'C1' from 1st year) and ('M3', 'M4', 'P2', 'C2', 'P_Practicals', 'C_Practicals' are from 2nd year) *Thats it no other marks needed needed] and scores as values)
 Month_year: Month and year of passing (e.g., March 2020)
 
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)

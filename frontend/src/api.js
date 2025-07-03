@@ -11,12 +11,9 @@ API.interceptors.request.use((config) => {
 });
 
 // Function to get image URL from backend
-export const getImageUrl = (fileId, token) => {
+export const getImageUrl = (fileId) => {
   if (!fileId) return null;
-  return {
-    url: `${API.defaults.baseURL}/image/${fileId}`,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  };
+  return `${API.defaults.baseURL}/image/${fileId}`;
 };
 
 export default API;
