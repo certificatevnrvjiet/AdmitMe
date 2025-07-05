@@ -90,10 +90,10 @@ fake_users_db = {
         "password": "csepass",
         "role": "cse"
     },
-    "amladmin": {
-        "username": "amladmin",
+    "aimladmin": {
+        "username": "aimladmin",
         "password": "amlpass",
-        "role": "aml"
+        "role": "aiml"
     },
     "csedsadmin": {
         "username": "csedsadmin",
@@ -600,6 +600,99 @@ async def get_image(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve image: {str(e)}")
+
+@app.post("/save-to-drive/{department}")
+async def save_to_drive_sheet(
+    department: str,
+    search_term: str = "",
+    status_filter: str = "all",
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Save filtered students to Google Sheet (append only new, no duplicates).
+    Assumes first row in sheet is header.
+    """
+    SPREADSHEET_IDs = {
+        "aids":   "1FsJZBO7zJmYJ-RynXQPPamoLoM8ieNE7nS0e46Fev5M",
+        "ae":     "1xKo6-5tnYjFKAZ0foJG-6QftqjG0S1P94EXUH0iYxm4",
+        "ce":     "1UlPoSSjGhWJARCqCesVbt3Rgp9LZd2iLicCQ57YaS_Y",
+        "csbs":   "1t84F7is0TBPmGlH-BgumuClclIMayWMyll08APE3R_I",
+        "cse":    "1173S9AzJxdB94PGBz3jTrGfeT10W7CPvO1X2bRYvdAU",
+        "aiml":    "1dJu56CBDMkDH73B-u8jJSV-qfr-sOlvb8a8pU0OXPro",
+        "cseds":  "1A1jtdop6cvwlnUm_ebqN3uedkgAe7Eac3xrS57MMV2I",
+        "csecys": "1j8qXYyqJts5bp4Zci42-6j5GZE3dSyOzdGBBBVdeDnU",
+        "cseiot": "1vvcxsFkdHEQ8T3f0_zeorNoG5jBGCyoT614MHHc_57c",
+        "eee":    "1OzIVR8TaHEM50VMjtcdT_6Q5KdqtsMW6TrIhE5oFWGQ",
+        "ece":    "1GcI5OIeTnuZSXMPt_Asd3YTQzCjw2rLEK8UIdEFsFRA",
+        "eie":    "1Y3gWIjffjJ7334yJJ89V892MKeDMvGFn9EB63u3wykI",
+        "it":     "1pbH58LUDH5MQsmgSyOK6TRwcIlX6XGKoPk2n5uKGLmA",
+        "me":     "1hhqxMoiiyT3hS_VFTnA6cm-HGG8TqkF4nO7-NBrEwSA",
+        "admin":  "1ahMbgqQ51nTKoNk_621iBpG5E4rpNdoC_vKilT6Gn4I"
+    }
+
+
+
+    try:
+        # Permissions
+        if current_user["role"] != "admin" and current_user["role"] != department:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to update this department's sheet"
+            )
+
+        # Get students from database (same as export)
+        if department.lower() == "admin":
+            response = supabase.table("students").select("*").execute()
+        else:
+            response = supabase.table("students").select("*") \
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
+                .execute()
+        students_data = response.data or []
+
+        # Apply filters
+        filtered_students = []
+        for student in students_data:
+            student_data = student.get('data', student)
+            if search_term and search_term.lower() not in student_data.get('student_name', '').lower():
+                continue
+            if department != 'admin' and student_data.get('branch_code', '').lower() != department:
+                continue
+            if status_filter != 'all' and student_data.get('status', '').lower() != status_filter:
+                continue
+            filtered_students.append(student_data)
+
+        # Prepare data for sheet
+        student_fields = list(Student.model_fields.keys())
+
+        # Get Google Sheets service
+        sheets_service = app.state.sheets_service
+        if not sheets_service:
+            raise HTTPException(status_code=500, detail="Sheets service not available")
+
+        # Sheet name and range
+        sheet_name = 'Sheet1'  # Adjust as needed
+        range_name = "Sheet1!A1:CE1000"  # Adjust as needed
+
+
+        # Prepare all rows: header + data
+        header_row = [field.replace('_', ' ').title() for field in student_fields]
+        all_rows = [header_row] + [
+            [str(student.get(field, "")) for field in student_fields]
+            for student in filtered_students
+        ]
+
+        # Overwrite the sheet with new data
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_IDs[department.lower()],
+            range=range_name,
+            valueInputOption="RAW",
+            body={"values": all_rows}
+        ).execute()
+
+        return {"message": f"Sheet overwritten with {len(filtered_students)} students."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Save to drive failed: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

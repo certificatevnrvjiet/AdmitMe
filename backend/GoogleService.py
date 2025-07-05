@@ -22,11 +22,11 @@ DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 
 SCOPES = [
-    'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
-    'https://www.googleapis.com/auth/spreadsheets.readonly' # Read-only access to Google Sheets
+    # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
+    # 'https://www.googleapis.com/auth/spreadsheets.readonly' # Read-only access to Google Sheets
     # For full access, use:
-    # 'https://www.googleapis.com/auth/drive',
-    # 'https://www.googleapis.com/auth/spreadsheets'
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/spreadsheets'
 ]
 
 

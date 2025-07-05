@@ -7,6 +7,7 @@ import Vnrheader from "./components/Vnrheader";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { AuthProvider } from "./auth/AuthContext";
+import "./App.css"; // Import your global styles
 
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
-          <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
+          <div className="flex flex-col min-h-screen overflow-auto scrollbar-hide h-64 bg-white dark:bg-gray-900">
             <Vnrheader />
             <main className="flex-grow mt-16 mb-16 overflow-y-auto">
               <Routes>

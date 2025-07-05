@@ -8,6 +8,7 @@ import { AuthContext } from "../auth/AuthContext";
 import API from '../api'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { FaGoogleDrive } from 'react-icons/fa';
 
 
 
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const verified_students = students.filter(s => s.status === 'Verified').length;
   const pending_students = students.filter(s => s.status === 'Pending').length;
   const [branchFilter, setBranchFilter] = useState('all');
+  const [SavingtoDrive, setSavingtoDrive] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -314,6 +316,43 @@ const Dashboard = () => {
     }
   };
 
+
+  const handleSavetoDrive = async () => {
+    setSavingtoDrive(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Not authenticated. Please login.');
+        return;
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search_term', searchTerm);
+      if (statusFilter !== 'all') params.append('status_filter', statusFilter);
+
+      const response = await fetch(`http://localhost:8000/save-to-drive/${department}?${params}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Export failed');
+      }
+
+    } catch (error) {
+      console.error('Error Saving to Drive:', error);
+      alert(error.message || 'Failed to Save To Drive. Please try again.');
+    } finally {
+      setSavingtoDrive(false);
+    }
+  };
+
+
+
   if (loading) {
     return (
       <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -400,6 +439,15 @@ const Dashboard = () => {
                   >
                     <IoDownload className="w-4 h-4" />
                     <span>{downloadLoading ? 'Downloading...' : 'Download Excel'}</span>
+                  </button>
+
+                  <button 
+                    className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${downloadLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                    onClick={handleSavetoDrive}
+                    disabled={SavingtoDrive}
+                  >
+                    <FaGoogleDrive className="text-white-600 text-xl" />
+                    <span>{SavingtoDrive ? 'Saving...' : 'Save To Drive'}</span>
                   </button>
                 </div>
               </div>
