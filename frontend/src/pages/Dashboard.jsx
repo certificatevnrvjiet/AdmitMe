@@ -289,7 +289,10 @@ const Dashboard = () => {
 
       // Get filename from response headers
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'students_export.xlsx';
+      // const data = await response.json();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `${department.toUpperCase()}_students_${timestamp}.xlsx`;
+      toast.success(`File: ${filename} Doownloaded Successfully!`);
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename=(.+)/);
         if (filenameMatch) {

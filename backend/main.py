@@ -44,7 +44,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL ]
+ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"https://vz9sk08m-5173.inc1.devtunnels.ms" ]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
