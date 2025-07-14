@@ -32,6 +32,14 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         setImageLoading(true); // Set loading to true when student changes
     }, [student]);
 
+    const validateStudentId = (id) => {
+        if (!id) return true; // Allow empty/null
+        if (id.length !== 10) return false;
+        const first5 = id.substring(0, 5);
+        const rest = id.substring(5);
+        return /^\d{5}$/.test(first5) && /^[a-zA-Z0-9]+$/.test(rest);
+    };
+
     const handleInputChange = (field, value) => {
         setEditedStudent((prev) => ({
             ...prev,
@@ -41,6 +49,10 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     };
 
     const handleSave = async () => {
+      if (!validateStudentId(editedStudent.ht_no)) {
+              alert('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
+              return;
+          }
         try {
             setIsSaving(true);
             console.log('Saving student:', editedStudent.aadhaar_card_number);
@@ -56,6 +68,12 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     };
 
     const handleDraft = async () => {
+
+          if (!validateStudentId(editedStudent.ht_no)) {
+              alert('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
+              return;
+          }
+
         try {
             setIsSaving(true);
             editedStudent.status = 'Pending'; // Set status to Draft

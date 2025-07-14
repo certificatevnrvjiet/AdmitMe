@@ -45,8 +45,17 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} py-12 px-4 sm:px-6 lg:px-8`}>
-      <div className={`max-w-md w-full space-y-8 p-10 rounded-xl shadow-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className="h-screen flex items-center justify-center relative"
+         style={{
+           backgroundImage: 'url(https://vnrvjiet.ac.in/assets/images/Numbers-Image.png)',
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+         }}>
+      {/* Overlay */}
+      <div className={`absolute inset-0 ${isDarkMode ? 'bg-gray-900 bg-opacity-75' : 'bg-gradient-to-br from-blue-50/70 to-indigo-100/70'}`}></div>
+      
+      {/* Content */}
+      <div className={`max-w-md w-full p-8 rounded-xl shadow-2xl relative z-10 mx-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <div>
           <h2 className={`mt-6 text-center text-4xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             VNRVJIET Login
