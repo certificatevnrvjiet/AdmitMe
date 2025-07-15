@@ -109,7 +109,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
     except Exception as e:
         print(f"Error downloading file from Drive: {e}")
         return None
-async def download_image_from_drive(file_id: str, cred) -> bytes:
+async def download_image_from_drive(file_id: str, cred) -> bytes | None:
     """Async wrapper for Drive download with credentials refresh"""
     async with DRIVE_SEMAPHORE:
         

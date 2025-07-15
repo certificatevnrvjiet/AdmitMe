@@ -41,13 +41,13 @@ function Vnrheader() {
             isDarkMode ? 'bg-gray-800 shadow-gray-900' : 'bg-white shadow-gray-200'
         }`}>
             <div className='flex justify-between items-center max-w-7xl mx-auto'>
-                <div className='flex items-center justify-center flex-1'>
+                <div className='lg:flex md:flex items-center justify-center flex-1'>
                     <img className="w-12 h-12 mx-3" src={image} alt="VNR Logo" />
                     <div className="text-center">
-                        <p className={`text-2xl font-bold tracking-wide ${
+                        <p className={`lg:text-2xl font-bold tracking-wide hidden sm:block ${
                         isDarkMode ? 'text-red-400' : 'text-red-600'
                     }`}>Vallurupalli Nageswara Rao Vignana Jyothi Institute of Engineering &Technology</p>
-                        <h5 className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        <h5 className={`text-sm hidden md:block ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             Vignana Jyothi Nagar, Pragathi Nagar, Nizampet (S.O), Hyderabad, Telangana, India - 500 090
                         </h5>
                     </div> 

@@ -471,7 +471,7 @@ const Dashboard = () => {
           </div>
 
           {/* Activity Table */}
-          <div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
+          {/* <div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
             <div className="p-6">
               <div className="flex justify-between mb-4">
                 <h3 className="text-lg font-medium text-indigo-400 mb-4">Student Verification Activity</h3>
@@ -535,7 +535,98 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              </div> */}
+
+<div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
+  <div className="p-6">
+    <div className="mb-4">
+      <h3 className="text-lg font-medium text-indigo-400 mb-4">
+        Student Verification Activity
+      </h3>
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* Filter Controls Group */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-4 w-full">
+          {/* Status Filter */}
+          <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleStatusFilterChange}
+              value={statusFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="all">All Status</option>
+              <option value="verified">Verified</option>
+              <option value="pending">Pending</option>
+              <option value="not viewed">Not Viewed</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div>
+
+          {/* Branch Filter */}
+          {department === 'admin' && (
+            <div className="relative w-full md:w-auto">
+              <select
+                onChange={handleBranchFilterChange}
+                value={branchFilter}
+                className={`appearance-none w-full md:w-auto bg-transparent border ${
+                  isDarkMode
+                    ? 'border-gray-600 text-white bg-gray-700'
+                    : 'border-gray-300 text-gray-700 bg-white'
+                } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+              >
+                <option value="all">All Branches</option>
+                <option value="aids">AIDS</option>
+                <option value="ae">AE</option>
+                <option value="ce">CE</option>
+                <option value="csbs">CSBS</option>
+                <option value="cse">CSE</option>
+                <option value="aml">AML</option>
+                <option value="cseds">CSE-DS</option>
+                <option value="csecys">CSE-CYS</option>
+                <option value="cseiot">CSE-IOT</option>
+                <option value="eee">EEE</option>
+                <option value="ece">ECE</option>
+                <option value="eie">EIE</option>
+                <option value="it">IT</option>
+                <option value="me">ME</option>
+              </select>
+              <RiArrowDropDownLine
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                  isDarkMode ? 'text-white' : 'text-gray-700'
+                }`}
+                size={20}
+              />
+            </div>
+          )}
+
+          {/* Search Box */}
+          <div className="relative w-full md:w-64">
+            <input
+              type="text"
+              placeholder="Search by Name"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`w-full pl-6 pr-10 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+                isDarkMode
+                  ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
+            />
+            <IoSearchSharp className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+      </div>
+    </div>
+
 
               <div className="overflow-x-auto">
                 <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
