@@ -37,6 +37,10 @@ const Dashboard = () => {
   const verified_students = students.filter(s => s.status === 'Verified').length;
   const pending_students = students.filter(s => s.status === 'Pending').length;
   const [branchFilter, setBranchFilter] = useState('all');
+  const [GenderFilter, setGenderFilter] = useState('all'); // New state for gender filter
+  const [boardFilter, setBoardFilter] = useState('all'); // New state for board filter
+  // const [regionFilter, setRegionFilter] = useState('all'); // New state for region filter
+
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
 
   const fetchStudents = async () => {
@@ -134,7 +138,10 @@ const Dashboard = () => {
       const matchesDepartment = department === 'admin' ? true : s.branch_code?.toLowerCase() === department;
       const matchesStatus = statusFilter === 'all' ? true : s.status?.toLowerCase() === statusFilter;
       const matchesBranch = branchFilter === 'all' ? true : s.branch_code?.toLowerCase() === branchFilter;
-      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch;
+      const matchesGender = GenderFilter === 'all' ? true : s.gender?.toLowerCase() === GenderFilter;
+      const matchesBoard = boardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === boardFilter;
+
+      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesBoard;
     })
   );
 
@@ -160,12 +167,25 @@ const Dashboard = () => {
     }
   };
 
+  // Handler for status filter change
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
   };
-
+  // Handler for region filter change
+  // const handleRegionFilterChange = (e) => {
+  //   setRegionFilter(e.target.value);
+  // };
+  // Handler for gender filter change
+  const handleGenderFilterChange = (e) => {
+    setGenderFilter(e.target.value);
+  };
+  // Handler for branch filter change
   const handleBranchFilterChange = (e) => {
     setBranchFilter(e.target.value);
+  };
+  //Handler for board filter change
+  const handleBoardFilterChange = (e) => {
+    setBoardFilter(e.target.value);
   };
 
   const handleSort = (key) => {
@@ -571,6 +591,35 @@ const Dashboard = () => {
             />
           </div>
 
+          {/* Board Filter */}
+          <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleBoardFilterChange}
+              value={boardFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="all">All Boards</option>
+              <option value="tg bse">TG BSE</option>
+              <option value="cbse">CBSE</option>
+              <option value="icse">ICSE</option>
+              <option value="ap bse">AP BSE</option>
+              <option value="idbp">IDBP</option>
+              <option value="ace and a level">ACE and A Level</option>
+              <option value="other">Other</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div>
+
+
           {/* Branch Filter */}
           {department === 'admin' && (
             <div className="relative w-full md:w-auto">
@@ -607,7 +656,50 @@ const Dashboard = () => {
               />
             </div>
           )}
-
+          {/* Region Filter
+          <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleRegionFilterChange}
+              value={regionFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="all">All Regions</option>
+              <option value="within_state">Within State</option>
+              <option value="outside_state">Other State</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div> */}
+          {/* Gender Filter */}
+          <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleGenderFilterChange}
+              value={GenderFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="all">All Gender</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div>
           {/* Search Box */}
           <div className="relative w-full md:w-64">
             <input
@@ -638,7 +730,10 @@ const Dashboard = () => {
                         } cursor-pointer hover:text-indigo-500`}
                         onClick={() => handleSort('student_id')}
                       >Student ID {getSortIcon('student_id')}</th>
-                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Student Name</th>
+                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                      } cursor-pointer hover:text-indigo-500`}
+                        onClick={() => handleSort('student_name')}>Student Name{getSortIcon('student_name')}</th>
                       <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Status</th>
                       <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Branch</th>
                     </tr>

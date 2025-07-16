@@ -333,7 +333,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-700"
               >
                 {isSaving ? (
                   <span className="inline-flex items-center">
@@ -355,9 +355,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                     </svg>
                     Saving...
                   </span>
-                ) : (
-                  <FiSave className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-                )}
+                ) : <span className={isDarkMode ? 'text-green-300' : 'text-green-600'}>Mark as Verified</span>}
               </button>
               <button
                 onClick={handleDraft}
@@ -365,7 +363,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                 className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
                 title="Save as Draft"
               >
-                <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Draft</span>
+                <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Mark as Pending</span>
               </button>
             </>
           )}
