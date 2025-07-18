@@ -38,7 +38,9 @@ const Dashboard = () => {
   const pending_students = students.filter(s => s.status === 'Pending').length;
   const [branchFilter, setBranchFilter] = useState('all');
   const [GenderFilter, setGenderFilter] = useState('all'); // New state for gender filter
-  const [boardFilter, setBoardFilter] = useState('all'); // New state for board filter
+  const [TenthboardFilter, setTenthBoardFilter] = useState('all'); // New state for board filter
+  const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all'); // New state for twelfth board filter
+
   // const [regionFilter, setRegionFilter] = useState('all'); // New state for region filter
 
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
@@ -139,9 +141,9 @@ const Dashboard = () => {
       const matchesStatus = statusFilter === 'all' ? true : s.status?.toLowerCase() === statusFilter;
       const matchesBranch = branchFilter === 'all' ? true : s.branch_code?.toLowerCase() === branchFilter;
       const matchesGender = GenderFilter === 'all' ? true : s.gender?.toLowerCase() === GenderFilter;
-      const matchesBoard = boardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === boardFilter;
-
-      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesBoard;
+      const matchesTenthBoard = TenthboardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === TenthboardFilter;
+      const matchesTwelfthBoard = TwelfthboardFilter === 'all' ? true : s.twelfth_board_name?.toLowerCase() === TwelfthboardFilter;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard;
     })
   );
 
@@ -183,9 +185,13 @@ const Dashboard = () => {
   const handleBranchFilterChange = (e) => {
     setBranchFilter(e.target.value);
   };
-  //Handler for board filter change
-  const handleBoardFilterChange = (e) => {
-    setBoardFilter(e.target.value);
+  //Handler for Tenthboard filter change
+  const handleTenthBoardFilterChange = (e) => {
+    setTenthBoardFilter(e.target.value);
+  };
+  //Handler for Twelfthboard filter change
+  const handleTwelfthBoardFilterChange = (e) => {
+    setTwelfthBoardFilter(e.target.value);
   };
 
   const handleSort = (key) => {
@@ -591,18 +597,18 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* Board Filter */}
+          {/* TenthBoard Filter */}
           <div className="relative w-full md:w-auto">
             <select
-              onChange={handleBoardFilterChange}
-              value={boardFilter}
+              onChange={handleTenthBoardFilterChange}
+              value={TenthboardFilter}
               className={`appearance-none w-full md:w-auto bg-transparent border ${
                 isDarkMode
                   ? 'border-gray-600 text-white bg-gray-700'
                   : 'border-gray-300 text-gray-700 bg-white'
               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             >
-              <option value="all">All Boards</option>
+              <option value="all">All Tenth Boards</option>
               <option value="tg bse">TG BSE</option>
               <option value="cbse">CBSE</option>
               <option value="icse">ICSE</option>
@@ -618,7 +624,33 @@ const Dashboard = () => {
               size={20}
             />
           </div>
-
+          {/* TwelfthBoardFilter */}
+              <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleTwelfthBoardFilterChange}
+              value={TwelfthboardFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="all">All Twelfth Boards</option>
+              <option value="tg bie">TG BIE</option>
+              <option value="cbse">CBSE</option>
+              <option value="icse">ICSE</option>
+              <option value="ap bie">AP BIE</option>
+              <option value="ibdp">IDBP</option>
+              <option value="ace and a level">ACE and A Level</option>
+              <option value="other">Other</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div>
 
           {/* Branch Filter */}
           {department === 'admin' && (
