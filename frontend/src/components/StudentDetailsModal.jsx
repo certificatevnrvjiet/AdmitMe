@@ -17,6 +17,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
     console.log('Initial student prop:', student);
 
     // Update `editedStudent` whenever the `student` prop changes
@@ -24,6 +25,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         setEditedStudent(student || {});
         setImageError(false);
         setImageLoading(true); // Set loading to true when student changes
+        setZoomLevel(1); // Reset zoom when student changes
     }, [student]);
 
     const validateStudentId = (id) => {
@@ -91,6 +93,37 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         setImageError(true);
     };
 
+    // Handle zoom functionality
+    const handleWheel = (e) => {
+        // Only zoom if Ctrl key is held
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const delta = e.deltaY;
+            const zoomFactor = 0.1;
+            if (delta < 0) {
+                // Scroll up - zoom in
+                setZoomLevel(prev => Math.min(prev + zoomFactor, 3)); // Max zoom 3x
+            } else {
+                // Scroll down - zoom out
+                setZoomLevel(prev => Math.max(prev - zoomFactor, 0.5)); // Min zoom 0.5x
+            }
+        }
+        // Otherwise, allow default scroll for panning
+    };
+
+    // Handle zoom buttons
+    const handleZoomIn = () => {
+        setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    };
+
+    const handleZoomOut = () => {
+        setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+    };
+
+    const handleResetZoom = () => {
+        setZoomLevel(1);
+    };
+
     const getImageSource = () => {
         let imageField = '';
         switch (activeImageTab) {
@@ -125,19 +158,34 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     React.useEffect(() => {
         setImageError(false);
         setImageLoading(true);
+        setZoomLevel(1); // Reset zoom when image tab changes
     }, [activeImageTab]);
+
+    // Helper function to format date as DD/MM/YYYY
+    function formatDateDMY(dateString) {
+      if (!dateString) return '';
+      // If already in DD/MM/YYYY or DD-MM-YYYY, return as is
+      if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateString)) {
+        return dateString.replace(/\-/g, '/'); // convert DD-MM-YYYY to DD/MM/YYYY
+      }
+      // Try to parse ISO or US format
+      const date = new Date(dateString);
+      if (isNaN(date)) return dateString; // fallback if invalid
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
 
     if (!isOpen) return null;
 
     const renderField = (label, field, type = 'text', readOnly = false) => {
         return (
             <div className="mb-4">
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {label}:
-                </label>
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
                 <input
                     type="text"
-                    value={editedStudent[field] || ''}
+                    value={field === 'date_of_birth' && !isEditing ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
                     onChange={(e) => handleInputChange(field, e.target.value)}
                     readOnly={!isEditing || readOnly}
                     className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
@@ -377,60 +425,108 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                             <ScrollableTabs tabs={imageTabs} activeTab={activeImageTab} setActiveTab={setActiveImageTab} />
                         </div>
                         
-                        {/* Image Display */}
-                        <div className="flex-1 overflow-y-auto border rounded-lg p-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                            {getImageSource() ? (
-                                <>
-                                    {imageLoading && (
-                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                                            <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="4"
-                                                    fill="none"
-                                                />
-                                                <path
-                                                    className="opacity-75"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                />
-                                            </svg>
-                                        </div>
-                                    )}
-                                    {imageError ? (
-                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                                            <div className="text-center">
-                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        {/* Image Display with Zoom */}
+                        <div 
+                            className="flex-1 border rounded-lg p-4 relative overflow-hidden" 
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            onWheel={handleWheel}
+                        >
+                            {/* Zoom Controls */}
+                            <div className="absolute top-2 right-2 z-10 flex items-center space-x-2 bg-white bg-opacity-90 rounded-lg px-3 py-2 shadow-lg">
+                                <button
+                                    onClick={handleZoomOut}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                    title="Zoom Out"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                    </svg>
+                                </button>
+                                <span className="text-sm font-medium min-w-[3rem] text-center">
+                                    {Math.round(zoomLevel * 100)}%
+                                </span>
+                                <button
+                                    onClick={handleZoomIn}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                    title="Zoom In"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={handleResetZoom}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                    title="Reset Zoom"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            {/* Scrollable Image Container */}
+                            <div className="w-full h-full overflow-auto">
+                                {getImageSource() ? (
+                                    <>
+                                        {imageLoading && (
+                                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                                                <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
+                                                    <circle
+                                                        className="opacity-25"
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="10"
+                                                        stroke="currentColor"
+                                                        strokeWidth="4"
+                                                        fill="none"
+                                                    />
+                                                    <path
+                                                        className="opacity-75"
+                                                        fill="currentColor"
+                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                    />
                                                 </svg>
-                                                <p className="mt-2 text-sm">Image not available</p>
                                             </div>
+                                        )}
+                                        {imageError ? (
+                                            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                                <div className="text-center">
+                                                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <p className="mt-2 text-sm">Image not available</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-center items-center min-h-full p-4">
+                                                <img
+                                                    src={getImageSource()}
+                                                    alt={`${activeImageTab} Document`}
+                                                    className="object-contain rounded-lg shadow-lg transition-transform duration-200"
+                                                    style={{ 
+                                                        transform: `scale(${zoomLevel})`,
+                                                        maxWidth: '100%',
+                                                        maxHeight: '100%',
+                                                        display: imageLoading ? 'none' : 'block'
+                                                    }}
+                                                    onLoad={handleImageLoad}
+                                                    onError={handleImageError}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                        <div className="text-center">
+                                            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <p className="mt-2 text-sm">No {activeImageTab.toLowerCase()} available</p>
                                         </div>
-                                    ) : (
-                                        <img
-                                            src={getImageSource()}
-                                            alt={`${activeImageTab} Document`}
-                                            className="w-full object-contain rounded-lg shadow-lg"
-                                            onLoad={handleImageLoad}
-                                            onError={handleImageError}
-                                            style={{ display: imageLoading ? 'none' : 'block' }}
-                                        />
-                                    )}
-                                </>
-                            ) : (
-                                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                                    <div className="text-center">
-                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <p className="mt-2 text-sm">No {activeImageTab.toLowerCase()} available</p>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
 

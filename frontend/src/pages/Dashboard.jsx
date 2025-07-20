@@ -402,6 +402,22 @@ const Dashboard = () => {
     );
   }
 
+  // Helper function to format date as DD/MM/YYYY
+  function formatDateDMY(dateString) {
+    if (!dateString) return '';
+    // If already in DD/MM/YYYY or DD-MM-YYYY, return as is
+    if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateString)) {
+      return dateString.replace(/\-/g, '/'); // convert DD-MM-YYYY to DD/MM/YYYY
+    }
+    // Try to parse ISO or US format
+    const date = new Date(dateString);
+    if (isNaN(date)) return dateString; // fallback if invalid
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
   return (
     <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
       {selectedStudent && (
@@ -766,6 +782,7 @@ const Dashboard = () => {
                         isDarkMode ? 'text-gray-300' : 'text-gray-500'
                       } cursor-pointer hover:text-indigo-500`}
                         onClick={() => handleSort('student_name')}>Student Name{getSortIcon('student_name')}</th>
+                      <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Date Of Birth</th>
                       <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Status</th>
                       <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Branch</th>
                     </tr>
@@ -779,6 +796,7 @@ const Dashboard = () => {
                       >
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.ht_no}</td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_name}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{formatDateDMY(s.date_of_birth)}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             s.status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
