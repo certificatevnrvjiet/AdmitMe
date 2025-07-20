@@ -13,17 +13,11 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
     const [activeTab, setActiveTab] = useState('Personal Information');
+    const [activeImageTab, setActiveImageTab] = useState('Aadhaar Card');
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     console.log('Initial student prop:', student);
-
-
-
-
-
-
-
 
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
@@ -98,44 +92,40 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     };
 
     const getImageSource = () => {
-        let imageFields = [];
-        switch (activeTab) {
-            case 'Personal Information':
-                imageFields = ['tenth_memo_link'];
+        let imageField = '';
+        switch (activeImageTab) {
+            case 'Aadhaar Card':
+                imageField = 'aadhaar_link';
                 break;
-            case 'Academic Information':
-                imageFields = ['twelfth_memo_link'];
+            case 'Transfer Certificate':
+                imageField = 'transfer_certificate_link';
                 break;
-            case 'Contact Details':
-                imageFields = ['aadhaar_link'];
+            case '10th Memo':
+                imageField = 'tenth_memo_link';
                 break;
-            case 'Address':
-                imageFields = ['aadhaar_link'];
-                break;
-            case 'Category & Status':
-                imageFields = ['transfer_certificate_link'];
+            case '12th Memo':
+                imageField = 'twelfth_memo_link';
                 break;
             default:
-                imageFields = ['aadhaar_link'];
+                imageField = 'aadhaar_link';
                 break;
         }
-        for (const field of imageFields) {
-            if (editedStudent[field]) {
-                const linkstr = editedStudent[field];
-                const match = linkstr.match(/id=([a-zA-Z0-9_-]+)/);
-                const fileId = match ? match[1] : null;
-                const imageUrl = getImageUrl(fileId);
-                return imageUrl;
-            }
+        
+        if (editedStudent[imageField]) {
+            const linkstr = editedStudent[imageField];
+            const match = linkstr.match(/id=([a-zA-Z0-9_-]+)/);
+            const fileId = match ? match[1] : null;
+            const imageUrl = getImageUrl(fileId);
+            return imageUrl;
         }
         return null;
     };
 
-    // Update image loading state when tab changes
+    // Update image loading state when image tab changes
     React.useEffect(() => {
         setImageError(false);
         setImageLoading(true);
-    }, [activeTab]);
+    }, [activeImageTab]);
 
     if (!isOpen) return null;
 
@@ -160,13 +150,21 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         );
     };
 
-    // Rollback: use simple string array for tabs
-    const tabs = [
+    // Form tabs
+    const formTabs = [
         'Personal Information',
         'Academic Information',
         'Contact Details',
         'Category & Status',
         'Address',
+    ];
+
+    // Image tabs
+    const imageTabs = [
+        'Aadhaar Card',
+        'Transfer Certificate',
+        '10th Memo',
+        '12th Memo',
     ];
 
     const renderTabContent = () => {
@@ -181,12 +179,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
                         {renderField('Date of Birth', 'date_of_birth')}
                         {renderField('Gender', 'gender')}
                         {renderField('Blood Group', 'blood_group')}
-                        {renderField('Nationality', 'nationality')}
-                        {renderField('Religion', 'religion')}
                         {renderField('Mother Tongue', 'mother_tongue')}
                         {renderField('Identification Mark 1', 'identification_mark_1')}
                         {renderField('Aadhaar Number', 'aadhaar_card_number')}
-                        {/* aadhaar_card_number */}
                     </div>
                 );
             case 'Academic Information':
@@ -277,6 +272,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'Category & Status':
                 return (
                     <div className="space-y-4">
+                        {renderField('Nationality', 'nationality')}
+                        {renderField('Religion', 'religion')}
                         {renderField('Category', 'category_name')}
                         {renderField('Caste as per TC', 'caste_as_per_tc')}
                         {renderField('Reservation', 'reservation')}
@@ -293,158 +290,162 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         }
     };
 
-   return isOpen ? (
-  <div className="fixed top-[64px] bottom-[90px] left-0 right-0 z-50 flex items-center justify-center">
-    {/* Blurry Backdrop */}
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
-      onClick={onClose}
-    />
-    
-    {/* Modal */}
-    <div
-      className="relative z-10 bg-white rounded-lg shadow-lg max-w-6xl w-full flex flex-col"
-      style={{ maxHeight: 'calc(100vh - 128px)' }}
-    >
-      {/* Top Action Bar */}
-      <div className=" w-full bg-white rounded-lg  border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
-                        
-                        
-         <h3
-            className={`text-xl font-medium ${
-              isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            Student Details - {editedStudent.student_name}
-          </h3>
-        <div className="flex items-center space-x-2">
-          
-
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+    return isOpen ? (
+        <div className="fixed top-[64px] bottom-[90px] left-0 right-0 z-50 flex items-center justify-center">
+            {/* Blurry Backdrop */}
+            <div
+                className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            />
+            
+            {/* Modal */}
+            <div
+                className="relative z-10 bg-white rounded-lg shadow-lg max-w-6xl w-full flex flex-col"
+                style={{ maxHeight: 'calc(100vh - 128px)' }}
             >
-              <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
-            </button>
-          )}
-          {isEditing && (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-700"
-              >
-                {isSaving ? (
-                  <span className="inline-flex items-center">
-                    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Saving...
-                  </span>
-                ) : <span className={isDarkMode ? 'text-green-300' : 'text-green-600'}>Mark as Verified</span>}
-              </button>
-              <button
-                onClick={handleDraft}
-                disabled={isSaving}
-                className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
-                title="Save as Draft"
-              >
-                <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Mark as Pending</span>
-              </button>
-            </>
-          )}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
-          </button>
-        </div>
-      </div>
+                {/* Top Action Bar */}
+                <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
+                    <h3
+                        className={`text-xl font-medium ${
+                            isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}
+                    >
+                        Student Details - {editedStudent.student_name}
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                        {!isEditing && (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                                <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                            </button>
+                        )}
+                        {isEditing && (
+                            <>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-700"
+                                >
+                                    {isSaving ? (
+                                        <span className="inline-flex items-center">
+                                            <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                    fill="none"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                />
+                                            </svg>
+                                            Saving...
+                                        </span>
+                                    ) : <span className={isDarkMode ? 'text-green-300' : 'text-green-600'}>Mark as Verified</span>}
+                                </button>
+                                <button
+                                    onClick={handleDraft}
+                                    disabled={isSaving}
+                                    className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
+                                    title="Save as Draft"
+                                >
+                                    <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Mark as Pending</span>
+                                </button>
+                            </>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                            <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
+                        </button>
+                    </div>
+                </div>
 
-      <div className="flex flex-row ">
-        {/* Left: Image */}
-        <div className="w-2/3 p-4 overflow-y-auto border-r" style={{ maxHeight: 'calc(100vh - 200px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {getImageSource() ? (
-            <>
-              {imageLoading && (
-                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                  <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                <div className="flex flex-row">
+                    {/* Left: Image Tabs and Image Display */}
+                    <div className="w-2/3 p-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                        {/* Image Tabs */}
+                        <div className="mb-4">
+                            <ScrollableTabs tabs={imageTabs} activeTab={activeImageTab} setActiveTab={setActiveImageTab} />
+                        </div>
+                        
+                        {/* Image Display */}
+                        <div className="flex-1 overflow-y-auto border rounded-lg p-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {getImageSource() ? (
+                                <>
+                                    {imageLoading && (
+                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                                            <svg className="animate-spin h-8 w-8 text-gray-500" viewBox="0 0 24 24">
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                    fill="none"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                />
+                                            </svg>
+                                        </div>
+                                    )}
+                                    {imageError ? (
+                                        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                            <div className="text-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <p className="mt-2 text-sm">Image not available</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={getImageSource()}
+                                            alt={`${activeImageTab} Document`}
+                                            className="w-full object-contain rounded-lg shadow-lg"
+                                            onLoad={handleImageLoad}
+                                            onError={handleImageError}
+                                            style={{ display: imageLoading ? 'none' : 'block' }}
+                                        />
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
+                                    <div className="text-center">
+                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <p className="mt-2 text-sm">No {activeImageTab.toLowerCase()} available</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Form Tabs and Content */}
+                    <div className="w-1/3 p-4 flex flex-col border-l" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                        <ScrollableTabs tabs={formTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        {/* Tab Content */}
+                        <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {renderTabContent()}
+                        </div>
+                    </div>
                 </div>
-              )}
-              {imageError ? (
-                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-                  <div className="text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="mt-2 text-sm">Image not available</p>
-                  </div>
-                </div>
-              ) : (
-                <img
-                    src={getImageSource()}
-                    alt="Student Document"
-                    className="w-full  object-contain rounded-lg shadow-lg"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                    style={{ display: imageLoading ? 'none' : 'block' }}
-                    />
-              )}
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">
-              <div className="text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="mt-2 text-sm">No document available</p>
-              </div>
             </div>
-          )}
         </div>
-
-        {/* Right: Tabs */}
-        <div className="w-1/3 p-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)'  }}>
-          
-          <ScrollableTabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}  >{renderTabContent()}</div>
-        </div>
-      </div>
-    </div>
-  </div>
-) : null;
-
+    ) : null;
 };
 
 export default StudentDetailsModal;
