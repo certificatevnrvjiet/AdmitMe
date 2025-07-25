@@ -136,6 +136,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case '12th Memo':
                 imageField = 'twelfth_memo_link';
                 break;
+            case 'JEE Rank Card':
+                imageField = 'jee_rank_card_link';
+                break;
             default:
                 imageField = 'aadhaar_link';
                 break;
@@ -210,6 +213,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
         'Transfer Certificate',
         '10th Memo',
         '12th Memo',
+        'JEE Rank Card',
     ];
 
     const renderTabContent = () => {
