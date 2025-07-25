@@ -31,7 +31,6 @@ function Vnrheader() {
         API.get('/me')
           .then(res =>{ 
             setUser(res.data.User);
-            console.log(user);
           })
           .catch(() => setUser(null));
       }, [role]);
@@ -46,7 +45,7 @@ function Vnrheader() {
                     <div className="text-center">
                         <p className={`lg:text-2xl font-bold tracking-wide hidden sm:block ${
                         isDarkMode ? 'text-red-400' : 'text-red-600'
-                    }`}>VNR Vignana Jyothi Institute of Engineering &Technology- VJEC</p>
+                    }`}>VNR Vignana Jyothi Institute of Engineering & Technology - VJEC</p>
                         <h5 className={`text-sm hidden md:block ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             Vignana Jyothi Nagar, Pragathi Nagar, Nizampet (S.O), Hyderabad, Telangana, India - 500 090
                         </h5>

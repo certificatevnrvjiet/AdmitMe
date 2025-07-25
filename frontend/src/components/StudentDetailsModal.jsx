@@ -18,7 +18,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
-    console.log('Initial student prop:', student);
 
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
@@ -41,7 +40,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             ...prev,
             [field]: value,
         }));
-        console.log('Student prop updated:', editedStudent.twelfth_subject_scores);
     };
 
     const handleSave = async () => {
@@ -51,7 +49,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
           }
         try {
             setIsSaving(true);
-            console.log('Saving student:', editedStudent.aadhaar_card_number);
             editedStudent.status = 'Verified'; // Set status to Verified
             await onSave(editedStudent);
             setIsEditing(false);

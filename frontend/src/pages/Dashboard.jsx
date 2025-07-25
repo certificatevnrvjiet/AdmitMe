@@ -40,9 +40,6 @@ const Dashboard = () => {
   const [GenderFilter, setGenderFilter] = useState('all'); // New state for gender filter
   const [TenthboardFilter, setTenthBoardFilter] = useState('all'); // New state for board filter
   const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all'); // New state for twelfth board filter
-
-  // const [regionFilter, setRegionFilter] = useState('all'); // New state for region filter
-
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
 
   const fetchStudents = async () => {
@@ -54,15 +51,12 @@ const Dashboard = () => {
           'Content-Type': 'application/json',
         },
       });
-      // console.log('Response:', response); // Debugging line
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      // console.log('Data:', data); // Debugging line
       setStudents(data.students || []);
-      // console.log('Fetched students:', data.students);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching students:', err);
@@ -74,7 +68,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // console.log("User is not authenticated, redirecting to login...");
       return <Navigate to="/" replace />;
     }
     API.get('/me')
@@ -123,7 +116,6 @@ const Dashboard = () => {
 
   // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
-  // console.log('Student List:', studentList); // Debugging line
   // Sort logic (based on name)
   const sortData = (data) => {
     return [...data].sort((a, b) => {
@@ -132,7 +124,6 @@ const Dashboard = () => {
       return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   };
-  // console.log('Student List 22:', studentList);
   // Filter students by department, search term, and status
   const filteredStudents = sortData(
     studentList.filter((s) => {
@@ -147,7 +138,6 @@ const Dashboard = () => {
     })
   );
 
-  // console.log('Student List 33:', filteredStudents);
 
 
   const getDepartmentName = (dept) => {
@@ -238,8 +228,13 @@ const Dashboard = () => {
         setStudents(students.map(student => 
             student.aadhaar_card_number === updatedStudent.aadhaar_card_number ? { ...student, ...updatedStudent  } : student
         ));
+        try {
+                await handleSavetoDrive();
+            } catch (driveError) {
+                console.error('Error saving to drive:', driveError);
+                // Don't block the main save if drive save fails
+            }
         
-        console.log('Student updated successfully:', result);
         handleCloseModal();
     } catch (error) {
         console.error('Error updating student:', error);

@@ -19,8 +19,6 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-
-      console.log("User is already authenticated, redirecting to dashboard...",isAuthenticated);
       navigate("/dashboard"); // or any other route you want
     }
   }, [isAuthenticated, navigate]);
