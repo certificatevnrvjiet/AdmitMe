@@ -1,30 +1,8 @@
-# # # backend.py
-# # from fastapi import FastAPI, Request
-# # from extractor import extract, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter
-
-# # app = FastAPI()
-
-# # @app.post("/process-form")
-# # async def process_form(data: Request):
-# #     body = await data.json()
-# #     board = body["12th Board"]
-# #     link = body["12th Marksheet"]
-
-# #     if board == "State":
-# #         result = extract(link, prompt_SSC_Inter)
-# #     elif board == "AS and A Level":
-# #         result = extract(link, prompt_IGCSE_Inter)
-# #     elif board == "ISC":
-# #         result = extract(link, prompt_ISC_Inter)
-# #     elif board == "CBSE":
-# #         result = extract(link, prompt_CBSE_Inter)
-# #     else:
-# #         return {"error": "Unknown board"}
-
-# #     return {"result": result}
-# from datetime import datetime
-
-
-# date_of_birth=datetime.strptime('16/08/2005', "%d-%m-%Y").date(),
-# print(date_of_birth)
-print(str('123'))
+from googleapiclient.discovery import build
+from config.settings import FRONTEND_URL,SPREADSHEET_ID
+from GoogleService import read_google_sheet
+from GoogleService import authenticate_service_account
+credentials = authenticate_service_account()
+sheets_service = build('sheets', 'v4', credentials=credentials)
+RANGE='cse!A12:B12'
+print(read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE))
