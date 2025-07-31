@@ -12,3 +12,6 @@ pydantic[email]
 Pillow
 supabase
 openpyxl
+tenacity
+PyMuPDF
+python-jose
