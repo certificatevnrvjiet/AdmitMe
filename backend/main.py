@@ -59,93 +59,37 @@ app.add_middleware(
 )
 
 
-fake_users_db = {
-    "admin@vnrvjiet.in": {
-        "username": "admin@vnrvjiet.in",
-        "password": "adminpass",
-        "role": "admin"
-    },
-    "aidsadmin": {
-        "username": "aidsadmin",
-        "password": "aidspass",
-        "role": "aids"
-    },
-    "aeadmin": {
-        "username": "aeadmin",
-        "password": "aepass",
-        "role": "ae"
-    },
-    "ceadmin": {
-        "username": "ceadmin",
-        "password": "cepass",
-        "role": "ce"
-    },
-    "csbsadmin": {
-        "username": "csbsadmin",
-        "password": "csbspass",
-        "role": "csbs"
-    },
-    "cseadmin": {
-        "username": "cseadmin",
-        "password": "csepass",
-        "role": "cse"
-    },
-    "aimladmin": {
-        "username": "aimladmin",
-        "password": "amlpass",
-        "role": "aiml"
-    },
-    "csedsadmin": {
-        "username": "csedsadmin",
-        "password": "csedspass",
-        "role": "cseds"
-    },
-    "csecysadmin": {
-        "username": "csecysadmin",
-        "password": "csecyspass",
-        "role": "csecys"
-    },
-    "cseiotadmin": {
-        "username": "cseiotadmin",
-        "password": "cseiotpass",
-        "role": "cseiot"
-    },
-    "eeeadmin": {
-        "username": "eeeadmin",
-        "password": "eeepass",
-        "role": "eee"
-    },
-    "eceadmin": {
-        "username": "eceadmin",
-        "password": "ecepass",
-        "role": "ece"
-    },
-    "eieadmin": {
-        "username": "eieadmin",
-        "password": "eiepass",
-        "role": "eie"
-    },
-    "itadmin": {
-        "username": "itadmin",
-        "password": "itpass",
-        "role": "it"
-    },
-    "meadmin": {
-        "username": "meadmin",
-        "password": "mepass",
-        "role": "me"
-    }
-}
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Helper to verify user credentials
+# import bcrypt
+
 def authenticate_user(username: str, password: str):
-    user = fake_users_db.get(username)
-    if not user or user["password"] != password:
-        return None
-    return user
+    try:
+        # Fetch user with matching email
+        response = supabase.table("users").select("*").eq("email", username).single().execute()
+
+        if response.data is None:
+            return {"error": "User not found"}
+
+        user = response.data
+        print(user)
+        # Check bcrypt-hashed password
+        # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
+        #     return {"error": "Invalid credentials"}
+
+        return {"user": {
+            "id": user["id"],
+            "email": user["email"],
+            "dept": user["dept"],
+            "rights": user["rights"]
+        }}
+
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # Create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -387,7 +331,8 @@ async def get_task_status(task_id: str):
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     print(form_data)
     user = authenticate_user(form_data.username, form_data.password)
-    print(form_data.username)
+    print(user['user']['email'],'\n\n')
+    user=user['user']
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -395,15 +340,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
     token_data = {
-        "sub": user["username"],
-        "role": user["role"]
+        "sub": user["email"],
+        "role": user["dept"]
     }
     access_token = create_access_token(
         data=token_data,
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     print(access_token)
-    return {"access_token": access_token, "token_type": "bearer", "role": user["role"]}
+    return {"access_token": access_token, "token_type": "bearer", "role": user["dept"]}
 
 
 @app.get("/api/verify-token")
