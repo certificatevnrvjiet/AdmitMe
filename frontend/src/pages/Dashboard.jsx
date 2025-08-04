@@ -1,8 +1,8 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { IoSearchSharp, IoArrowUp, IoArrowDown, IoDownload } from "react-icons/io5";
+import { IoSearchSharp, IoArrowUp, IoArrowDown, IoDownload, IoPeople } from "react-icons/io5";
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { useTheme } from '../context/ThemeContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import StudentDetailsModal from '../components/StudentDetailsModal';
 import { AuthContext } from "../auth/AuthContext";
 import API from '../api'
@@ -38,6 +38,7 @@ const Dashboard = () => {
   const [TenthboardFilter, setTenthBoardFilter] = useState('all'); // New state for board filter
   const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all'); // New state for twelfth board filter
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
+  const [Le,setLe] = useState(false);
 
   const fetchStudents = async () => {
     try {
@@ -486,6 +487,16 @@ const Dashboard = () => {
                     <FaGoogleDrive className="text-white-600 text-xl" />
                     <span>{SavingtoDrive ? 'Saving...' : 'Save To Drive'}</span>
                   </button>
+                  
+                  {userRole === 'admin' && (
+                    <Link
+                      to="/user-management"
+                      className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
+                    >
+                      <IoPeople className="w-4 h-4" />
+                      <span>User Management</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

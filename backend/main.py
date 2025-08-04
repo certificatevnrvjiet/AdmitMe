@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Response, Depends, status, Backgroun
 from fastapi.middleware.cors import CORSMiddleware
 from models.SheetModel import SheetStudent
 from models.StudentModel import Student
+from models.UserModel import User, UserCreate, UserUpdate, PasswordChange
 from extractor import extract,prompts
 from uuid import uuid4
 import re
@@ -44,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"https://vz9sk08m-5173.inc1.devtunnels.ms" ]
+ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"http://192.168.137.41:5173" ]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -59,93 +60,37 @@ app.add_middleware(
 )
 
 
-fake_users_db = {
-    "admin@vnrvjiet.in": {
-        "username": "admin@vnrvjiet.in",
-        "password": "adminpass",
-        "role": "admin"
-    },
-    "aidsadmin": {
-        "username": "aidsadmin",
-        "password": "aidspass",
-        "role": "aids"
-    },
-    "aeadmin": {
-        "username": "aeadmin",
-        "password": "aepass",
-        "role": "ae"
-    },
-    "ceadmin": {
-        "username": "ceadmin",
-        "password": "cepass",
-        "role": "ce"
-    },
-    "csbsadmin": {
-        "username": "csbsadmin",
-        "password": "csbspass",
-        "role": "csbs"
-    },
-    "cseadmin": {
-        "username": "cseadmin",
-        "password": "csepass",
-        "role": "cse"
-    },
-    "aimladmin": {
-        "username": "aimladmin",
-        "password": "amlpass",
-        "role": "aiml"
-    },
-    "csedsadmin": {
-        "username": "csedsadmin",
-        "password": "csedspass",
-        "role": "cseds"
-    },
-    "csecysadmin": {
-        "username": "csecysadmin",
-        "password": "csecyspass",
-        "role": "csecys"
-    },
-    "cseiotadmin": {
-        "username": "cseiotadmin",
-        "password": "cseiotpass",
-        "role": "cseiot"
-    },
-    "eeeadmin": {
-        "username": "eeeadmin",
-        "password": "eeepass",
-        "role": "eee"
-    },
-    "eceadmin": {
-        "username": "eceadmin",
-        "password": "ecepass",
-        "role": "ece"
-    },
-    "eieadmin": {
-        "username": "eieadmin",
-        "password": "eiepass",
-        "role": "eie"
-    },
-    "itadmin": {
-        "username": "itadmin",
-        "password": "itpass",
-        "role": "it"
-    },
-    "meadmin": {
-        "username": "meadmin",
-        "password": "mepass",
-        "role": "me"
-    }
-}
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Helper to verify user credentials
+# import bcrypt
+
 def authenticate_user(username: str, password: str):
-    user = fake_users_db.get(username)
-    if not user or user["password"] != password:
-        return None
-    return user
+    try:
+        # Fetch user with matching email
+        response = supabase.table("users").select("*").eq("email", username).single().execute()
+
+        if response.data is None:
+            return {"error": "User not found"}
+
+        user = response.data
+        print(user)
+        # Check bcrypt-hashed password
+        # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
+        #     return {"error": "Invalid credentials"}
+
+        return {"user": {
+            "id": user["id"],
+            "email": user["email"],
+            "dept": user["dept"],
+            "rights": user["rights"]
+        }}
+
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # Create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -171,7 +116,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return {"username": username, "role": role}
 
-DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 # Store active WebSocket connections: {username: websocket}
 active_connections: Dict[str, WebSocket] = {}
@@ -294,14 +238,16 @@ async def sync(task_id: str, params: dict , app: FastAPI):
         count_students_synced = d.get(params["branch"], 0)
         sheets_service=app.state.sheets_service
         RANGE=f'{params["branch"]}!B2:BS4'
-        data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
-        # print("Data from sheets:", data_from_sheets[].index("557119422790"))
+        # data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
+        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!A1:AS300')
+
+        aadharindex=data_from_sheets[0].index("Aadhaar Card Number")
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
         print("\naadhaar cards in db",aadhaar_cards)
 
         if data_from_sheets is None:
             data_from_sheets = []
-        data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
+        data_from_sheets = [row for row in data_from_sheets if row[aadharindex] not in aadhaar_cards]  # Filter out already synced students
         # Prepare subtasks (60-150 groups of 6)
         print("Data from sheets:", data_from_sheets)
         no_of_students = len(data_from_sheets)
@@ -387,7 +333,8 @@ async def get_task_status(task_id: str):
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     print(form_data)
     user = authenticate_user(form_data.username, form_data.password)
-    print(form_data.username)
+    print(user['user']['email'],'\n\n')
+    user=user['user']
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -395,15 +342,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
     token_data = {
-        "sub": user["username"],
-        "role": user["role"]
+        "sub": user["email"],
+        "role": user["dept"]
     }
     access_token = create_access_token(
         data=token_data,
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     print(access_token)
-    return {"access_token": access_token, "token_type": "bearer", "role": user["role"]}
+    return {"access_token": access_token, "token_type": "bearer", "role": user["dept"]}
 
 
 @app.get("/api/verify-token")
@@ -694,6 +641,175 @@ async def save_to_drive_sheet(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Save to drive failed: {str(e)}")
+
+# User Management Endpoints
+@app.get("/users")
+async def get_users(current_user: dict = Depends(get_current_user)):
+    """Get all users - Admin only"""
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can access user management"
+        )
+    
+    try:
+        response = supabase.table("users").select("id, email, dept, rights").execute()
+        return {"users": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/users")
+async def create_user(user_data: UserCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new user - Admin only"""
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can create users"
+        )
+    
+    try:
+        # Check if user already exists
+        existing_user = supabase.table("users").select("*").eq("email", user_data.email).execute()
+        if existing_user.data:
+            raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+        # Create user (password should be hashed in production)
+        user_dict = user_data.model_dump()
+        response = supabase.table("users").insert(user_dict).execute()
+        
+        if response.data:
+            created_user = response.data[0]
+            return {
+                "message": "User created successfully",
+                "user": {
+                    "id": created_user["id"],
+                    "email": created_user["email"],
+                    "dept": created_user["dept"],
+                    "rights": created_user["rights"]
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/users/{user_id}")
+async def update_user(user_id: str, user_data: UserUpdate, current_user: dict = Depends(get_current_user)):
+    """Update user - Admin only"""
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can update users"
+        )
+    
+    try:
+        # Check if user exists
+        existing_user = supabase.table("users").select("*").eq("id", user_id).execute()
+        if not existing_user.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Prepare update data (only include non-None values)
+        update_data = {}
+        if user_data.email is not None:
+            update_data["email"] = user_data.email
+        if user_data.dept is not None:
+            update_data["dept"] = user_data.dept
+        if user_data.rights is not None:
+            update_data["rights"] = user_data.rights
+        if user_data.password is not None:
+            update_data["password"] = user_data.password
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Update user
+        response = supabase.table("users").update(update_data).eq("id", user_id).execute()
+        
+        if response.data:
+            updated_user = response.data[0]
+            return {
+                "message": "User updated successfully",
+                "user": {
+                    "id": updated_user["id"],
+                    "email": updated_user["email"],
+                    "dept": updated_user["dept"],
+                    "rights": updated_user["rights"]
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update user")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete user - Admin only"""
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can delete users"
+        )
+    
+    try:
+        # Check if user exists
+        existing_user = supabase.table("users").select("*").eq("id", user_id).execute()
+        if not existing_user.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Prevent admin from deleting themselves
+        if existing_user.data[0]["email"] == current_user["username"]:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
+        # Delete user
+        response = supabase.table("users").delete().eq("id", user_id).execute()
+        
+        if response.data:
+            return {"message": "User deleted successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete user")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/users/{user_id}/change-password")
+async def change_user_password(user_id: str, password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    """Change user password - Admin only"""
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can change user passwords"
+        )
+    
+    try:
+        # Validate password confirmation
+        if password_data.new_password != password_data.confirm_password:
+            raise HTTPException(status_code=400, detail="Passwords do not match")
+        
+        # Check if user exists
+        existing_user = supabase.table("users").select("*").eq("id", user_id).execute()
+        if not existing_user.data:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update password
+        response = supabase.table("users").update({"password": password_data.new_password}).eq("id", user_id).execute()
+        
+        if response.data:
+            return {"message": "Password changed successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to change password")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import UserManagement from "./pages/UserManagement";
 import Footer from "./components/Footer";
 import Vnrheader from "./components/Vnrheader";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -25,6 +26,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/user-management"
+                  element={
+                    <ProtectedRoute>
+                      <UserManagement />
                     </ProtectedRoute>
                   }
                 />

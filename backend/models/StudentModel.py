@@ -86,6 +86,7 @@ class Student(BaseModel):
     twelfth_memo_link: Optional[str] = ""
     jee_rank_card_link: Optional[str] = ""
     eapcet_rank_card_link: Optional[str] = ""
+    student_type: Optional[str]=""
 
     @classmethod
     def from_flat_student(cls, flat_student: SheetStudent) -> 'Student':
