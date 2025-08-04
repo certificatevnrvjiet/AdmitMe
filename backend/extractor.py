@@ -99,14 +99,14 @@ College_Code:
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
-# prompt_Diploma = '''Extract the following structured data from the image:
-# Hall Ticket Number: Hall ticket number from the certificate
-# CGPA: Cumulative Grade Point Average (CGPA) from the certificate
+prompt_Diploma = '''Extract the following structured data from the image:
+Hall Ticket Number: Hall ticket number from the certificate
+CGPA: Cumulative Grade Point Average (CGPA) from the certificate
 
-# Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
-# just Dictionary no other stuff.'''
+Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
+just Dictionary no other stuff.'''
 
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
+prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter, prompt_Diploma]
 
 
 

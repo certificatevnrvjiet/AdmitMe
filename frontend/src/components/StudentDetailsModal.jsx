@@ -8,7 +8,7 @@ import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 
 
-const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
+const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
@@ -139,6 +139,12 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
             case 'JEE Rank Card':
                 imageField = 'jee_rank_card_link';
                 break;
+            case 'EAPCET Rank Card':
+                imageField = 'eapcet_rank_card_link';
+                break;
+            case 'Diploma Certificate':
+                imageField = 'twelfth_memo_link'; // Assuming diploma is same as 12th memo
+                break;
             default:
                 imageField = 'aadhaar_link';
                 break;
@@ -244,13 +250,24 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     ];
 
     // Image tabs
-    const imageTabs = [
-        'Aadhaar Card',
-        'Transfer Certificate',
-        '10th Memo',
-        '12th Memo',
-        'JEE Rank Card',
-    ];
+    const imageTabs = React.useMemo(() =>{
+        if (isLE) {
+            return [
+                'Aadhaar Card',
+                'Transfer Certificate',
+                '10th Memo',
+                'Diploma Certificate',
+            ];
+        }
+        return [
+            'Aadhaar Card', 
+            'Transfer Certificate',
+            '10th Memo',
+            '12th Memo',
+            'JEE Rank Card',
+            'EAPCET Rank Card',
+        ];
+    }, [isLE]);
 
     const renderTabContent = () => {
         switch (activeTab) {
