@@ -180,23 +180,59 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student }) => {
     if (!isOpen) return null;
 
     const renderField = (label, field, type = 'text', readOnly = false) => {
-        return (
-            <div className="mb-4">
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
-                <input
-                    type="text"
-                    value={field === 'date_of_birth' && !isEditing ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
-                    onChange={(e) => handleInputChange(field, e.target.value)}
-                    readOnly={!isEditing || readOnly}
-                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
-                        isDarkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                    } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
-                />
-            </div>
-        );
-    };
+    const isDOB = field === 'date_of_birth';
+    return (
+        <div className="mb-4 relative">
+            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
+            <input
+                type={type}
+                value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
+                onChange={(e) => handleInputChange(field, e.target.value)}
+                readOnly={!isEditing || readOnly}
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                    isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
+            />
+            {/* Calendar Picker for DOB in Edit Mode */}
+            {isDOB && isEditing && !readOnly && (
+                <div className="absolute top-[33px] right-2">
+                    <input
+                        type="date"
+                        value={(() => {
+                            const d = new Date(editedStudent[field]);
+                            return isNaN(d) ? '' : d.toISOString().split('T')[0];
+                        })()}
+                        onChange={(e) => {
+                            const isoDate = e.target.value; // yyyy-mm-dd
+                            const [year, month, day] = isoDate.split('-');
+                            const formatted = `${day}/${month}/${year}`;
+                            handleInputChange(field, formatted);
+                        }}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                    />
+                    <svg
+                        className="w-5 h-5 text-gray-500 pointer-events-none"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 
+                            00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                    </svg>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 
     // Form tabs
     const formTabs = [

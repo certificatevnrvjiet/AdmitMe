@@ -97,6 +97,12 @@ Month_year: Month and year of passing (e.g., March 2020)
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
+# prompt_Diploma = '''Extract the following structured data from the image:
+# Hall Ticket Number: Hall ticket number from the certificate
+# CGPA: Cumulative Grade Point Average (CGPA) from the certificate
+
+# Please return the result in Dictionary format with exact field names as mentioned above (if any field not found return null)
+# just Dictionary no other stuff.'''
 
 prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
 
@@ -126,7 +132,7 @@ async def extract(linkstr: str, prompt: str, drive_service) -> dict:
         )
         
         # Parse response
-        # print(f"\n\nResponse from Gemini: {response_text}\n\n")
+        print(f"\n\nResponse from Gemini: {response_text}\n\n")
         return json.loads(response_text.split("```")[1][5:])
     
     except Exception as e:

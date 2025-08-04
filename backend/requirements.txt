@@ -12,3 +12,4 @@ pydantic[email]
 Pillow
 supabase
 openpyxl
+tenacity
