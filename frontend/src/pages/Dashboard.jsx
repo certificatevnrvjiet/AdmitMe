@@ -37,7 +37,7 @@ const Dashboard = () => {
   const [TenthboardFilter, setTenthBoardFilter] = useState('all');
   const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all');
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
-  const [StudenttypeFilter, setStudentTypeFilter] = useState('all');
+  const [StudenttypeFilter, setStudentTypeFilter] = useState('regular'); // Default to Regular
 
   const fetchStudents = async () => {
     try {

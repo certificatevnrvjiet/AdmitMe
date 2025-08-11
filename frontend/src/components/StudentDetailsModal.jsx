@@ -8,7 +8,7 @@ import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 
 
-const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
+const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
@@ -18,7 +18,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
-
+    const isLE= student?.student_type?.toLowerCase() === 'le'; // Check if student type is LE
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
         setEditedStudent(student || {});
@@ -145,6 +145,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
             case 'Diploma Certificate':
                 imageField = 'twelfth_memo_link'; // Assuming diploma is same as 12th memo
                 break;
+            case 'ECET Rank Card':
+                imageField = 'eapcet_rank_card_link';
+                break;
             default:
                 imageField = 'aadhaar_link';
                 break;
@@ -257,6 +260,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
                 'Transfer Certificate',
                 '10th Memo',
                 'Diploma Certificate',
+                'ECET Rank Card',
             ];
         }
         return [
@@ -307,50 +311,59 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, isLE}) => {
                             {renderField('Month & Year', 'tenth_month_year')}
                         </div>
                         <div>
-                            <h5 className="font-medium mb-4">12th Details</h5>
-                            {renderField('Board Name', 'twelfth_board_name')}
-                            {renderField('College Name', 'twelfth_college_name')}
-                            {renderField('Hall Ticket No', 'twelfth_ht_no')}
-                            {/* 5x2 grid for subject scores */}
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    {renderField('M1', 'm1')}
-                                </div>
-                                <div>
-                                    {renderField('M2', 'm2')}
-                                </div>
-                                <div>
-                                    {renderField('M3', 'm3')}
-                                </div>
-                                <div>
-                                    {renderField('M4', 'm4')}
-                                </div>
-                                <div>
-                                    {renderField('P1', 'p1')}
-                                </div>
-                                <div>
-                                    {renderField('P2', 'p2')}
-                                </div>
-                                <div>
-                                    {renderField('C1', 'ch1')}
-                                </div>
-                                <div>
-                                    {renderField('C2', 'ch2')}
-                                </div>
-                                <div>
-                                    {renderField('CLAB', 'chlab')}
-                                </div>
-                                <div>
-                                    {renderField('PLAB', 'plab')}
-                                </div>
-                            </div>
-                            {renderField('Max Marks', 'twelfth_maximum_marks')}
-                            {renderField('Total Marks', 'twelfth_total_marks')}
-                            {renderField('Percentage', 'twelfth_percentage')}
-                            {renderField('Month & Year', 'twelfth_month_year')}
+                <h5 className="font-medium mb-4">{isLE ? 'Diploma Details' : '12th Details'}</h5>
+                {isLE ? (
+                    <>
+                        {renderField('Board Name', 'twelfth_board_name')}
+                        {renderField('College Name', 'twelfth_college_name')}
+                        {renderField('Hall Ticket No', 'twelfth_ht_no')}
+                        {renderField('Max Marks', 'twelfth_maximum_marks')}
+                        {renderField('Total Marks', 'twelfth_total_marks')}
+                        {renderField('Percentage', 'twelfth_percentage')}
+                        {renderField('Month & Year', 'twelfth_month_year')}
+                    </>
+                ) : (
+                    <>
+                        {renderField('Board Name', 'twelfth_board_name')}
+                        {renderField('College Name', 'twelfth_college_name')}
+                        {renderField('Hall Ticket No', 'twelfth_ht_no')}
+                        {/* 5x2 grid for subject scores */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>{renderField('M1', 'm1')}</div>
+                            <div>{renderField('M2', 'm2')}</div>
+                            <div>{renderField('M3', 'm3')}</div>
+                            <div>{renderField('M4', 'm4')}</div>
+                            <div>{renderField('P1', 'p1')}</div>
+                            <div>{renderField('P2', 'p2')}</div>
+                            <div>{renderField('C1', 'ch1')}</div>
+                            <div>{renderField('C2', 'ch2')}</div>
+                            <div>{renderField('CLAB', 'chlab')}</div>
+                            <div>{renderField('PLAB', 'plab')}</div>
                         </div>
-                    </div>
-                );
+                        {renderField('Max Marks', 'twelfth_maximum_marks')}
+                        {renderField('Total Marks', 'twelfth_total_marks')}
+                        {renderField('Percentage', 'twelfth_percentage')}
+                        {renderField('Month & Year', 'twelfth_month_year')}
+                    </>
+                )}
+            </div>
+            <div>
+                <h5 className="font-medium mb-4">{isLE ? 'ECET Details' : 'EAPCET Details'}</h5>
+                {isLE ? (
+                    <>
+                        {renderField('ECET Hall Ticket No', 'eapcet_ht_no')}
+                        {renderField('ECET Rank', 'eapcet_rank')}
+                    </>
+                ) : (
+                    <>
+                        {renderField('EAPCET Hall Ticket No', 'eapcet_ht_no')}
+                        {renderField('EAPCET Rank', 'eapcet_rank')}
+                    </>
+                )}
+            </div>
+        </div>
+        
+    );
             case 'Contact Details':
                 return (
                     <div className="space-y-4">

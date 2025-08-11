@@ -70,12 +70,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 def authenticate_user(username: str, password: str):
     try:
         # Fetch user with matching email
-        response = supabase.table("users").select("*").eq("email", username).single().execute()
+        print( "response from supabase\n\n\n")
 
+        response = supabase.table("users").select("*").eq("email", username).single().execute()
         if response.data is None:
             return {"error": "User not found"}
 
         user = response.data
+        print()
+        print()
         print(user)
         # Check bcrypt-hashed password
         # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
@@ -213,7 +216,7 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         student_dict = student.model_dump()
 
         # Insert into Supabase
-        response = supabase.table("students").insert(student_dict).execute()
+        response = supabase.table("students2025").insert(student_dict).execute()
 
         # Print the response
         # print("Insert response:", response)
@@ -230,7 +233,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
     try:
         # Update to processing status
         supabase.table("tasks").update({"status": "processing"}).eq("id", task_id).execute()
-        aadhaar_cards=supabase.table("students").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
+        aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
         result = supabase.table('degree_code_counts').select('*').execute().data
         d={}
         for i in result:
@@ -333,7 +336,7 @@ async def get_task_status(task_id: str):
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     print(form_data)
     user = authenticate_user(form_data.username, form_data.password)
-    print(user['user']['email'],'\n\n')
+    print(user,'\n\n')
     user=user['user']
     if not user:
         raise HTTPException(
@@ -389,7 +392,7 @@ def verify_token(token: str = Depends(oauth2_scheme)):
 @app.get("/students")
 async def get_students():
     try:
-        response = supabase.table("students").select("*").execute()
+        response = supabase.table("students2025").select("*").execute()
         return {"students": response.data}
     except Exception as e:
         return {"error": str(e)}
@@ -402,7 +405,7 @@ def update_student(aadhaar_card_number: str, updated_student: Student):
     print("student_dict", student_dict)
     # Update in Supabase
     try:
-        response = supabase.table("students").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
+        response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
         if response.data:
             return {"message": "Student updated successfully", "data": response.data}
         else:
@@ -420,10 +423,10 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
 async def get_students_by_department(department: str):
     try:
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
             # Try both degree_code and branch_code for compatibility
-            response = supabase.table("students").select("*") \
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         return {"students": response.data}
@@ -448,9 +451,9 @@ async def export_students_excel(
         
         # Get students from database
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("students").select("*") \
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         
@@ -590,9 +593,9 @@ async def save_to_drive_sheet(
 
         # Get students from database (same as export)
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("students").select("*") \
+            response = supabase.table("2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         students_data = response.data or []
