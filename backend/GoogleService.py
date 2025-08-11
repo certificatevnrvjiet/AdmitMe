@@ -19,7 +19,7 @@ DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 
 
 
-SERVICE_ACCOUNT_FILE = 'credentials.json'
+# SERVICE_ACCOUNT_FILE = 'credentials.json'
 
 SCOPES = [
     # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
