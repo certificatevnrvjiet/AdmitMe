@@ -45,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL  ]
+ORIGINS = [ FRONTEND_URL]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -53,7 +53,7 @@ SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Adjust this to your frontend URL in production
+    allow_origins = ORIGINS,  # Adjust this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -335,7 +335,7 @@ async def get_task_status(task_id: str):
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print(form_data)
+    print("HI",form_data)
     user = authenticate_user(form_data.username, form_data.password)
     print(user['user']['email'],'\n\n')
     user=user['user']
