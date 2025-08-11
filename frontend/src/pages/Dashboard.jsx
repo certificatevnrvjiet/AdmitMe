@@ -10,7 +10,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaGoogleDrive } from 'react-icons/fa';
 
-
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -28,17 +27,17 @@ const Dashboard = () => {
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
-  const total_students_processed = students.length; // Assuming this is the total count of students fetched
+  const total_students_processed = students.length;
   const wsRef = useRef(null);
   const not_viewed_students = students.filter(s => s.status === 'Not Viewed').length;
   const verified_students = students.filter(s => s.status === 'Verified').length;
   const pending_students = students.filter(s => s.status === 'Pending').length;
   const [branchFilter, setBranchFilter] = useState('all');
-  const [GenderFilter, setGenderFilter] = useState('all'); // New state for gender filter
-  const [TenthboardFilter, setTenthBoardFilter] = useState('all'); // New state for board filter
-  const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all'); // New state for twelfth board filter
+  const [GenderFilter, setGenderFilter] = useState('all');
+  const [TenthboardFilter, setTenthBoardFilter] = useState('all');
+  const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all');
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
-  const [Le,setLe] = useState(false);
+  const [StudenttypeFilter, setStudentTypeFilter] = useState('regular'); // Default to Regular
 
   const fetchStudents = async () => {
     try {
@@ -52,7 +51,6 @@ const Dashboard = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
       setStudents(data.students || []);
     } catch (err) {
@@ -62,7 +60,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -85,36 +82,29 @@ const Dashboard = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-
-    // Open WebSocket connection
     const ws = new window.WebSocket(`ws://localhost:8000/ws/notifications?token=${token}`);
     wsRef.current = ws;
-
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "sync_complete") {
         toast.success(data.message || "Sync completed!");
         setSyncStatus(data.message);
-        fetchStudents(); // Refresh students after sync complete
+        fetchStudents();
       } else if (data.type === "sync_failed") {
         toast.error(data.message || "Sync failed!");
         setSyncStatus(data.message);
-        fetchStudents(); // Optionally refresh students after sync failed
+        fetchStudents();
       }
     };
-
     ws.onclose = () => {
       wsRef.current = null;
     };
-
     return () => {
       ws.close();
     };
   }, []);
 
-  // Flatten data: students = [{ data: {...} }, ...] → studentList = [{...}, {...}]
   const studentList = students.map((s) => s.data || s);
-  // Sort logic (based on name)
   const sortData = (data) => {
     return [...data].sort((a, b) => {
       const aVal = a[sortConfig.key]?.toLowerCase?.() || '';
@@ -122,7 +112,6 @@ const Dashboard = () => {
       return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
   };
-  // Filter students by department, search term, and status
   const filteredStudents = sortData(
     studentList.filter((s) => {
       const matchesSearch = s.student_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -132,11 +121,12 @@ const Dashboard = () => {
       const matchesGender = GenderFilter === 'all' ? true : s.gender?.toLowerCase() === GenderFilter;
       const matchesTenthBoard = TenthboardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === TenthboardFilter;
       const matchesTwelfthBoard = TwelfthboardFilter === 'all' ? true : s.twelfth_board_name?.toLowerCase() === TwelfthboardFilter;
-      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard;
+      const matchesStudentType = StudenttypeFilter=== 'all' ? true : s.student_type?.toLowerCase() === StudenttypeFilter;
+      // Add LE/Regular filter here if you want to filter students based on LE state
+      // Example: const matchesLe = Le ? s.is_le : !s.is_le;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard && matchesStudentType;
     })
   );
-
-
 
   const getDepartmentName = (dept) => {
     const deptNames = {
@@ -157,30 +147,24 @@ const Dashboard = () => {
     }
   };
 
-  // Handler for status filter change
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
   };
-  // Handler for region filter change
-  // const handleRegionFilterChange = (e) => {
-  //   setRegionFilter(e.target.value);
-  // };
-  // Handler for gender filter change
   const handleGenderFilterChange = (e) => {
     setGenderFilter(e.target.value);
   };
-  // Handler for branch filter change
   const handleBranchFilterChange = (e) => {
     setBranchFilter(e.target.value);
   };
-  //Handler for Tenthboard filter change
   const handleTenthBoardFilterChange = (e) => {
     setTenthBoardFilter(e.target.value);
   };
-  //Handler for Twelfthboard filter change
   const handleTwelfthBoardFilterChange = (e) => {
     setTwelfthBoardFilter(e.target.value);
   };
+  const handleStudentTypeFilterChange = (e) => {
+    setStudentTypeFilter(e.target.value);
+  }
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -221,8 +205,6 @@ const Dashboard = () => {
         }
 
         const result = await response.json();
-        
-        // Update local state
         setStudents(students.map(student => 
             student.aadhaar_card_number === updatedStudent.aadhaar_card_number ? { ...student, ...updatedStudent  } : student
         ));
@@ -230,9 +212,7 @@ const Dashboard = () => {
                 await handleSavetoDrive();
             } catch (driveError) {
                 console.error('Error saving to drive:', driveError);
-                // Don't block the main save if drive save fails
             }
-        
         handleCloseModal();
     } catch (error) {
         console.error('Error updating student:', error);
@@ -240,19 +220,16 @@ const Dashboard = () => {
     }
   };
 
-  // Handler for syncing students
   const handleSyncStudents = async () => {
     setSyncStatus(null);
     setSyncLoading(true);
     try {
-      // Get token from localStorage or AuthContext
       const token = localStorage.getItem('token');
       if (!token) {
         setSyncStatus('Not authenticated. Please login.');
         setSyncLoading(false);
         return;
       }
-      // Use department as branch (skip if admin)
       const branch = department;
       if (!branch || branch === 'admin') {
         setSyncStatus('Please select a department to sync.');
@@ -279,7 +256,6 @@ const Dashboard = () => {
     }
   };
 
-  // Handler for downloading Excel file
   const handleDownloadExcel = async () => {
     setDownloadLoading(true);
     try {
@@ -288,8 +264,6 @@ const Dashboard = () => {
         alert('Not authenticated. Please login.');
         return;
       }
-
-      // Build query parameters
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
@@ -306,11 +280,9 @@ const Dashboard = () => {
         throw new Error(errorData.detail || 'Export failed');
       }
 
-      // Get filename from response headers
       const contentDisposition = response.headers.get('Content-Disposition');
-      // const data = await response.json();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `${department.toUpperCase()}_students_${timestamp}.xlsx`;
+      let filename = `${department.toUpperCase()}_students_${timestamp}.xlsx`;
       toast.success(`File: ${filename} Doownloaded Successfully!`);
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename=(.+)/);
@@ -319,7 +291,6 @@ const Dashboard = () => {
         }
       }
 
-      // Download the file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -338,7 +309,6 @@ const Dashboard = () => {
     }
   };
 
-
   const handleSavetoDrive = async () => {
     setSavingtoDrive(true);
     try {
@@ -347,8 +317,6 @@ const Dashboard = () => {
         alert('Not authenticated. Please login.');
         return;
       }
-
-      // Build query parameters
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
@@ -373,38 +341,14 @@ const Dashboard = () => {
     }
   };
 
-
-
-  if (loading) {
-    return (
-      <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <p className={`text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <p className={`text-center text-red-500`}>Error: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
   // Helper function to format date as DD/MM/YYYY
   function formatDateDMY(dateString) {
     if (!dateString) return '';
-    // If already in DD/MM/YYYY or DD-MM-YYYY, return as is
     if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateString)) {
-      return dateString.replace(/\-/g, '/'); // convert DD-MM-YYYY to DD/MM/YYYY
+      return dateString.replace(/\-/g, '/');
     }
-    // Try to parse ISO or US format
     const date = new Date(dateString);
-    if (isNaN(date)) return dateString; // fallback if invalid
+    if (isNaN(date)) return dateString;
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
@@ -419,6 +363,7 @@ const Dashboard = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSave={handleSaveStudent}
+          isLE={StudenttypeFilter === "le"} // Pass LE info to modal
         />
       )}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -427,35 +372,15 @@ const Dashboard = () => {
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               {department.toUpperCase()} Department Dashboard
             </h2>
-            {/* <div className="relative">
-              <select
-                onChange={handleDepartmentChange}
-                className={`appearance-none bg-transparent border ${
-                  isDarkMode ? 'border-gray-600 text-white bg-gray-700' : 'border-gray-300 text-gray-700 bg-white'
-                } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                defaultValue={department}
-              >
-                <option value="admin">All Departments</option>
-                <option value="cse">Computer Science</option>
-                <option value="ece">Electronics and Communication</option>
-                <option value="eee">Electrical and Electronics</option>
-                <option value="mech">Mechanical</option>
-                <option value="civil">Civil</option>
-              </select>
-              <RiArrowDropDownLine
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                  isDarkMode ? 'text-white' : 'text-gray-700'
-                }`}
-                size={20}
-              />
-            </div> */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Quick Actions */}
             <div className={`overflow-hidden shadow-sm rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
               <div className="p-6">
-                <h3 className="text-lg font-medium text-indigo-400 mb-4">Quick Actions</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-indigo-400">Quick Actions</h3>
+                </div>
                 <div className="space-y-4">
                   <button
                     className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'} ${syncLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -467,9 +392,6 @@ const Dashboard = () => {
                   {syncStatus && (
                     <div className="text-sm mt-2 text-indigo-400">{syncStatus}</div>
                   )}
-                  {/* <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Verify New Student</button>
-                  <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>View Pending Verifications</button>
-                  <button className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-600 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>Generate Reports</button> */}
                   <button 
                     className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${downloadLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     onClick={handleDownloadExcel}
@@ -478,7 +400,6 @@ const Dashboard = () => {
                     <IoDownload className="w-4 h-4" />
                     <span>{downloadLoading ? 'Downloading...' : 'Download Excel'}</span>
                   </button>
-
                   <button 
                     className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${downloadLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     onClick={handleSavetoDrive}
@@ -487,7 +408,6 @@ const Dashboard = () => {
                     <FaGoogleDrive className="text-white-600 text-xl" />
                     <span>{SavingtoDrive ? 'Saving...' : 'Save To Drive'}</span>
                   </button>
-                  
                   {userRole === 'admin' && (
                     <Link
                       to="/user-management"
@@ -515,73 +435,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Activity Table */}
-          {/* <div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
-            <div className="p-6">
-              <div className="flex justify-between mb-4">
-                <h3 className="text-lg font-medium text-indigo-400 mb-4">Student Verification Activity</h3>
-                <div className="flex space-x-4">
-                  <div className="relative">
-                    <select
-                      onChange={handleStatusFilterChange}
-                      className={`appearance-none bg-transparent border ${
-                        isDarkMode ? 'border-gray-600 text-white bg-gray-700' : 'border-gray-300 text-gray-700 bg-white'
-                      } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                      value={statusFilter}
-                    >
-                      <option value="all">All Status</option>
-                      <option value="verified">Verified</option>
-                      <option value="pending">Pending</option>
-                      <option value="not viewed">Not Viewed</option>
-                    </select>
-                    <RiArrowDropDownLine className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                      isDarkMode ? 'text-white' : 'text-gray-700'}`} size={20}/>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search by Name"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className={`w-64 pl-6 pr-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                        isDarkMode ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      }`}
-                    />
-                    <IoSearchSharp className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
-                  {department === 'admin' && (
-                    <div className="relative">
-                      <select
-                        onChange={handleBranchFilterChange}
-                        className={`appearance-none bg-transparent border ${
-                          isDarkMode ? 'border-gray-600 text-white bg-gray-700' : 'border-gray-300 text-gray-700 bg-white'
-                        } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                        value={branchFilter}
-                      >
-                        <option value="all">All Branches</option>
-                        <option value="aids">AIDS</option>
-                        <option value="ae">AE</option>
-                        <option value="ce">CE</option>
-                        <option value="csbs">CSBS</option>
-                        <option value="cse">CSE</option>
-                        <option value="aml">AML</option>
-                        <option value="cseds">CSE-DS</option>
-                        <option value="csecys">CSE-CYS</option>
-                        <option value="cseiot">CSE-IOT</option>
-                        <option value="eee">EEE</option>
-                        <option value="ece">ECE</option>
-                        <option value="eie">EIE</option>
-                        <option value="it">IT</option>
-                        <option value="me">ME</option>
-                      </select>
-                      <RiArrowDropDownLine className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                        isDarkMode ? 'text-white' : 'text-gray-700'
-                      }`} size={20}/>
-                    </div>
-                  )}
-                </div>
-              </div> */}
-
 <div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
   <div className="p-6">
     <div className="mb-4">
@@ -592,6 +445,27 @@ const Dashboard = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {/* Filter Controls Group */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-4 w-full">
+          {/* StudentType Filter */}
+          <div className="relative w-full md:w-auto">
+            <select
+              onChange={handleStudentTypeFilterChange}
+              value={StudenttypeFilter}
+              className={`appearance-none w-full md:w-auto bg-transparent border ${
+                isDarkMode
+                  ? 'border-gray-600 text-white bg-gray-700'
+                  : 'border-gray-300 text-gray-700 bg-white'
+              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            >
+              <option value="regular">Regular</option>
+              <option value="le">LE</option>
+            </select>
+            <RiArrowDropDownLine
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                isDarkMode ? 'text-white' : 'text-gray-700'
+              }`}
+              size={20}
+            />
+          </div>  
           {/* Status Filter */}
           <div className="relative w-full md:w-auto">
             <select
@@ -769,8 +643,6 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
-
-
               <div className="overflow-x-auto">
                 <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
                   <thead>
