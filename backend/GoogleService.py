@@ -1,5 +1,5 @@
 from fastapi import Request
-from config.settings import GOOGLE_API_KEY
+from config.settings import GOOGLE_API_KEY,GOOGLE_CREDENTIALS
 from googleapiclient.discovery import build
 from io import BytesIO
 from googleapiclient.http import MediaIoBaseDownload
@@ -36,7 +36,7 @@ def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
     try:
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+            GOOGLE_CREDENTIALS, scopes=SCOPES
         )
         print("Authentication successful using service account.")
         return credentials
