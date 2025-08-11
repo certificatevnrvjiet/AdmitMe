@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 from models.SheetModel import SheetStudent
+from models.SheetModelLE import SheetStudentLE
 
 class Student(BaseModel):
     degree_code: Optional[str] = ""
@@ -14,6 +15,7 @@ class Student(BaseModel):
     identification_mark_2: Optional[str] = ""
     tenth_board_name: Optional[str] = ""
     tenth_school_name: Optional[str] = ""
+    tenth_district_code: Optional[str] = ""
     tenth_ht_no: Optional[str] = ""
     tenth_maximum_marks: Optional[str] = ""
     tenth_total_marks_cgpa: Optional[str] = ""
@@ -21,6 +23,7 @@ class Student(BaseModel):
     tenth_month_year: Optional[str] = ""
     twelfth_board_name: Optional[str] = ""
     twelfth_college_name: Optional[str] = ""
+    twelfth_district_code: Optional[str] = ""
     twelfth_ht_no: Optional[str] = ""
     twelfth_maximum_marks: Optional[str] = ""
     twelfth_total_marks: Optional[str] = ""
@@ -136,5 +139,55 @@ class Student(BaseModel):
             aadhaar_link=flat_student.aadhaar_card,
             eapcet_rank_card_link=flat_student.eapcet_rank_card,
             jee_rank_card_link=flat_student.jee_rank_card,
-            transfer_certificate_link=flat_student.transfer_certificate
+            transfer_certificate_link=flat_student.transfer_certificate,
+            student_type="regular"
+        )
+
+    @classmethod
+    def from_flat_leStudent(cls, flat_student: SheetStudentLE) -> 'Student':
+        return cls(
+            student_name=flat_student.name_of_the_student,
+            father_name=flat_student.fathers_name,
+            mother_name=flat_student.mothers_name,
+            date_of_birth=flat_student.date_of_birth,
+            gender=flat_student.gender,
+            aadhaar_card_number=flat_student.aadhaar_card_number,
+            eapcet_ht_no=flat_student.ecet_hall_ticket_no,  # ECET instead of EAPCET for LE
+            eapcet_rank=flat_student.ecet_rank,  # ECET rank instead of EAPCET rank
+            mother_tongue=flat_student.mother_tongue,
+            student_phone=flat_student.student_phone_number,
+            father_phone=flat_student.father_phone_number,
+            mother_phone=flat_student.mother_phone_number,
+            student_email=flat_student.student_email,
+            father_email=flat_student.father_email,
+            mother_email=flat_student.mother_email,
+            parent_email=flat_student.mother_email if flat_student.primary_contact_person == "Mother" else flat_student.father_email,
+            parent_phone=flat_student.mother_phone_number if flat_student.primary_contact_person == "Mother" else flat_student.father_phone_number,
+            father_profession_and_designation=flat_student.father_profession_and_designation,
+            mother_profession_and_designation=flat_student.mother_profession_and_designation,
+            address_dno=flat_student.door_no,
+            address_street=flat_student.street_name,
+            address_village_town=flat_student.village_name,
+            address_mandal=flat_student.mandal_name,
+            address_district=flat_student.district_name,
+            address_state=flat_student.state_name,
+            address_pincode=flat_student.pincode,
+            rural_urban=flat_student.rural_urban,
+            ews_status=flat_student.ews_status,
+            category_name=flat_student.caste_category,
+            caste_as_per_tc=flat_student.caste_as_per_tc,
+            ebc_status=flat_student.ebc_status,
+            income=flat_student.annual_income_of_parent,
+            minority=flat_student.minority,
+            blood_group=flat_student.blood_group,
+            ph_status=flat_student.ph_status,
+            scribe=flat_student.ph_scribe,
+            tenth_board_name=flat_student.tenth_board,
+            twelfth_board_name=flat_student.diploma_board_name,  # Diploma board instead of 12th board
+            tenth_memo_link=flat_student.tenth_memo,
+            twelfth_memo_link=flat_student.diploma_certificate,  # Diploma certificate instead of 12th memo
+            aadhaar_link=flat_student.aadhaar_card,
+            eapcet_rank_card_link=flat_student.ecet_rank_card,  # ECET rank card instead of EAPCET
+            transfer_certificate_link=flat_student.transfer_certificate,
+            student_type="LE"  # Mark as Lateral Entry student
         )
