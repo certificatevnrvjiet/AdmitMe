@@ -45,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"http://192.168.137.41:5173" ]
+ORIGINS = ["http://localhost:5173", FRONTEND_URL  ]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -53,7 +53,7 @@ SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGINS,  # Adjust this to your frontend URL in production
+    allow_origins=["http://localhost:5173"],  # Adjust this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,7 +76,7 @@ def authenticate_user(username: str, password: str):
             return {"error": "User not found"}
 
         user = response.data
-        print(user)
+        # print(user)
         # Check bcrypt-hashed password
         # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
         #     return {"error": "Invalid credentials"}
@@ -182,16 +182,20 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             Scores = {}
         print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
+        student.tenth_district_code = safe_get(results[0],"district_code")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
         student.identification_mark_2 = safe_get(results[0], "identification_marks2")
         student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
         student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
         student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
+        student.tenth_percentage = safe_get(results[0],"tenth_percentage")
         student.tenth_month_year = safe_get(results[0], "tenth_month_year")
         student.twelfth_college_name = safe_get(results[2], "College Name")
+        student.twelfth_district_code = safe_get(results[0],"district_code")
         student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
         student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
-        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
+        student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
+        student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
         student.nationality = safe_get(results[2], "Nationality")
         student.religion = safe_get(results[2], "Religion")
@@ -213,7 +217,7 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         student_dict = student.model_dump()
 
         # Insert into Supabase
-        response = supabase.table("students").insert(student_dict).execute()
+        response = supabase.table("students2025").insert(student_dict).execute()
 
         # Print the response
         # print("Insert response:", response)
@@ -230,7 +234,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
     try:
         # Update to processing status
         supabase.table("tasks").update({"status": "processing"}).eq("id", task_id).execute()
-        aadhaar_cards=supabase.table("students").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
+        aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
         result = supabase.table('degree_code_counts').select('*').execute().data
         d={}
         for i in result:
@@ -389,7 +393,7 @@ def verify_token(token: str = Depends(oauth2_scheme)):
 @app.get("/students")
 async def get_students():
     try:
-        response = supabase.table("students").select("*").execute()
+        response = supabase.table("students2025").select("*").execute()
         return {"students": response.data}
     except Exception as e:
         return {"error": str(e)}
@@ -402,7 +406,7 @@ def update_student(aadhaar_card_number: str, updated_student: Student):
     print("student_dict", student_dict)
     # Update in Supabase
     try:
-        response = supabase.table("students").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
+        response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
         if response.data:
             return {"message": "Student updated successfully", "data": response.data}
         else:
@@ -420,10 +424,10 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
 async def get_students_by_department(department: str):
     try:
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
             # Try both degree_code and branch_code for compatibility
-            response = supabase.table("students").select("*") \
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         return {"students": response.data}
@@ -448,9 +452,9 @@ async def export_students_excel(
         
         # Get students from database
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("students").select("*") \
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         
@@ -590,9 +594,9 @@ async def save_to_drive_sheet(
 
         # Get students from database (same as export)
         if department.lower() == "admin":
-            response = supabase.table("students").select("*").execute()
+            response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("students").select("*") \
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         students_data = response.data or []

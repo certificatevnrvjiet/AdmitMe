@@ -92,7 +92,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
         # Handle PDF files
         if mime_type == "application/pdf":
             pdf_doc = fitz.open(stream=fh.read(), filetype="pdf")
-            page = pdf_doc[0]  # Get the first page
+            page = pdf_doc[-1]  # Get the first page
             pix = page.get_pixmap()
             image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
         # Handle image files
