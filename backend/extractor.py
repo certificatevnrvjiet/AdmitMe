@@ -21,6 +21,7 @@ tenth_percentage: Percentage scored(please Calculate as (total marks obtained/to
 tenth_month_year: Month and year of passing (e.g., March 2020)
 identification_marks1: Identification marks (if any)
 identification_marks2: Identification marks (if any)
+district_code: 
 
 
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
@@ -34,6 +35,8 @@ Subject Scores: Subject-wise scores (if available, please provide in a dictionar
 Total Marks: sum of all subject scores
 Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
 Month_Passing: Month and year of passing (e.g., March 2020)
+district_code: 
+
 
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
@@ -47,6 +50,7 @@ Subject Scores: Subject-wise scores (if available, please provide in a dictionar
 Total Marks: sum of all subject scores
 Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
 Month_Passing: Month and year of passing (e.g., March 2020)
+district_code: 
 
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
@@ -59,7 +63,11 @@ Max Marks: 500
 Percentage: Percentage scored(please Calculate as (total marks obtained/total maximum marks)*100)
 Month_year: Month and year of passing (e.g., March 2020)
 Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [keys are 'M4' , 'P2' , 'C2' thats it no more needed only 3] and scores as values)
-'Total Marks': Total marks obtained(Sum of all 5 subjects) '''
+'Total Marks': Total marks obtained(Sum of all 5 subjects)
+district_code: 
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff. '''
 
 prompt_uidai = '''Extract the following structured data from the image:
 Number: Number of the Aadhar card
@@ -93,14 +101,26 @@ Total Marks: Total marks obtained
 Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100)
 Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are ('M1', 'M2', 'P1', 'C1' from 1st year) and ('M3', 'M4', 'P2', 'C2', 'P_Practicals', 'C_Practicals' are from 2nd year) *Thats it no other marks needed needed] and scores as values)
 Month_year: Month and year of passing (e.g., March 2020)
-District_Code: 
-College_Code:
+district_code: 
 
 Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
 just Dictionary no other stuff.
 '''
 
-prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter]
+prompt_Diploma= '''Extract the following structured data from the image:
+Board Name: Name of the educational board (e.g., CBSE, ICSE, State Board)
+Hall Ticket Number: Hall ticket or registered number
+Max Marks: 10
+Total Marks: Points Scored
+Percentage: Percentage scored (please Calculate as (total marks obtained/total maximum marks)*100 )
+Subject Scores: Subject-wise scores (if available, please provide in a dictionary format with subject names as keys [the keys are ('M1', 'M2', 'P1', 'C1' from 1st year) and ('M3', 'M4', 'P2', 'C2', 'P_Practicals', 'C_Practicals' are from 2nd year) *Thats it no other marks needed needed] and scores as values)
+Month_year: Month and year of passing (e.g., March 2020)
+
+Please return the result in Dictionary format with exact field names as mentioned above  (if any field not found return null)
+just Dictionary no other stuff.
+'''
+
+prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter,prompt_Diploma]
 
 
 

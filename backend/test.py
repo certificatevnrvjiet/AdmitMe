@@ -18,9 +18,12 @@ drive_service=build('drive', 'v3', credentials=credentials)
 
 
 async def process_student(student_data: SheetStudentLE, branch: str):
+    print("Strted Extracting......")
     """Process 6 extract calls in parallel for one subtask"""
     print("\n\nstarted processing student", student_data.name_of_the_student)
-    student = Student.from_flat_student(student_data)
+    student = Student.from_flat_leStudent(student_data)
+    # for i  in student:
+        # print(i)
     student.degree_code = branch.upper()
     student.branch_code = branch.upper()
     student.status = "Not Viewed"
@@ -49,18 +52,22 @@ async def process_student(student_data: SheetStudentLE, branch: str):
         Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict)  else {}
         if Scores is None or not isinstance(Scores, dict):
             Scores = {}
-        print("Scores  : ",Scores)
+        # print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
+        student.tenth_district_code = safe_get(results[0],"district_code")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
         student.identification_mark_2 = safe_get(results[0], "identification_marks2")
         student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
         student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
         student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
+        student.tenth_percentage = safe_get(results[0],"tenth_percentage")
         student.tenth_month_year = safe_get(results[0], "tenth_month_year")
         student.twelfth_college_name = safe_get(results[2], "College Name")
+        student.twelfth_district_code = safe_get(results[0],"district_code")
         student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
         student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
-        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
+        student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
+        student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
         student.nationality = safe_get(results[2], "Nationality")
         student.religion = safe_get(results[2], "Religion")
@@ -78,11 +85,12 @@ async def process_student(student_data: SheetStudentLE, branch: str):
        
 
         # Convert exceptions to error objects
-        print("Processing student:", student.model_dump_json(indent=2))
+        # print("Processing student:", student.model_dump_json(indent=2))
         student_dict = student.model_dump()
-
+        # print(student_dict)
         # Insert into Supabase
-        response = supabase.table("students").insert(student_dict).execute()
+        response = supabase.table("students2025").insert(student_dict).execute()
+        # print(response)
 
 
 def safe_get(result, key):
@@ -98,13 +106,13 @@ async def sync():
     """Process all subtasks with progress tracking"""
     try:
        
-        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C2:AS4')
+        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C3:AS3')
 
         if data_from_sheets is None:
             data_from_sheets = []
 
-        print("Data from sheets:", data_from_sheets)
-        h
+        # print("Data from sheets:", data_from_sheets)
+        # h
         no_of_students = len(data_from_sheets)
 
         for i, student in enumerate(data_from_sheets):
@@ -112,28 +120,24 @@ async def sync():
             field_names = list(SheetStudentLE.model_fields.keys())
             flatstudent_dict = dict(zip(field_names, row))
             student = SheetStudentLE(**flatstudent_dict)
+            # print()
+            # for i in student:
+            #     print(i)
+            # print()
+            # h
             async with SUBTASK_SEMAPHORE:
-                subtask_result = await process_student(student)
+                subtask_result = await process_student(student,student.branch_opted)
                 
                 # Update progress every 10% of tasks
-                if (i + 1) % max(1, no_of_students // 10) == 0:
-                    progress = int(((i + 1) / no_of_students) * 100)
-                    supabase.table("tasks").update({
-                        "progress": progress
-                    }).eq("id", task_id).execute()
+                # if (i + 1) % max(1, no_of_students // 10) == 0:
+                #     progress = int(((i + 1) / no_of_students) * 100)
+                #     supabase.table("tasks").update({
+                #         "progress": progress
+                #     }).eq("id", task_id).execute()
         
         # Final update
-        supabase.table("tasks").update({
-            "status": "completed",
-            "result": f"{no_of_students} students processed",
-            "progress": 100
-        }).eq("id", task_id).execute()
-    except Exception as e:
-        supabase.table("tasks").update({
-            "status": "failed",
-            "error": str(e)
-        }).eq("id", task_id).execute()
-        logging.exception(f"Task {task_id} failed")
 
+    except Exception as e:
+       print(e)
 if __name__ == "__main__":
     asyncio.run(sync())

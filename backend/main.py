@@ -45,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"http://192.168.137.41:5173" ]
+ORIGINS = ["http://localhost:5173", FRONTEND_URL  ]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -53,7 +53,7 @@ SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGINS,  # Adjust this to your frontend URL in production
+    allow_origins=["http://localhost:5173"],  # Adjust this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,9 +77,7 @@ def authenticate_user(username: str, password: str):
             return {"error": "User not found"}
 
         user = response.data
-        print()
-        print()
-        print(user)
+
         # Check bcrypt-hashed password
         # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
         #     return {"error": "Invalid credentials"}
@@ -185,16 +183,20 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             Scores = {}
         print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
+        student.tenth_district_code = safe_get(results[0],"district_code")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
         student.identification_mark_2 = safe_get(results[0], "identification_marks2")
         student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
         student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
         student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
+        student.tenth_percentage = safe_get(results[0],"tenth_percentage")
         student.tenth_month_year = safe_get(results[0], "tenth_month_year")
         student.twelfth_college_name = safe_get(results[2], "College Name")
+        student.twelfth_district_code = safe_get(results[0],"district_code")
         student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
         student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
-        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
+        student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
+        student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
         student.nationality = safe_get(results[2], "Nationality")
         student.religion = safe_get(results[2], "Religion")
@@ -595,7 +597,8 @@ async def save_to_drive_sheet(
         if department.lower() == "admin":
             response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("2025").select("*") \
+
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         students_data = response.data or []
