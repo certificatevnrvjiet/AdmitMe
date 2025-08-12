@@ -21,7 +21,6 @@ const verifyToken = async (token) => {
       expiresAt: response.data.expires
     };
   } catch (error) {
-    console.error("Token verification failed:", error.response?.data || error.message);
     return {
       isValid: false,
       user: null,

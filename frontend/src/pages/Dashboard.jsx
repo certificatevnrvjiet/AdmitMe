@@ -47,7 +47,6 @@ const Dashboard = () => {
       setStudents(res.data.students || []);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
-      console.error('Error fetching students:', err);
     } finally {
       setLoading(false);
     }
@@ -205,12 +204,10 @@ const Dashboard = () => {
       try {
         await handleSavetoDrive();
       } catch (driveError) {
-        console.error('Error saving to drive:', driveError);
       }
   
       handleCloseModal();
     } catch (error) {
-      console.error('Error updating student:', error);
       alert(
         error.response?.data?.detail ||
         error.message ||
@@ -282,7 +279,6 @@ const Dashboard = () => {
       document.body.removeChild(a);
   
     } catch (error) {
-      console.error('Error downloading Excel:', error);
       alert(
         error.response?.data?.detail ||
         error.message ||
@@ -304,7 +300,6 @@ const Dashboard = () => {
       await API.post(`/save-to-drive/${department}`, null, { params });
   
     } catch (error) {
-      console.error('Error Saving to Drive:', error);
       alert(
         error.response?.data?.detail ||
         error.message ||

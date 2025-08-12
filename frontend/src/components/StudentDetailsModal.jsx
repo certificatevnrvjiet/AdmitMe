@@ -52,7 +52,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
-            console.error('Error saving student:', error);
             alert(error.message || 'Failed to save changes. Please try again.');
         } finally {
             setIsSaving(false);
@@ -72,7 +71,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
-            console.error('Error saving draft:', error);
             alert(error.message || 'Failed to save draft. Please try again.');
         } finally {
             setIsSaving(false);
