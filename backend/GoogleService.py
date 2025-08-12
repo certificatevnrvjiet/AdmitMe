@@ -1,5 +1,5 @@
 from fastapi import Request
-from config.settings import GOOGLE_API_KEY
+from config.settings import GOOGLE_API_KEY,GOOGLE_CREDENTIALS
 from googleapiclient.discovery import build
 from io import BytesIO
 from googleapiclient.http import MediaIoBaseDownload
@@ -14,12 +14,15 @@ import fitz  # PyMuPDF
 import mimetypes
 from google.auth.transport.requests import Request
 import os
+import json
+
 
 DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 
 
 
-SERVICE_ACCOUNT_FILE = 'credentials.json'
+creds_dict = json.loads(GOOGLE_CREDENTIALS)
+
 
 SCOPES = [
     # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
@@ -35,13 +38,13 @@ SCOPES = [
 def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_dict, scopes=SCOPES
         )
         print("Authentication successful using service account.")
         return credentials
     except FileNotFoundError:
-        print(f"Error: The service account file '{SERVICE_ACCOUNT_FILE}' was not found.")
+        print(f"Error: The service account file '{GOOGLE_CREDENTIALS}' was not found.")
         print("Please ensure it's in the same directory as the script or provide the full path.")
         return None
     except Exception as e:
