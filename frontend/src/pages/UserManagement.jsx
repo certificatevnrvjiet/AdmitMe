@@ -16,6 +16,8 @@ import {
   IoShield,
   IoMail
 } from "react-icons/io5";
+import API from '../api'
+
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -79,19 +81,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
-      const data = await response.json();
+      const { data } = await API.get('/users'); // Token is automatically added in API.js
       setUsers(data.users || []);
     } catch (err) {
       setError(err.message);
@@ -101,138 +91,89 @@ const UserManagement = () => {
     }
   };
 
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    
-    if (createForm.password !== createForm.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/users', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: createForm.email,
-          dept: createForm.dept,
-          rights: createForm.rights,
-          password: createForm.password
-        })
-      });
+// CREATE USER
+const handleCreateUser = async (e) => {
+  e.preventDefault();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create user');
-      }
+  if (createForm.password !== createForm.confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
 
-      const data = await response.json();
-      toast.success('User created successfully');
-      setShowCreateModal(false);
-      setCreateForm({ email: '', dept: '', rights: '', password: '', confirmPassword: '' });
-      fetchUsers();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
+  try {
+    await API.post('/users', {
+      email: createForm.email,
+      dept: createForm.dept,
+      rights: createForm.rights,
+      password: createForm.password,
+    });
 
-  const handleEditUser = async (e) => {
-    e.preventDefault();
+    toast.success('User created successfully');
+    setShowCreateModal(false);
+    setCreateForm({ email: '', dept: '', rights: '', password: '', confirmPassword: '' });
+    fetchUsers();
+  } catch (err) {
+    toast.error(err.response?.data?.detail || err.message);
+  }
+};
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/users/${selectedUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(editForm)
-      });
+// EDIT USER
+const handleEditUser = async (e) => {
+  e.preventDefault();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update user');
-      }
+  try {
+    await API.put(`/users/${selectedUser.id}`, editForm);
 
-      const data = await response.json();
-      toast.success('User updated successfully');
-      setShowEditModal(false);
-      setSelectedUser(null);
-      setEditForm({ email: '', dept: '', rights: '' });
-      fetchUsers();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
+    toast.success('User updated successfully');
+    setShowEditModal(false);
+    setSelectedUser(null);
+    setEditForm({ email: '', dept: '', rights: '' });
+    fetchUsers();
+  } catch (err) {
+    toast.error(err.response?.data?.detail || err.message);
+  }
+};
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
+// CHANGE PASSWORD
+const handleChangePassword = async (e) => {
+  e.preventDefault();
 
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/users/${selectedUser.id}/change-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          new_password: passwordForm.newPassword,
-          confirm_password: passwordForm.confirmPassword
-        })
-      });
+  try {
+    await API.post(`/users/${selectedUser.id}/change-password`, {
+      new_password: passwordForm.newPassword,
+      confirm_password: passwordForm.confirmPassword,
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to change password');
-      }
+    toast.success('Password changed successfully');
+    setShowPasswordModal(false);
+    setSelectedUser(null);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+  } catch (err) {
+    toast.error(err.response?.data?.detail || err.message);
+  }
+};
 
-      const data = await response.json();
-      toast.success('Password changed successfully');
-      setShowPasswordModal(false);
-      setSelectedUser(null);
-      setPasswordForm({ newPassword: '', confirmPassword: '' });
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
+// DELETE USER
+const handleDeleteUser = async (userId, userEmail) => {
+  if (!window.confirm(`Are you sure you want to delete user ${userEmail}?`)) {
+    return;
+  }
 
-  const handleDeleteUser = async (userId, userEmail) => {
-    if (!window.confirm(`Are you sure you want to delete user ${userEmail}?`)) {
-      return;
-    }
+  try {
+    await API.delete(`/users/${userId}`);
+    toast.success('User deleted successfully');
+    fetchUsers();
+  } catch (err) {
+    toast.error(err.response?.data?.detail || err.message);
+  }
+};
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to delete user');
-      }
-
-      toast.success('User deleted successfully');
-      fetchUsers();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
 
   const openEditModal = (user) => {
     setSelectedUser(user);
