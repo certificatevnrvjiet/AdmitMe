@@ -24,6 +24,7 @@ DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 creds_dict = json.loads(GOOGLE_CREDENTIALS)
 
 
+
 SCOPES = [
     # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
     # 'https://www.googleapis.com/auth/spreadsheets.readonly' # Read-only access to Google Sheets
@@ -38,8 +39,10 @@ SCOPES = [
 def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
     try:
+
         credentials = service_account.Credentials.from_service_account_info(
             creds_dict, scopes=SCOPES
+
         )
         print("Authentication successful using service account.")
         return credentials

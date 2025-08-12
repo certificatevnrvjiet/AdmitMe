@@ -148,7 +148,7 @@ async def extract(linkstr: str, prompt: str, drive_service) -> dict:
         )
         
         # Parse response
-        # print(f"\n\nResponse from Gemini: {response_text}\n\n")
+        print(f"\n\nResponse from Gemini: {response_text}\n\n")
         return json.loads(response_text.split("```")[1][5:])
     
     except Exception as e:

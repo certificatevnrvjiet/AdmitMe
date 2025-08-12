@@ -70,13 +70,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 def authenticate_user(username: str, password: str):
     try:
         # Fetch user with matching email
-        response = supabase.table("users").select("*").eq("email", username).single().execute()
+        print( "response from supabase\n\n\n")
 
+        response = supabase.table("users").select("*").eq("email", username).single().execute()
         if response.data is None:
             return {"error": "User not found"}
 
         user = response.data
-        # print(user)
+
         # Check bcrypt-hashed password
         # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
         #     return {"error": "Invalid credentials"}
@@ -337,7 +338,7 @@ async def get_task_status(task_id: str):
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     print("HI",form_data)
     user = authenticate_user(form_data.username, form_data.password)
-    print(user['user']['email'],'\n\n')
+    print(user,'\n\n')
     user=user['user']
     if not user:
         raise HTTPException(
@@ -596,6 +597,7 @@ async def save_to_drive_sheet(
         if department.lower() == "admin":
             response = supabase.table("students2025").select("*").execute()
         else:
+
             response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
