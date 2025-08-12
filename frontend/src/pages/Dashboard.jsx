@@ -9,6 +9,7 @@ import API from '../api'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaGoogleDrive } from 'react-icons/fa';
+import { createWebSocket } from '../websocket';
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,24 +43,16 @@ const Dashboard = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/students/${department}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setStudents(data.students || []);
+      const res = await API.get(`/students/${department}`);
+      setStudents(res.data.students || []);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       console.error('Error fetching students:', err);
     } finally {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -80,29 +73,36 @@ const Dashboard = () => {
   }, [department]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    const ws = new window.WebSocket(`ws://localhost:8000/ws/notifications?token=${token}`);
+    const ws = createWebSocket("/ws/notifications");
+    if (!ws) return;
+  
     wsRef.current = ws;
-    ws.onmessage = (event) => {
+  
+    ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+  
       if (data.type === "sync_complete") {
         toast.success(data.message || "Sync completed!");
         setSyncStatus(data.message);
-        fetchStudents();
+        await fetchStudents();
       } else if (data.type === "sync_failed") {
         toast.error(data.message || "Sync failed!");
         setSyncStatus(data.message);
-        fetchStudents();
+        await fetchStudents();
       }
     };
+  
     ws.onclose = () => {
       wsRef.current = null;
     };
+  
     return () => {
       ws.close();
     };
   }, []);
+  
+  
+  
 
   const studentList = students.map((s) => s.data || s);
   const sortData = (data) => {
@@ -191,108 +191,88 @@ const Dashboard = () => {
 
   const handleSaveStudent = async (updatedStudent) => {
     try {
-        const response = await fetch(`http://localhost:8000/student/${updatedStudent.aadhaar_card_number}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updatedStudent),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to update student');
-        }
-
-        const result = await response.json();
-        setStudents(students.map(student => 
-            student.aadhaar_card_number === updatedStudent.aadhaar_card_number ? { ...student, ...updatedStudent  } : student
-        ));
-        try {
-                await handleSavetoDrive();
-            } catch (driveError) {
-                console.error('Error saving to drive:', driveError);
-            }
-        handleCloseModal();
+      const response = await API.put(
+        `/student/${updatedStudent.aadhaar_card_number}`,
+        updatedStudent
+      );
+  
+      setStudents(students.map(student =>
+        student.aadhaar_card_number === updatedStudent.aadhaar_card_number
+          ? { ...student, ...updatedStudent }
+          : student
+      ));
+  
+      try {
+        await handleSavetoDrive();
+      } catch (driveError) {
+        console.error('Error saving to drive:', driveError);
+      }
+  
+      handleCloseModal();
     } catch (error) {
-        console.error('Error updating student:', error);
-        alert(error.message || 'Failed to update student details. Please try again.');
+      console.error('Error updating student:', error);
+      alert(
+        error.response?.data?.detail ||
+        error.message ||
+        'Failed to update student details. Please try again.'
+      );
     }
   };
+  
 
   const handleSyncStudents = async () => {
     setSyncStatus(null);
     setSyncLoading(true);
+  
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setSyncStatus('Not authenticated. Please login.');
-        setSyncLoading(false);
-        return;
-      }
       const branch = department;
+  
       if (!branch || branch === 'admin') {
         setSyncStatus('Please select a department to sync.');
         setSyncLoading(false);
         return;
       }
-      const response = await fetch(`http://localhost:8000/sync/${branch}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Sync failed');
-      }
-      const data = await response.json();
+  
+      const { data } = await API.post(`/sync/${branch}`);
+  
       setSyncStatus(`Sync started! Task ID: ${data.task_id}`);
     } catch (err) {
-      setSyncStatus(`Error: ${err.message}`);
+      setSyncStatus(
+        `Error: ${err.response?.data?.detail || err.message || 'Sync failed'}`
+      );
     } finally {
       setSyncLoading(false);
     }
   };
+  
 
   const handleDownloadExcel = async () => {
     setDownloadLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Not authenticated. Please login.');
-        return;
-      }
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
-
-      const response = await fetch(`http://localhost:8000/export-students/${department}?${params}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+  
+      const response = await API.get(`/export-students/${department}`, {
+        params,
+        responseType: 'blob', // Important for binary file downloads
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Export failed');
-      }
-
-      const contentDisposition = response.headers.get('Content-Disposition');
+  
+      const contentDisposition = response.headers['content-disposition'];
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       let filename = `${department.toUpperCase()}_students_${timestamp}.xlsx`;
-      toast.success(`File: ${filename} Doownloaded Successfully!`);
+  
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename=(.+)/);
         if (filenameMatch) {
           filename = filenameMatch[1];
         }
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+  
+      toast.success(`File: ${filename} Downloaded Successfully!`);
+  
+      // Create a link and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -300,46 +280,41 @@ const Dashboard = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
+  
     } catch (error) {
       console.error('Error downloading Excel:', error);
-      alert(error.message || 'Failed to download Excel file. Please try again.');
+      alert(
+        error.response?.data?.detail ||
+        error.message ||
+        'Failed to download Excel file. Please try again.'
+      );
     } finally {
       setDownloadLoading(false);
     }
   };
+  
 
   const handleSavetoDrive = async () => {
     setSavingtoDrive(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Not authenticated. Please login.');
-        return;
-      }
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
-
-      const response = await fetch(`http://localhost:8000/save-to-drive/${department}?${params}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Export failed');
-      }
-
+  
+      await API.post(`/save-to-drive/${department}`, null, { params });
+  
     } catch (error) {
       console.error('Error Saving to Drive:', error);
-      alert(error.message || 'Failed to Save To Drive. Please try again.');
+      alert(
+        error.response?.data?.detail ||
+        error.message ||
+        'Failed to Save To Drive. Please try again.'
+      );
     } finally {
       setSavingtoDrive(false);
     }
   };
+  
 
   // Helper function to format date as DD/MM/YYYY
   function formatDateDMY(dateString) {

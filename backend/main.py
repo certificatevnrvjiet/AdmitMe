@@ -422,12 +422,18 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
     return {"User": current_user['username'],"role":current_user['role']}
 
 @app.get("/students/{department}")
-async def get_students_by_department(department: str):
+async def get_students_by_department(department: str,
+    current_user:dict=Depends(get_current_user)
+):
     try:
+        if current_user["role"] != "admin" and current_user["role"] != department:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to export this department's data"
+            )
         if department.lower() == "admin":
             response = supabase.table("students2025").select("*").execute()
         else:
-            # Try both degree_code and branch_code for compatibility
             response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
