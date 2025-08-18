@@ -124,7 +124,7 @@ async def sync():
     """Process all subtasks with progress tracking"""
     try:
        
-        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C2:AS2')
+        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C2:AS220')
         seen = set()
         filtered_data = []
         for row in reversed(data_from_sheets):

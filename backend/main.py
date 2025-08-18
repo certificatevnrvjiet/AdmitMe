@@ -9,7 +9,6 @@ from extractor import extract,prompts
 from uuid import uuid4
 import re
 from GoogleService import authenticate_service_account, download_image_from_drive,read_google_sheet
-from datetime import datetime 
 from datetime import datetime, timedelta
 import uvicorn
 from jose import JWTError, jwt
@@ -406,6 +405,7 @@ def update_student(aadhaar_card_number: str, updated_student: Student):
     # Convert to dict
     student_dict = updated_student.model_dump()
     print("student_dict", student_dict)
+    student_dict["Time_updated"] = datetime.utcnow().isoformat()
     # Update in Supabase
     try:
         response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
@@ -591,7 +591,8 @@ async def save_to_drive_sheet(
         "me": "1vFlnZbt8ebS4_cdCkkyFr1j9zwsQkHSLKbfyXvJcKfc",
         "vlsi": "1uNCdi6bp4VTMkugW7qfejH29kLw9BYOCvm7QO0Mfzg",
         "biotechnology": "1KeUep03GXhNZha4qCNaGwX-l6ZnTSBmHtE5wJG6_5hw",
-        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY"
+        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY",
+        "admin":"1senxGU1NEjmcl63NXNniZz0hRfrEVGeoo9u3BKSBg2E"
 }
 
 
