@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from models.SheetModel import SheetStudent
 from models.SheetModelLE import SheetStudentLE
+from datetime import datetime
 
 class Student(BaseModel):
     degree_code: Optional[str] = ""
@@ -90,6 +91,7 @@ class Student(BaseModel):
     jee_rank_card_link: Optional[str] = ""
     eapcet_rank_card_link: Optional[str] = ""
     student_type: Optional[str]=""
+    Time_updated: Optional[datetime] = None  # Timestamp for last update
 
     @classmethod
     def from_flat_student(cls, flat_student: SheetStudent) -> 'Student':
