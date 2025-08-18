@@ -83,29 +83,52 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         return /^\d{5}$/.test(first5) && /^[a-zA-Z0-9]+$/.test(rest);
     };
 
-    // Helper to calculate percentage
+
+    // Helper to calculate percentage (no negatives allowed)
     const calculatePercentage = (total, max) => {
-        if (!total || !max || isNaN(total) || isNaN(max) || Number(max) === 0) return '';
+        if (
+            !total || !max ||
+            isNaN(total) || isNaN(max) ||
+            Number(max) <= 0 || Number(total) < 0 || Number(max) < 0
+        ) return '';
         return ((Number(total) / Number(max)) * 100).toFixed(2);
     };
 
-    const handleInputChange = (field, value) => {
-        setEditedStudent((prev) => {
-            let updated = { ...prev, [field]: value };
-            // 10th percentage
-            if (['tenth_total_marks_cgpa', 'tenth_maximum_marks'].includes(field)) {
-                const total = field === 'tenth_total_marks_cgpa' ? value : updated.tenth_total_marks_cgpa;
-                const max = field === 'tenth_maximum_marks' ? value : updated.tenth_maximum_marks;
-                updated.tenth_percentage = calculatePercentage(total, max);
+    // Always recalculate percentage when marks fields change
+    React.useEffect(() => {
+        setEditedStudent(prev => {
+            const tenth_percentage = calculatePercentage(prev.tenth_total_marks_cgpa, prev.tenth_maximum_marks);
+            const twelfth_percentage = calculatePercentage(prev.twelfth_total_marks, prev.twelfth_maximum_marks);
+            // Only update if changed, to avoid unnecessary rerenders
+            if (prev.tenth_percentage !== tenth_percentage || prev.twelfth_percentage !== twelfth_percentage) {
+                return {
+                    ...prev,
+                    tenth_percentage,
+                    twelfth_percentage
+                };
             }
-            // 12th/Diploma percentage
-            if (['twelfth_total_marks', 'twelfth_maximum_marks'].includes(field)) {
-                const total = field === 'twelfth_total_marks' ? value : updated.twelfth_total_marks;
-                const max = field === 'twelfth_maximum_marks' ? value : updated.twelfth_maximum_marks;
-                updated.twelfth_percentage = calculatePercentage(total, max);
-            }
-            return updated;
+            return prev;
         });
+    }, [editedStudent.tenth_total_marks_cgpa, editedStudent.tenth_maximum_marks, editedStudent.twelfth_total_marks, editedStudent.twelfth_maximum_marks]);
+
+    // Prevent negative numbers for marks fields
+    const handleInputChange = (field, value) => {
+        // List of marks fields that should not allow negatives
+        const marksFields = [
+            'tenth_maximum_marks', 'tenth_total_marks_cgpa',
+            'twelfth_maximum_marks', 'twelfth_total_marks',
+        ];
+        let newValue = value;
+        if (marksFields.includes(field)) {
+            // Remove negative sign if present
+            if (String(newValue).startsWith('-')) newValue = String(newValue).replace(/^-+/, '');
+            // Remove any non-digit except dot
+            newValue = newValue.replace(/[^\d.]/g, '');
+        }
+        setEditedStudent((prev) => ({
+            ...prev,
+            [field]: newValue,
+        }));
     };
 
     const handleSave = async () => {
@@ -135,6 +158,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         try {
             setIsSaving(true);
             editedStudent.status = 'Pending'; // Set status to Draft
+            editedStudent.Time_updated = new Date().toISOString; // Mark as draft
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
@@ -254,6 +278,10 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
     const renderField = (label, field, type = 'text', readOnly = false) => {
     const isDOB = field === 'date_of_birth';
+    const isMarksField = [
+        'tenth_maximum_marks', 'tenth_total_marks_cgpa',
+        'twelfth_maximum_marks', 'twelfth_total_marks'
+    ].includes(field);
     return (
         <div className="mb-4 relative">
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
@@ -262,6 +290,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                 value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
                 onChange={(e) => handleInputChange(field, e.target.value)}
                 readOnly={!isEditing || readOnly}
+                min={isMarksField && type === 'number' ? 0 : undefined}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
                     isDarkMode
                         ? 'bg-gray-700 border-gray-600 text-white'
