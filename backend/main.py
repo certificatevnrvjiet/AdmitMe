@@ -424,7 +424,7 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
 @app.get("/students/{department}")
 async def get_students_by_department(department: str,
     current_user:dict=Depends(get_current_user)
-):
+    ):
     try:
         if current_user["role"] != "admin" and current_user["role"] != department:
             raise HTTPException(
@@ -546,6 +546,9 @@ async def get_image(
             image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
             if image_bytes:
                 image_cache[file_id] = image_bytes  # Cache the result
+                if len(image_cache)>99:
+                    image_cache: Dict[str, bytes] = {}
+
         
         if not image_bytes:
             raise HTTPException(status_code=404, detail="Image not found or could not be downloaded")

@@ -67,7 +67,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
         try {
             setIsSaving(true);
-            editedStudent.status = 'Pending'; // Set status to Draft
+            editedStudent.status = 'Pending';
+             // Set status to Draft
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
