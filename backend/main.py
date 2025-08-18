@@ -21,6 +21,7 @@ import logging
 from typing import Optional, Dict
 from openpyxl import Workbook
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
