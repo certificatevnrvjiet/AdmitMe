@@ -542,6 +542,9 @@ const Dashboard = () => {
                 <option value="eie">EIE</option>
                 <option value="it">IT</option>
                 <option value="me">ME</option>
+                <option value="vlsi">VLSI</option>
+                <option value="biotechnology">Biotechnology</option>
+                <option value="rai">Robotics and AI</option>
               </select>
               <RiArrowDropDownLine
                 className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${

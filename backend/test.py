@@ -7,6 +7,33 @@ import asyncio
 import logging
 
 
+
+def get_short_form(full_form):
+    mapping = {
+        "AIDS - Artificial Intelligence  & Data Science": "aids",
+        "AE - Automobile Engineering": "ae",
+        "CE - Civil Engineering": "ce",
+        "CSBS - Computer Science & Business Systems": "csbs",
+        "CSE - Computer Science & Engineering": "cse",
+        "AIML - Artificial Intelligence & Machine Learning": "aiml",
+        "CSE - DS - Data Science": "cseds",
+        "CSE - CyS - Cyber Security": "csecys",
+        "CSE - IOT - Internet of Things": "cseiot",
+        "EEE - Electrical & Electronics Engineering": "eee",
+        "ECE - Electronics & Communication Engineering": "ece",
+        "EIE - Electronics & Instrumentation Engineering": "eie",
+        "IT - Information Technology": "it",
+        "ME - Mechanical Engineering": "me",
+        "RAI - Robotics & AI": "rai",
+        "VLSI": "vlsi",
+        "BIOT - Bio Technology": "biot",
+        "ADMIN - Administration": "admin"
+    }
+    return mapping.get(full_form)
+
+  # Output: me
+
+
 from extractor import extract,prompts
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
@@ -18,26 +45,16 @@ drive_service=build('drive', 'v3', credentials=credentials)
 
 
 async def process_student(student_data: SheetStudentLE, branch: str):
-    print("Strted Extracting......")
+    print("\nStrted Extracting......")
     """Process 6 extract calls in parallel for one subtask"""
-    print("\n\nstarted processing student", student_data.name_of_the_student)
+    print("started processing student", student_data.name_of_the_student)
     student = Student.from_flat_leStudent(student_data)
-    # for i  in student:
-        # print(i)
+    branch=get_short_form(branch)
     student.degree_code = branch.upper()
     student.branch_code = branch.upper()
     student.status = "Not Viewed"
     board = student.twelfth_board_name
-    print("Processing board:", board)
-    prompt = prompts[4]  # Default prompt for most boards
-    if board in ("TG BIE", "AP BIE"):
-        prompt=prompts[4]
-    elif board == "ACE and A Level":
-        prompt=prompts[5]
-    elif board == "ICSC":
-        prompt=prompts[6]
-    elif board == "CBSE":
-        prompt=prompts[7]
+    prompt = prompts[-1]  # Default prompt for most boards
     links_prompts = [
         (student.tenth_memo_link, prompts[0]),
         (student.twelfth_memo_link, prompt),
@@ -48,7 +65,6 @@ async def process_student(student_data: SheetStudentLE, branch: str):
             extract(link, prompt, drive_service)
             for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
-        print("Results:", results[1])
         Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict)  else {}
         if Scores is None or not isinstance(Scores, dict):
             Scores = {}
@@ -65,7 +81,7 @@ async def process_student(student_data: SheetStudentLE, branch: str):
         student.twelfth_college_name = safe_get(results[2], "College Name")
         student.twelfth_district_code = safe_get(results[0],"district_code")
         student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
-        student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
+        student.twelfth_maximum_marks = "10"
         student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
         student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
@@ -88,6 +104,8 @@ async def process_student(student_data: SheetStudentLE, branch: str):
         # print("Processing student:", student.model_dump_json(indent=2))
         student_dict = student.model_dump()
         # print(student_dict)
+        # for i in student_dict:
+        #     print(i,student_dict[i])
         # Insert into Supabase
         response = supabase.table("students2025").insert(student_dict).execute()
         # print(response)
@@ -106,15 +124,34 @@ async def sync():
     """Process all subtasks with progress tracking"""
     try:
        
-        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C3:AS3')
+        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C2:AS220')
+        seen = set()
+        filtered_data = []
+        for row in reversed(data_from_sheets):
+            key = row[5]
+            if key not in seen:
+                seen.add(key)
+                filtered_data.append(row)
 
+        # Reverse back to restore original order
+        data_from_sheets = list(reversed(filtered_data))
+        # print(len(data_from_sheets))
+        # u909
         if data_from_sheets is None:
             data_from_sheets = []
+            
+        aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").execute().data
 
-        # print("Data from sheets:", data_from_sheets)
+        # aadharindex=data_from_sheets[0].index("Aadhaar Card Number")
+        aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
+        # print("\naadhaar cards in db",len(aadhaar_cards))
+
+        data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
+
+        # print("Data from sheets:", data_from_sheets[1])
         # h
-        no_of_students = len(data_from_sheets)
-
+        # print(len(data_from_sheets))
+        # lkjhgfd
         for i, student in enumerate(data_from_sheets):
             row = student
             field_names = list(SheetStudentLE.model_fields.keys())

@@ -9,7 +9,6 @@ from extractor import extract,prompts
 from uuid import uuid4
 import re
 from GoogleService import authenticate_service_account, download_image_from_drive,read_google_sheet
-from datetime import datetime 
 from datetime import datetime, timedelta
 import uvicorn
 from jose import JWTError, jwt
@@ -406,6 +405,7 @@ def update_student(aadhaar_card_number: str, updated_student: Student):
     # Convert to dict
     student_dict = updated_student.model_dump()
     print("student_dict", student_dict)
+    student_dict["Time_updated"] = datetime.utcnow().isoformat()
     # Update in Supabase
     try:
         response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
@@ -425,7 +425,7 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
 @app.get("/students/{department}")
 async def get_students_by_department(department: str,
     current_user:dict=Depends(get_current_user)
-):
+    ):
     try:
         if current_user["role"] != "admin" and current_user["role"] != department:
             raise HTTPException(
@@ -547,6 +547,9 @@ async def get_image(
             image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
             if image_bytes:
                 image_cache[file_id] = image_bytes  # Cache the result
+                if len(image_cache)>99:
+                    image_cache: Dict[str, bytes] = {}
+
         
         if not image_bytes:
             raise HTTPException(status_code=404, detail="Image not found or could not be downloaded")
@@ -588,7 +591,8 @@ async def save_to_drive_sheet(
         "me": "1vFlnZbt8ebS4_cdCkkyFr1j9zwsQkHSLKbfyXvJcKfc",
         "vlsi": "1uNCdi6bp4VTMkugW7qfejH29kLw9BYOCvm7QO0Mfzg",
         "biotechnology": "1KeUep03GXhNZha4qCNaGwX-l6ZnTSBmHtE5wJG6_5hw",
-        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY"
+        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY",
+        "admin":"1senxGU1NEjmcl63NXNniZz0hRfrEVGeoo9u3BKSBg2E"
 }
 
 

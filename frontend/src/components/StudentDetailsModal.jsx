@@ -158,7 +158,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         try {
             setIsSaving(true);
             editedStudent.status = 'Pending'; // Set status to Draft
-            editedStudent.Time_updated = new Date().toISOString; // Mark as draft
+            editedStudent.Time_updated = new Date().toISOString(); // Mark as draft
+            console.log(editedStudent.Time_updated);
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
@@ -251,7 +252,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         return null;
     };
 
-    // Update image loading state when image tab changes
+    // Update image loading state whtime_updaen image tab changes
     React.useEffect(() => {
         setImageError(false);
         setImageLoading(true);
