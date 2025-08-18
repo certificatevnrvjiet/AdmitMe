@@ -21,6 +21,7 @@ import logging
 from typing import Optional, Dict
 from openpyxl import Workbook
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -634,7 +635,7 @@ async def save_to_drive_sheet(
 
         # Sheet name and range
         sheet_name = 'Sheet1'  # Adjust as needed
-        range_name = "Sheet1!A1:CE1000"  # Adjust as needed
+        range_name = "Sheet1!A1:CZ1000"  # Adjust as needed
 
 
         # Prepare all rows: header + data

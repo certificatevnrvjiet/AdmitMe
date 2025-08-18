@@ -5,7 +5,7 @@ import { FiEdit2, FiSave } from 'react-icons/fi';
 import { getImageUrl } from '../api';
 import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
-
+import useDisableBrowserZoom from './useDisableBrowserZoom';
 
 const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const { isDarkMode } = useTheme();
@@ -13,11 +13,60 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
     const [activeTab, setActiveTab] = useState('Personal Information');
     const [activeImageTab, setActiveImageTab] = useState('Aadhaar Card');
+    // Check if student type is LE (must be before any use)
+    const isLE = student?.student_type?.toLowerCase() === 'le';
+    // Track the active academic sub-section (10th, 12th, Diploma)
+    const [activeAcademicSection, setActiveAcademicSection] = useState(isLE ? 'Diploma' : '10th');
+
+    // Mapping from form tab to default image tab
+    const tabToImageTab = {
+        'Personal Information': 'Aadhaar Card',
+        'Academic Information': isLE ? 'Diploma Certificate' : '10th Memo',
+        'Contact Details': 'Aadhaar Card',
+        'Category & Status': 'Transfer Certificate',
+        'Address': 'Aadhaar Card',
+    };
+
+    // Academic sub-sections and mapping to image tabs
+    const academicSections = isLE
+        ? [
+            { label: '10th Details', value: '10th', imageTab: '10th Memo' },
+            { label: 'Diploma Details', value: 'Diploma', imageTab: 'Diploma Certificate' },
+            { label: 'ECET Details', value: 'ECET', imageTab: 'ECET Rank Card' },
+        ]
+        : [
+            { label: '10th Details', value: '10th', imageTab: '10th Memo' },
+            { label: '12th Details', value: '12th', imageTab: '12th Memo' },
+            { label: 'JEE Mains', value: 'JEE', imageTab: 'JEE Rank Card' },
+                        { label: 'EAPCET', value: 'EAPCET', imageTab: 'EAPCET Rank Card' },
+                    ];
+
+        // Helper to get image tab for current academic section
+        const getAcademicImageTab = (sectionValue) => {
+                const found = academicSections.find(s => s.value === sectionValue);
+                return found ? found.imageTab : academicSections[0].imageTab;
+        };
+
+    // When the right-side tab changes, update the left-side image tab accordingly
+    React.useEffect(() => {
+        if (activeTab === 'Academic Information') {
+            setActiveImageTab(getAcademicImageTab(activeAcademicSection));
+        } else {
+            const mappedImageTab = tabToImageTab[activeTab];
+            if (mappedImageTab && mappedImageTab !== activeImageTab) {
+                setActiveImageTab(mappedImageTab);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, isLE, activeAcademicSection]);
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
-    const isLE= student?.student_type?.toLowerCase() === 'le'; // Check if student type is LE
+
+    // Use custom hook to disable browser zoom when modal is open
+    useDisableBrowserZoom(isOpen);
+
     // Update `editedStudent` whenever the `student` prop changes
     React.useEffect(() => {
         setEditedStudent(student || {});
@@ -34,10 +83,51 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         return /^\d{5}$/.test(first5) && /^[a-zA-Z0-9]+$/.test(rest);
     };
 
+
+    // Helper to calculate percentage (no negatives allowed)
+    const calculatePercentage = (total, max) => {
+        if (
+            !total || !max ||
+            isNaN(total) || isNaN(max) ||
+            Number(max) <= 0 || Number(total) < 0 || Number(max) < 0
+        ) return '';
+        return ((Number(total) / Number(max)) * 100).toFixed(2);
+    };
+
+    // Always recalculate percentage when marks fields change
+    React.useEffect(() => {
+        setEditedStudent(prev => {
+            const tenth_percentage = calculatePercentage(prev.tenth_total_marks_cgpa, prev.tenth_maximum_marks);
+            const twelfth_percentage = calculatePercentage(prev.twelfth_total_marks, prev.twelfth_maximum_marks);
+            // Only update if changed, to avoid unnecessary rerenders
+            if (prev.tenth_percentage !== tenth_percentage || prev.twelfth_percentage !== twelfth_percentage) {
+                return {
+                    ...prev,
+                    tenth_percentage,
+                    twelfth_percentage
+                };
+            }
+            return prev;
+        });
+    }, [editedStudent.tenth_total_marks_cgpa, editedStudent.tenth_maximum_marks, editedStudent.twelfth_total_marks, editedStudent.twelfth_maximum_marks]);
+
+    // Prevent negative numbers for marks fields
     const handleInputChange = (field, value) => {
+        // List of marks fields that should not allow negatives
+        const marksFields = [
+            'tenth_maximum_marks', 'tenth_total_marks_cgpa',
+            'twelfth_maximum_marks', 'twelfth_total_marks',
+        ];
+        let newValue = value;
+        if (marksFields.includes(field)) {
+            // Remove negative sign if present
+            if (String(newValue).startsWith('-')) newValue = String(newValue).replace(/^-+/, '');
+            // Remove any non-digit except dot
+            newValue = newValue.replace(/[^\d.]/g, '');
+        }
         setEditedStudent((prev) => ({
             ...prev,
-            [field]: value,
+            [field]: newValue,
         }));
     };
 
@@ -67,8 +157,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
         try {
             setIsSaving(true);
-            editedStudent.status = 'Pending';
-             // Set status to Draft
+            editedStudent.status = 'Pending'; // Set status to Draft
+            editedStudent.Time_updated = new Date().toISOString; // Mark as draft
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
@@ -188,6 +278,10 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
     const renderField = (label, field, type = 'text', readOnly = false) => {
     const isDOB = field === 'date_of_birth';
+    const isMarksField = [
+        'tenth_maximum_marks', 'tenth_total_marks_cgpa',
+        'twelfth_maximum_marks', 'twelfth_total_marks'
+    ].includes(field);
     return (
         <div className="mb-4 relative">
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
@@ -196,6 +290,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                 value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
                 onChange={(e) => handleInputChange(field, e.target.value)}
                 readOnly={!isEditing || readOnly}
+                min={isMarksField && type === 'number' ? 0 : undefined}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
                     isDarkMode
                         ? 'bg-gray-700 border-gray-600 text-white'
@@ -298,70 +393,90 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                             {renderField('Admission Category', 'admission_category')}
                             {renderField('UG Code', 'degree_code')}
                         </div>
-                        <div>
-                            <h5 className="font-medium mb-4">10th Details</h5>
-                            {renderField('Board Name', 'tenth_board_name')}
-                            {renderField('School Name', 'tenth_school_name')}
-                            {renderField('Hall Ticket No', 'tenth_ht_no')}
-                            {renderField('Max Marks', 'tenth_maximum_marks')}
-                            {renderField('Total Marks', 'tenth_total_marks_cgpa')}
-                            {renderField('Percentage', 'tenth_percentage')}
-                            {renderField('Month & Year', 'tenth_month_year')}
+                        {/* Academic sub-section selector */}
+                        <div className="flex space-x-2 mb-2">
+                            {academicSections.map(section => (
+                                <button
+                                    key={section.value}
+                                    className={`px-3 py-1 rounded ${activeAcademicSection === section.value ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    onClick={() => setActiveAcademicSection(section.value)}
+                                >
+                                    {section.label}
+                                </button>
+                            ))}
                         </div>
-                        <div>
-                <h5 className="font-medium mb-4">{isLE ? 'Diploma Details' : '12th Details'}</h5>
-                {isLE ? (
-                    <>
-                        {renderField('Board Name', 'twelfth_board_name')}
-                        {renderField('College Name', 'twelfth_college_name')}
-                        {renderField('Hall Ticket No', 'twelfth_ht_no')}
-                        {renderField('Max Marks', 'twelfth_maximum_marks')}
-                        {renderField('Total Marks', 'twelfth_total_marks')}
-                        {renderField('Percentage', 'twelfth_percentage')}
-                        {renderField('Month & Year', 'twelfth_month_year')}
-                    </>
-                ) : (
-                    <>
-                        {renderField('Board Name', 'twelfth_board_name')}
-                        {renderField('College Name', 'twelfth_college_name')}
-                        {renderField('Hall Ticket No', 'twelfth_ht_no')}
-                        {/* 5x2 grid for subject scores */}
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>{renderField('M1', 'm1')}</div>
-                            <div>{renderField('M2', 'm2')}</div>
-                            <div>{renderField('M3', 'm3')}</div>
-                            <div>{renderField('M4', 'm4')}</div>
-                            <div>{renderField('P1', 'p1')}</div>
-                            <div>{renderField('P2', 'p2')}</div>
-                            <div>{renderField('C1', 'ch1')}</div>
-                            <div>{renderField('C2', 'ch2')}</div>
-                            <div>{renderField('CLAB', 'chlab')}</div>
-                            <div>{renderField('PLAB', 'plab')}</div>
-                        </div>
-                        {renderField('Max Marks', 'twelfth_maximum_marks')}
-                        {renderField('Total Marks', 'twelfth_total_marks')}
-                        {renderField('Percentage', 'twelfth_percentage')}
-                        {renderField('Month & Year', 'twelfth_month_year')}
-                    </>
-                )}
-            </div>
-            <div>
-                <h5 className="font-medium mb-4">{isLE ? 'ECET Details' : 'EAPCET Details'}</h5>
-                {isLE ? (
-                    <>
-                        {renderField('ECET Hall Ticket No', 'eapcet_ht_no')}
-                        {renderField('ECET Rank', 'eapcet_rank')}
-                    </>
-                ) : (
-                    <>
-                        {renderField('EAPCET Hall Ticket No', 'eapcet_ht_no')}
-                        {renderField('EAPCET Rank', 'eapcet_rank')}
-                    </>
-                )}
-            </div>
-        </div>
-        
-    );
+                        {/* Render academic section details */}
+                        {activeAcademicSection === '10th' && (
+                            <div>
+                                <h5 className="font-medium mb-4">10th Details</h5>
+                                {renderField('Board Name', 'tenth_board_name')}
+                                {renderField('School Name', 'tenth_school_name')}
+                                {renderField('Hall Ticket No', 'tenth_ht_no')}
+                                {renderField('Max Marks', 'tenth_maximum_marks', 'number', false)}
+                                {renderField('Total Marks', 'tenth_total_marks_cgpa', 'number', false)}
+                                {renderField('Percentage', 'tenth_percentage', 'text', true)}
+                                {renderField('Month & Year', 'tenth_month_year')}
+                            </div>
+                        )}
+                        {activeAcademicSection === '12th' && !isLE && (
+                            <div>
+                                <h5 className="font-medium mb-4">12th Details</h5>
+                                {renderField('Board Name', 'twelfth_board_name')}
+                                {renderField('College Name', 'twelfth_college_name')}
+                                {renderField('Hall Ticket No', 'twelfth_ht_no')}
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div>{renderField('M1', 'm1')}</div>
+                                    <div>{renderField('M2', 'm2')}</div>
+                                    <div>{renderField('M3', 'm3')}</div>
+                                    <div>{renderField('M4', 'm4')}</div>
+                                    <div>{renderField('P1', 'p1')}</div>
+                                    <div>{renderField('P2', 'p2')}</div>
+                                    <div>{renderField('C1', 'ch1')}</div>
+                                    <div>{renderField('C2', 'ch2')}</div>
+                                    <div>{renderField('CLAB', 'chlab')}</div>
+                                    <div>{renderField('PLAB', 'plab')}</div>
+                                </div>
+                                {renderField('Max Marks', 'twelfth_maximum_marks', 'number', false)}
+                                {renderField('Total Marks', 'twelfth_total_marks', 'number', false)}
+                                {renderField('Percentage', 'twelfth_percentage', 'text', true)}
+                                {renderField('Month & Year', 'twelfth_month_year')}
+                            </div>
+                        )}
+                        {activeAcademicSection === 'Diploma' && isLE && (
+                            <div>
+                                <h5 className="font-medium mb-4">Diploma Details</h5>
+                                {renderField('Board Name', 'twelfth_board_name')}
+                                {renderField('College Name', 'twelfth_college_name')}
+                                {renderField('Hall Ticket No', 'twelfth_ht_no')}
+                                {renderField('Max Marks', 'twelfth_maximum_marks', 'number', false)}
+                                {renderField('Total Marks', 'twelfth_total_marks', 'number', false)}
+                                {renderField('Percentage', 'twelfth_percentage', 'text', true)}
+                                {renderField('Month & Year', 'twelfth_month_year')}
+                            </div>
+                        )}
+                        {activeAcademicSection === 'ECET' && isLE && (
+                            <div>
+                                <h5 className="font-medium mb-4">ECET Details</h5>
+                                {renderField('ECET Hall Ticket No', 'eapcet_ht_no')}
+                                {renderField('ECET Rank', 'eapcet_rank')}
+                            </div>
+                        )}
+                        {activeAcademicSection === 'JEE' && !isLE && (
+                            <div>
+                                <h5 className="font-medium mb-4">JEE Mains</h5>
+                                {renderField('JEE Roll No', 'jee_roll_no')}
+                                {renderField('JEE Rank', 'jee_rank')}
+                            </div>
+                        )}
+                        {activeAcademicSection === 'EAPCET' && !isLE && (
+                            <div>
+                                <h5 className="font-medium mb-4">EAPCET Details</h5>
+                                {renderField('EAPCET Hall Ticket No', 'eapcet_ht_no')}
+                                {renderField('EAPCET Rank', 'eapcet_rank')}
+                            </div>
+                        )}
+                    </div>
+                );
             case 'Contact Details':
                 return (
                     <div className="space-y-4">

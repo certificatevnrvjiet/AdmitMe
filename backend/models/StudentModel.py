@@ -91,7 +91,7 @@ class Student(BaseModel):
     jee_rank_card_link: Optional[str] = ""
     eapcet_rank_card_link: Optional[str] = ""
     student_type: Optional[str]=""
-    Time_updated: Optional[datetime] = None
+    Time_updated: Optional[datetime] = None  # Timestamp for last update
 
     @classmethod
     def from_flat_student(cls, flat_student: SheetStudent) -> 'Student':
