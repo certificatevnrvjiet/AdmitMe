@@ -84,6 +84,9 @@ class Student(BaseModel):
     ph_status: Optional[str] = ""
     scribe: Optional[str] = ""
     status: Optional[str] = ""
+    candidate_pic: Optional[str] = ""
+    allotment_order: Optional[str] = ""
+    joining_report: Optional[str] = ""
     aadhaar_link: Optional[str] = ""
     transfer_certificate_link: Optional[str] = ""
     tenth_memo_link: Optional[str] = ""
@@ -102,21 +105,41 @@ class Student(BaseModel):
             date_of_birth=flat_student.date_of_birth,
             gender=flat_student.gender,
             aadhaar_card_number=flat_student.aadhaar_card_number,
+            
+            # Exam Details
             eapcet_ht_no=flat_student.eapcet_hall_ticket_no,
             eapcet_rank=flat_student.eapcet_rank,
             jee_ht_no=flat_student.jee_hall_ticket_no,
             jee_mains_rank=flat_student.jee_crl_rank,
+            
+            # Personal Info
             mother_tongue=flat_student.mother_tongue,
+            religion=flat_student.religion,
+            nationality=flat_student.nationality,
+            
+            # Contact Info
             student_phone=flat_student.student_phone_number,
             father_phone=flat_student.father_phone_number,
             mother_phone=flat_student.mother_phone_number,
             student_email=flat_student.student_email,
             father_email=flat_student.father_email,
             mother_email=flat_student.mother_email,
-            parent_email=flat_student.mother_email if flat_student.primary_contact_person == "Mother" else flat_student.father_email,
-            parent_phone=flat_student.mother_phone_number if flat_student.primary_contact_person == "Mother" else flat_student.father_phone_number,
+            parent_email=(
+                flat_student.mother_email
+                if flat_student.primary_contact_person == "Mother"
+                else flat_student.father_email
+            ),
+            parent_phone=(
+                flat_student.mother_phone_number
+                if flat_student.primary_contact_person == "Mother"
+                else flat_student.father_phone_number
+            ),
+            
+            # Profession
             father_profession_and_designation=flat_student.father_profession_and_designation,
             mother_profession_and_designation=flat_student.mother_profession_and_designation,
+            
+            # Address
             address_dno=flat_student.door_no,
             address_street=flat_student.street_name,
             address_village_town=flat_student.village_name,
@@ -125,24 +148,35 @@ class Student(BaseModel):
             address_state=flat_student.state_name,
             address_pincode=flat_student.pincode,
             rural_urban=flat_student.rural_urban,
+            
+            # Reservation & Caste
             ews_status=flat_student.ews_status,
             category_name=flat_student.caste_category,
             caste_as_per_tc=flat_student.caste_as_per_tc,
             ebc_status=flat_student.ebc_status,
             income=flat_student.annual_income_of_parent,
             minority=flat_student.minority,
+            
+            # Medical
             blood_group=flat_student.blood_group,
             ph_status=flat_student.ph_status,
             scribe=flat_student.ph_scribe,
+            
+            # Academics
             tenth_board_name=flat_student.tenth_board,
-            twelfth_board_name=flat_student.twelfth_board,
+            twelfth_board_name=flat_student.twelfth_board_name,
+            
+            # Documents / Uploads
+            candidate_pic=flat_student.passport_size_photo,
+            allotment_order=flat_student.convenor_allotment_order,
+            joining_report=flat_student.convenor_joining_report,
             tenth_memo_link=flat_student.tenth_memo,
             twelfth_memo_link=flat_student.twelfth_memo,
             aadhaar_link=flat_student.aadhaar_card,
             eapcet_rank_card_link=flat_student.eapcet_rank_card,
             jee_rank_card_link=flat_student.jee_rank_card,
             transfer_certificate_link=flat_student.transfer_certificate,
-            student_type="regular"
+            student_type="regular"  # Mark as regular student
         )
 
     @classmethod

@@ -198,8 +198,6 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
         student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
-        student.nationality = safe_get(results[2], "Nationality")
-        student.religion = safe_get(results[2], "Religion")
         student.m1=safe_get(Scores, "M1")
         student.m2=safe_get(Scores, "M2")
         student.m3=safe_get(Scores, "M3")
@@ -216,7 +214,9 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         # Convert exceptions to error objects
         print("Processing student:", student.model_dump_json(indent=2))
         student_dict = student.model_dump()
-
+        print("Final student dict:")
+        for i in student_dict:
+            print(i, ":", student_dict[i])
         # Insert into Supabase
         response = supabase.table("students2025").insert(student_dict).execute()
 
@@ -239,22 +239,19 @@ async def sync(task_id: str, params: dict , app: FastAPI):
         result = supabase.table('degree_code_counts').select('*').execute().data
         d={}
         for i in result:
-            d[i['DEGREE_CODE']] = i['student_count']
+            d[i['branch_code']] = i['student_count']
         count_students_synced = d.get(params["branch"], 0)
         sheets_service=app.state.sheets_service
-        RANGE=f'{params["branch"]}!B2:BS4'
+        RANGE=f'{params["branch"]}!B3:BS3'
         # data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
-        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!A1:AS300')
+        data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
 
-        aadharindex=data_from_sheets[0].index("Aadhaar Card Number")
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
-        print("\naadhaar cards in db",aadhaar_cards)
 
         if data_from_sheets is None:
             data_from_sheets = []
-        data_from_sheets = [row for row in data_from_sheets if row[aadharindex] not in aadhaar_cards]  # Filter out already synced students
+        data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
         # Prepare subtasks (60-150 groups of 6)
-        print("Data from sheets:", data_from_sheets)
         no_of_students = len(data_from_sheets)
         # print(data_from_sheets["n"])
         # Process with concurrency control
@@ -263,6 +260,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             field_names = list(SheetStudent.model_fields.keys())
             flatstudent_dict = dict(zip(field_names, row))
             student = SheetStudent(**flatstudent_dict)
+            print("\n\nProcessing studentxxxxx:", student)
             async with SUBTASK_SEMAPHORE:
                 subtask_result = await process_student(student, params["branch"], app)
                 
@@ -538,18 +536,20 @@ async def get_image(
     try:
         if not app.state.drive_service:
             raise HTTPException(status_code=500, detail="Drive service not available")
-        
+  
         # Check cache first
         if file_id in image_cache:
+            print("Cache hit for file_id:", file_id)
             image_bytes = image_cache[file_id]
+            print("Cache hit for file_id:", file_id)
         else:
             # Download image from Google Drive
+            print("Downloading image for file_id:", file_id)
             image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
             if image_bytes:
                 image_cache[file_id] = image_bytes  # Cache the result
                 if len(image_cache)>99:
-                    image_cache: Dict[str, bytes] = {}
-
+                    image_cache.clear()
         
         if not image_bytes:
             raise HTTPException(status_code=404, detail="Image not found or could not be downloaded")

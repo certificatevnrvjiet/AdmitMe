@@ -84,7 +84,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
         file_metadata = drive_service.files().get(fileId=file_id, fields="mimeType, name").execute()
         mime_type = file_metadata['mimeType']
         file_name = file_metadata['name']
-        # print(f"Downloading '{file_name}' with MIME type: {mime_type}")
+        print(f"Downloading '{file_name}' with MIME type: {mime_type}")
 
         # Download file content
         request = drive_service.files().get_media(fileId=file_id)
@@ -94,7 +94,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
         while not done:
             status, done = downloader.next_chunk()
         fh.seek(0)
-        # print("Hi")
+        print("Hi")
         # Handle PDF files
         if mime_type == "application/pdf":
             # print(mime_type)
