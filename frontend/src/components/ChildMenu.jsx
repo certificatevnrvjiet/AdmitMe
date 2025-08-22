@@ -8,7 +8,6 @@ export default function ChildMenu({ onSelect, Name, l }) {
 
   const handleItemClick=(item)=>{
     setSelectedItem(item);
-    // console.log(item)
     onSelect(item);
   }
   // Function to handle item click and send the selected item to the parent

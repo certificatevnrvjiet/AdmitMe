@@ -1,5 +1,5 @@
 from fastapi import Request
-from config.settings import GOOGLE_API_KEY
+from config.settings import GOOGLE_API_KEY,GOOGLE_CREDENTIALS
 from googleapiclient.discovery import build
 from io import BytesIO
 from googleapiclient.http import MediaIoBaseDownload
@@ -14,12 +14,16 @@ import fitz  # PyMuPDF
 import mimetypes
 from google.auth.transport.requests import Request
 import os
+import json
+
 
 DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 
 
 
-SERVICE_ACCOUNT_FILE = 'credentials.json'
+creds_dict = json.loads(GOOGLE_CREDENTIALS)
+
+
 
 SCOPES = [
     # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
@@ -35,13 +39,15 @@ SCOPES = [
 def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_dict, scopes=SCOPES
+
         )
         print("Authentication successful using service account.")
         return credentials
     except FileNotFoundError:
-        print(f"Error: The service account file '{SERVICE_ACCOUNT_FILE}' was not found.")
+        print(f"Error: The service account file '{GOOGLE_CREDENTIALS}' was not found.")
         print("Please ensure it's in the same directory as the script or provide the full path.")
         return None
     except Exception as e:
@@ -78,7 +84,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
         file_metadata = drive_service.files().get(fileId=file_id, fields="mimeType, name").execute()
         mime_type = file_metadata['mimeType']
         file_name = file_metadata['name']
-        print(f"Downloading '{file_name}' with MIME type: {mime_type}")
+        # print(f"Downloading '{file_name}' with MIME type: {mime_type}")
 
         # Download file content
         request = drive_service.files().get_media(fileId=file_id)
@@ -88,15 +94,19 @@ def download_drive_image_as_bytes(file_id, drive_service):
         while not done:
             status, done = downloader.next_chunk()
         fh.seek(0)
-
+        # print("Hi")
         # Handle PDF files
         if mime_type == "application/pdf":
+            # print(mime_type)
             pdf_doc = fitz.open(stream=fh.read(), filetype="pdf")
-            page = pdf_doc[0]  # Get the first page
+            if len(pdf_doc) == 0:
+                raise Exception(f"PDF file {file_name} has no pages")
+            page = pdf_doc[-1]  # Get the last page
             pix = page.get_pixmap()
             image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
         # Handle image files
         elif mime_type.startswith("image/"):
+            # print(mime_type)
             image = Image.open(fh).convert("RGB")
         else:
             raise Exception(f"Unsupported MIME type: {mime_type}")

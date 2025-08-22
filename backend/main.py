@@ -9,7 +9,6 @@ from extractor import extract,prompts
 from uuid import uuid4
 import re
 from GoogleService import authenticate_service_account, download_image_from_drive,read_google_sheet
-from datetime import datetime 
 from datetime import datetime, timedelta
 import uvicorn
 from jose import JWTError, jwt
@@ -21,6 +20,7 @@ import logging
 from typing import Optional, Dict
 from openpyxl import Workbook
 from io import BytesIO
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -45,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = ["http://localhost:5173", FRONTEND_URL ,"http://192.168.137.41:5173" ]
+ORIGINS = [FRONTEND_URL,"http://localhost:5173"]
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -53,7 +53,7 @@ SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGINS,  # Adjust this to your frontend URL in production
+    allow_origins = ORIGINS,  # Adjust this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,9 +77,7 @@ def authenticate_user(username: str, password: str):
             return {"error": "User not found"}
 
         user = response.data
-        print()
-        print()
-        print(user)
+
         # Check bcrypt-hashed password
         # if not bcrypt.checkpw(password.encode(), user["password"].encode()):
         #     return {"error": "Invalid credentials"}
@@ -185,16 +183,20 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             Scores = {}
         print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
+        student.tenth_district_code = safe_get(results[0],"district_code")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
         student.identification_mark_2 = safe_get(results[0], "identification_marks2")
         student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
         student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
         student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
+        student.tenth_percentage = safe_get(results[0],"tenth_percentage")
         student.tenth_month_year = safe_get(results[0], "tenth_month_year")
         student.twelfth_college_name = safe_get(results[2], "College Name")
+        student.twelfth_district_code = safe_get(results[0],"district_code")
         student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
         student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
-        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
+        student.twelfth_total_marks = safe_get(results[1],  "Total Marks")
+        student.twelfth_percentage = safe_get(results[2], "Percentage")
         student.twelfth_month_year = safe_get(results[1], "Month_year")
         student.nationality = safe_get(results[2], "Nationality")
         student.religion = safe_get(results[2], "Religion")
@@ -334,7 +336,7 @@ async def get_task_status(task_id: str):
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print(form_data)
+    print("HI",form_data)
     user = authenticate_user(form_data.username, form_data.password)
     print(user,'\n\n')
     user=user['user']
@@ -403,6 +405,7 @@ def update_student(aadhaar_card_number: str, updated_student: Student):
     # Convert to dict
     student_dict = updated_student.model_dump()
     print("student_dict", student_dict)
+    student_dict["Time_updated"] = datetime.utcnow().isoformat()
     # Update in Supabase
     try:
         response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
@@ -420,12 +423,18 @@ def read_users_me(current_user: dict = Depends(get_current_user)):
     return {"User": current_user['username'],"role":current_user['role']}
 
 @app.get("/students/{department}")
-async def get_students_by_department(department: str):
+async def get_students_by_department(department: str,
+    current_user:dict=Depends(get_current_user)
+    ):
     try:
+        if current_user["role"] != "admin" and current_user["role"] != department:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to export this department's data"
+            )
         if department.lower() == "admin":
             response = supabase.table("students2025").select("*").execute()
         else:
-            # Try both degree_code and branch_code for compatibility
             response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
@@ -538,6 +547,9 @@ async def get_image(
             image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
             if image_bytes:
                 image_cache[file_id] = image_bytes  # Cache the result
+                if len(image_cache)>99:
+                    image_cache: Dict[str, bytes] = {}
+
         
         if not image_bytes:
             raise HTTPException(status_code=404, detail="Image not found or could not be downloaded")
@@ -579,7 +591,8 @@ async def save_to_drive_sheet(
         "me": "1vFlnZbt8ebS4_cdCkkyFr1j9zwsQkHSLKbfyXvJcKfc",
         "vlsi": "1uNCdi6bp4VTMkugW7qfejH29kLw9BYOCvm7QO0Mfzg",
         "biotechnology": "1KeUep03GXhNZha4qCNaGwX-l6ZnTSBmHtE5wJG6_5hw",
-        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY"
+        "roboticsandai": "1vybIqUdF-22H0kWg2H6g7OAHkuvDcJoeruN3QqSndPY",
+        "admin":"1senxGU1NEjmcl63NXNniZz0hRfrEVGeoo9u3BKSBg2E"
 }
 
 
@@ -595,7 +608,8 @@ async def save_to_drive_sheet(
         if department.lower() == "admin":
             response = supabase.table("students2025").select("*").execute()
         else:
-            response = supabase.table("2025").select("*") \
+
+            response = supabase.table("students2025").select("*") \
                 .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
                 .execute()
         students_data = response.data or []
@@ -622,7 +636,7 @@ async def save_to_drive_sheet(
 
         # Sheet name and range
         sheet_name = 'Sheet1'  # Adjust as needed
-        range_name = "Sheet1!A1:CE1000"  # Adjust as needed
+        range_name = "Sheet1!A1:CZ1000"  # Adjust as needed
 
 
         # Prepare all rows: header + data

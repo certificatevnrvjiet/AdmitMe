@@ -29,15 +29,12 @@ const LoginPage = () => {
     const form = new URLSearchParams();
     form.append("username", username);
     form.append("password", password);
-    // console.log(username);
 
     try {
       const res = await API.post("/token", form);
-      console.log("Login successful:", res.data);
       login(res.data.access_token, res.data.role); // Assuming the token contains the role
       navigate("/dashboard");
     } catch (err) {
-      console.error("Login failed:", err);
       alert("Invalid credentials");
     }
   };
