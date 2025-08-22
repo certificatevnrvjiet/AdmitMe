@@ -242,7 +242,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             d[i['branch_code']] = i['student_count']
         count_students_synced = d.get(params["branch"], 0)
         sheets_service=app.state.sheets_service
-        RANGE=f'{params["branch"]}!B3:BS3'
+        RANGE=f'{params["branch"]}!B3:BS300'
         # data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
         data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
 
