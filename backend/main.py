@@ -70,9 +70,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 def authenticate_user(username: str, password: str):
     try:
         # Fetch user with matching email
-        print( "response from supabase\n\n\n")
 
         response = supabase.table("users").select("*").eq("email", username).single().execute()
+
         if response.data is None:
             return {"error": "User not found"}
 
@@ -86,7 +86,6 @@ def authenticate_user(username: str, password: str):
             "id": user["id"],
             "email": user["email"],
             "dept": user["dept"],
-            "rights": user["rights"]
         }}
 
     except Exception as e:
@@ -96,6 +95,7 @@ def authenticate_user(username: str, password: str):
 # Create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
+    print("data",data)
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -111,11 +111,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         role = payload.get("role")
+        response = supabase.table("users").select("*").eq("email", username).single().execute()
+        rights=response.data['rights']
         if username is None or role is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    return {"username": username, "role": role}
+    return {"username": username, "role": role, "rights": rights}
 
 
 # Store active WebSocket connections: {username: websocket}
@@ -218,7 +220,7 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
         for i in student_dict:
             print(i, ":", student_dict[i])
         # Insert into Supabase
-        response = supabase.table("students2025").insert(student_dict).execute()
+        # response = supabase.table("students2025").insert(student_dict).execute()
 
         # Print the response
         # print("Insert response:", response)
@@ -334,9 +336,8 @@ async def get_task_status(task_id: str):
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    print("HI",form_data)
     user = authenticate_user(form_data.username, form_data.password)
-    print(user,'\n\n')
+    print(user)
     user=user['user']
     if not user:
         raise HTTPException(
@@ -346,13 +347,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
     token_data = {
         "sub": user["email"],
-        "role": user["dept"]
+        "role": user["dept"],
     }
     access_token = create_access_token(
         data=token_data,
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    print(access_token)
     return {"access_token": access_token, "token_type": "bearer", "role": user["dept"]}
 
 
@@ -389,31 +389,55 @@ def verify_token(token: str = Depends(oauth2_scheme)):
         )
     
 
-@app.get("/students")
-async def get_students():
-    try:
-        response = supabase.table("students2025").select("*").execute()
-        return {"students": response.data}
-    except Exception as e:
-        return {"error": str(e)}
-
+# @app.get("/students")
+# async def get_students():
+#     try:
+#         response = supabase.table("students2025").select("*").execute()
+#         return {"students": response.data}
+#     except Exception as e:
+#         return {"error": str(e)}
 
 @app.put("/student/{aadhaar_card_number}")
-def update_student(aadhaar_card_number: str, updated_student: Student):
-    # Convert to dict
+def update_student(
+    aadhaar_card_number: str,
+    updated_student: Student,
+    current_user: dict = Depends(get_current_user),
+):
+    # Permission check
+    print(current_user)
+    if current_user.get("rights") == "Read Only":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have enough permissions"
+        )
+    
+    # Convert Student model to dictionary
     student_dict = updated_student.model_dump()
-    print("student_dict", student_dict)
-    student_dict["Time_updated"] = datetime.utcnow().isoformat()
-    # Update in Supabase
+    student_dict["Time_updated"] = datetime.utcnow().isoformat() + "Z"
+
     try:
-        response = supabase.table("students2025").update(student_dict).eq("aadhaar_card_number", aadhaar_card_number).execute()
+        # Attempt to update the student in Supabase
+        response = (
+            supabase.table("students2025")
+            .update(student_dict)
+            .eq("aadhaar_card_number", aadhaar_card_number)
+            .execute()
+        )
+
         if response.data:
-            return {"message": "Student updated successfully", "data": response.data}
+            return {
+                "message": "Student updated successfully",
+                "data": response.data
+            }
         else:
             raise HTTPException(status_code=404, detail="Student not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
+    except HTTPException:
+        # Let explicit HTTPExceptions pass through
+        raise
+    except Exception as e:
+        # Catch unexpected errors
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @app.get("/me")
@@ -530,7 +554,6 @@ image_cache: Dict[str, bytes] = {}
 @app.get("/image/{file_id}")
 async def get_image(
     file_id: str,
-    # current_user: dict = Depends(get_current_user)  # Require authentication
 ):
     """Serve images from Google Drive by file ID, with in-memory caching"""
     try:
