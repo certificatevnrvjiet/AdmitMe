@@ -490,6 +490,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
             case 'Address':
                 return (
                     <div className="space-y-4">
+                        {renderField('Door Number', 'address_dno')}
                         {renderField('Street', 'address_street')}
                         {renderField('Village/Town', 'address_village_town')}
                         {renderField('Mandal', 'address_mandal')}
