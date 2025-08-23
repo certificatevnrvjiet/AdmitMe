@@ -352,13 +352,15 @@ const Dashboard = () => {
                   <h3 className="text-lg font-medium text-indigo-400">Quick Actions</h3>
                 </div>
                 <div className="space-y-4">
-                  <button
-                    className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'} ${syncLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={handleSyncStudents}
-                    disabled={syncLoading}
-                  >
-                    {syncLoading ? 'Syncing...' : 'Extract and Fill 71 fields'}
-                  </button>
+                  {userRole !== 'admin' &&
+                    <button
+                      className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'} ${syncLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={handleSyncStudents}
+                      disabled={syncLoading}
+                    >
+                      {syncLoading ? 'Syncing...' : 'Extract and Fill 71 fields'}
+                    </button>
+                  }     
                   {syncStatus && (
                     <div className="text-sm mt-2 text-indigo-400">{syncStatus}</div>
                   )}
