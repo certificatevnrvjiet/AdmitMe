@@ -95,7 +95,6 @@ def authenticate_user(username: str, password: str):
 # Create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    print("data",data)
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -159,7 +158,6 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
     student.branch_code = branch.upper()
     student.status = "Not Viewed"
     board = student.twelfth_board_name
-    print("Processing board:", board)
     prompt = prompts[4]  # Default prompt for most boards
     if board in ("TG BIE", "AP BIE"):
         prompt=prompts[4]
@@ -179,11 +177,9 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
             extract(link, prompt, app.state.drive_service)
             for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
-        print("Results:", results[1])
         Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict)  else {}
         if Scores is None or not isinstance(Scores, dict):
             Scores = {}
-        print("Scores  : ",Scores)
         student.tenth_school_name = safe_get(results[0], "tenth_school_name")
         student.tenth_district_code = safe_get(results[0],"district_code")
         student.identification_mark_1 = safe_get(results[0], "identification_marks1")
@@ -214,13 +210,13 @@ async def process_student(student_data: SheetStudent, branch: str, app: FastAPI)
        
 
         # Convert exceptions to error objects
-        print("Processing student:", student.model_dump_json(indent=2))
+        # print("Processing student:", student.model_dump_json(indent=2))
         student_dict = student.model_dump()
-        print("Final student dict:")
-        for i in student_dict:
-            print(i, ":", student_dict[i])
+        # print("Final student dict:")
+        # for i in student_dict:
+        #     print(i, ":", student_dict[i])
         # Insert into Supabase
-        # response = supabase.table("students2025").insert(student_dict).execute()
+        response = supabase.table("students2025").insert(student_dict).execute()
 
         # Print the response
         # print("Insert response:", response)
@@ -262,7 +258,6 @@ async def sync(task_id: str, params: dict , app: FastAPI):
             field_names = list(SheetStudent.model_fields.keys())
             flatstudent_dict = dict(zip(field_names, row))
             student = SheetStudent(**flatstudent_dict)
-            print("\n\nProcessing studentxxxxx:", student)
             async with SUBTASK_SEMAPHORE:
                 subtask_result = await process_student(student, params["branch"], app)
                 
@@ -337,7 +332,6 @@ async def get_task_status(task_id: str):
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
-    print(user)
     user=user['user']
     if not user:
         raise HTTPException(
@@ -404,7 +398,6 @@ def update_student(
     current_user: dict = Depends(get_current_user),
 ):
     # Permission check
-    print(current_user)
     if current_user.get("rights") == "Read Only":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -567,7 +560,7 @@ async def get_image(
             print("Cache hit for file_id:", file_id)
         else:
             # Download image from Google Drive
-            print("Downloading image for file_id:", file_id)
+            # print("Downloading image for file_id:", file_id)
             image_bytes = await download_image_from_drive(file_id, app.state.drive_service)
             if image_bytes:
                 image_cache[file_id] = image_bytes  # Cache the result
