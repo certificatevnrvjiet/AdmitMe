@@ -58,7 +58,7 @@ const UserManagement = () => {
   // Department options
   const departments = [
     'admin', 'cse', 'ece', 'eee', 'me', 'ce', 'it', 'aiml', 'csbs', 'cseds', 
-    'csecys', 'cseiot', 'aids', 'ae', 'vlsi', 'biotechnology', 'roboticsandai'
+    'csecys', 'cseiot', 'aids', 'ae', 'vlsi', 'biotechnology', 'roboticsandai','eie'
   ];
 
   // Rights options
