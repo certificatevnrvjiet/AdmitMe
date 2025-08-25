@@ -63,6 +63,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
+    const [rotationAngle, setRotationAngle] = useState(0); // Add rotation state
 
     // Use custom hook to disable browser zoom when modal is open
     useDisableBrowserZoom(isOpen);
@@ -73,6 +74,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         setImageError(false);
         setImageLoading(true); // Set loading to true when student changes
         setZoomLevel(1); // Reset zoom when student changes
+        setRotationAngle(0); // Reset rotation when student changes
     }, [student]);
 
     const validateStudentId = (id) => {
@@ -208,6 +210,15 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
     const handleResetZoom = () => {
         setZoomLevel(1);
+    };
+
+    // Handle rotation functionality
+    const handleRotate = () => {
+        setRotationAngle(prev => (prev + 90) % 360);
+    };
+
+    const handleResetRotation = () => {
+        setRotationAngle(0);
     };
 
     const getImageSource = () => {
@@ -637,6 +648,15 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                                     </svg>
                                 </button>
                                 <button
+                                    onClick={handleRotate}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                    title="Rotate 90°"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                                <button
                                     onClick={handleResetZoom}
                                     className="p-1 rounded hover:bg-gray-200 text-gray-600"
                                     title="Reset Zoom"
@@ -687,7 +707,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                                                     alt={`${activeImageTab} Document`}
                                                     className="object-contain rounded-lg shadow-lg transition-transform duration-200"
                                                     style={{ 
-                                                        transform: `scale(${zoomLevel})`,
+                                                        transform: `scale(${zoomLevel}) rotate(${rotationAngle}deg)`,
                                                         maxWidth: '100%',
                                                         maxHeight: '100%',
                                                         display: imageLoading ? 'none' : 'block'
