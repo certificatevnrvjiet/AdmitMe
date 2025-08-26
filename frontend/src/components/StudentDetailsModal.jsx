@@ -585,14 +585,14 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     const headerPx = headerEl?.offsetHeight ?? 0;
     const footerPx = footerEl?.offsetHeight ?? 0;
     const safeAreaStyle = headerPx && footerPx
-        ? { top: headerPx, bottom: footerPx, left: 0, right: 0 }
+        ? { top: headerPx + 1, bottom: footerPx + 2, left: 0, right: 0 }
         : { top: `${headerHeightVh}vh`, bottom: `${footerHeightVh}vh`, left: 0, right: 0 };
     const modalMaxHeight = headerPx && footerPx
-        ? `calc(100vh - ${headerPx + footerPx + 8}px)`
-        : `calc(100vh - ${headerHeightVh + footerHeightVh}vh - 8px)`;
+        ? `calc(100vh - ${headerPx + footerPx + 4}px)`
+        : `calc(100vh - ${headerHeightVh + footerHeightVh}vh - 4px)`;
 
     return isOpen ? (
-        <div className="fixed z-[150] flex items-start justify-center pt-4 md:pt-6 pb-2 px-4 md:px-6" style={safeAreaStyle}>
+        <div className="fixed z-[150] flex items-start justify-center pt-1 md:pt-2 pb-2 px-4 md:px-6" style={safeAreaStyle}>
             {/* Blurry Backdrop */}
             <div
                 className="fixed z-[140] bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
@@ -606,9 +606,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                 style={{ maxHeight: modalMaxHeight }}
             >
                 {/* Top Action Bar */}
-                <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
+                <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-1 md:p-2 flex justify-between space-x-2">
                     <h3
-                        className={`text-xl font-medium ${
+                        className={`text-lg md:text-xl font-medium ${
                             isDarkMode ? 'text-white' : 'text-gray-900'
                         }`}
                     >
@@ -673,7 +673,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
 
                 <div className="flex flex-row h-full min-h-0">
                     {/* Left: Image Tabs and Image Display */}
-                    <div className="w-2/3 p-3 md:p-4 flex flex-col min-h-0" style={{ maxHeight: '100%' }}>
+                    <div className="w-2/3 p-2 md:p-3 flex flex-col min-h-0" style={{ maxHeight: '100%' }}>
                         {/* Image Tabs */}
                         <div className="mb-2">
                             <ScrollableTabs tabs={imageTabs} activeTab={activeImageTab} setActiveTab={setActiveImageTab} />
@@ -681,7 +681,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                         
                         {/* Image Display with Zoom */}
                         <div 
-                            className="flex-1 border rounded-lg p-2 md:p-4 relative overflow-hidden min-h-0" 
+                            className="flex-1 border rounded-lg p-2 md:p-3 relative overflow-hidden min-h-0" 
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             onWheel={handleWheel}
                         >
@@ -794,7 +794,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                     </div>
 
                     {/* Right: Form Tabs and Content */}
-                    <div className="w-1/3 p-3 md:p-4 flex flex-col border-l min-h-0" style={{ maxHeight: '100%' }}>
+                    <div className="w-1/3 p-2 md:p-3 flex flex-col border-l min-h-0" style={{ maxHeight: '100%' }}>
                         <ScrollableTabs tabs={formTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                         {/* Tab Content */}
                         <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>

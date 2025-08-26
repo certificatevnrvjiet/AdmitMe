@@ -353,10 +353,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: headerPx || '10vh', bottom: footerEl?.offsetHeight || '12vh' }}>
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
           <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`} style={{ maxHeight: 'calc(100vh - 22vh)' }}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Create New User</h2>
               <button
@@ -491,10 +491,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: headerPx || '10vh', bottom: footerEl?.offsetHeight || '12vh' }}>
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
           <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`} style={{ maxHeight: 'calc(100vh - 22vh)' }}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Edit User</h2>
               <button
@@ -579,10 +579,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Change Password Modal */}
       {showPasswordModal && selectedUser && (
-        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: headerPx || '10vh', bottom: footerEl?.offsetHeight || '12vh' }}>
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
           <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`} style={{ maxHeight: 'calc(100vh - 22vh)' }}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Change Password</h2>
               <button
