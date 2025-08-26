@@ -18,6 +18,27 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     // Track the active academic sub-section (10th, 12th, Diploma)
     const [activeAcademicSection, setActiveAcademicSection] = useState(isLE ? 'Diploma' : '10th');
 
+    // Branch codes for dropdown (using uppercase values to match database format)
+    const branchCodes = [
+        { value: 'AIDS', label: 'AIDS' },
+        { value: 'AE', label: 'AE' },
+        { value: 'CE', label: 'CE' },
+        { value: 'CSBS', label: 'CSBS' },
+        { value: 'CSE', label: 'CSE' },
+        { value: 'AML', label: 'AML' },
+        { value: 'CSEDS', label: 'CSE-DS' },
+        { value: 'CSECYS', label: 'CSE-CYS' },
+        { value: 'CSEIOT', label: 'CSE-IOT' },
+        { value: 'EEE', label: 'EEE' },
+        { value: 'ECE', label: 'ECE' },
+        { value: 'EIE', label: 'EIE' },
+        { value: 'IT', label: 'IT' },
+        { value: 'ME', label: 'ME' },
+        { value: 'VLSI', label: 'VLSI' },
+        { value: 'BIOTECHNOLOGY', label: 'Biotechnology' },
+        { value: 'RAI', label: 'Robotics and AI' },
+    ];
+
     // Mapping from form tab to default image tab
     const tabToImageTab = {
         'Personal Information': 'Aadhaar Card',
@@ -288,29 +309,56 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
     if (!isOpen) return null;
 
-    const renderField = (label, field, type = 'text', readOnly = false) => {
+    const renderField = (label, field, type = 'text', readOnly = false, options = null) => {
     const isDOB = field === 'date_of_birth';
     const isMarksField = [
         'tenth_maximum_marks', 'tenth_total_marks_cgpa',
         'twelfth_maximum_marks', 'twelfth_total_marks'
     ].includes(field);
+    const isDropdown = options && isEditing && !readOnly;
+    
     return (
         <div className="mb-4 relative">
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
-            <input
-                type={type}
-                value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
-                onChange={(e) => handleInputChange(field, e.target.value)}
-                readOnly={!isEditing || readOnly}
-                min={isMarksField && type === 'number' ? 0 : undefined}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
-                    isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
-            />
+            {isDropdown ? (
+                <select
+                    value={editedStudent[field] || ''}
+                    onChange={(e) => handleInputChange(field, e.target.value)}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                        isDarkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                >
+                    {!editedStudent[field] && <option value="">Select {label}</option>}
+                    {options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                    {/* Add current value as option if it doesn't exist in the list */}
+                    {editedStudent[field] && !options.find(opt => opt.value === editedStudent[field]) && (
+                        <option value={editedStudent[field]}>
+                            {editedStudent[field]} (Current)
+                        </option>
+                    )}
+                </select>
+            ) : (
+                <input
+                    type={type}
+                    value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
+                    onChange={(e) => handleInputChange(field, e.target.value)}
+                    readOnly={!isEditing || readOnly}
+                    min={isMarksField && type === 'number' ? 0 : undefined}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                        isDarkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                    } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
+                />
+            )}
             {/* Calendar Picker for DOB in Edit Mode */}
-            {isDOB && isEditing && !readOnly && (
+            {isDOB && isEditing && !readOnly && !isDropdown && (
                 <div className="absolute top-[33px] right-2">
                     <input
                         type="date"
@@ -401,7 +449,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                         <div>
                             <h5 className="font-medium mb-4">Basic Details</h5>
                             {renderField('College Code', 'college_code')}
-                            {renderField('Branch Code', 'branch_code')}
+                            {renderField('Branch Code', 'branch_code', 'text', false, branchCodes)}
                             {renderField('Admission Category', 'admission_category')}
                             {renderField('UG Code', 'degree_code')}
                         </div>
