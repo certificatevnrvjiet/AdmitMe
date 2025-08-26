@@ -348,10 +348,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed top-[80px] bottom-[100px] left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: 'calc(100vh - 200px)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Create New User</h2>
               <button
@@ -486,10 +486,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed top-[80px] bottom-[100px] left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: 'calc(100vh - 200px)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Edit User</h2>
               <button
@@ -574,10 +574,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Change Password Modal */}
       {showPasswordModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed top-[80px] bottom-[100px] left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: 'calc(100vh - 200px)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Change Password</h2>
               <button
