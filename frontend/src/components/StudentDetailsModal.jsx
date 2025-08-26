@@ -7,7 +7,7 @@ import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 import useDisableBrowserZoom from './useDisableBrowserZoom';
 
-const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeight = 80, footerHeight = 100 }) => {
+const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh = 10, footerHeightVh = 12 }) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
@@ -579,8 +579,17 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeight = 
         }
     };
 
-    const safeAreaStyle = { top: headerHeight, bottom: footerHeight, left: 0, right: 0 };
-    const modalMaxHeight = `calc(100vh - ${headerHeight + footerHeight + 8}px)`; // tighter padding for more vertical space
+    // Prefer DOM-measured header/footer if available for perfect alignment
+    const headerEl = typeof document !== 'undefined' ? document.getElementById('app-header') : null;
+    const footerEl = typeof document !== 'undefined' ? document.getElementById('app-footer') : null;
+    const headerPx = headerEl?.offsetHeight ?? 0;
+    const footerPx = footerEl?.offsetHeight ?? 0;
+    const safeAreaStyle = headerPx && footerPx
+        ? { top: headerPx, bottom: footerPx, left: 0, right: 0 }
+        : { top: `${headerHeightVh}vh`, bottom: `${footerHeightVh}vh`, left: 0, right: 0 };
+    const modalMaxHeight = headerPx && footerPx
+        ? `calc(100vh - ${headerPx + footerPx + 8}px)`
+        : `calc(100vh - ${headerHeightVh + footerHeightVh}vh - 8px)`;
 
     return isOpen ? (
         <div className="fixed z-[150] flex items-start justify-center pt-4 md:pt-6 pb-2 px-4 md:px-6" style={safeAreaStyle}>
