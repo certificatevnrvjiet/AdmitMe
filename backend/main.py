@@ -233,7 +233,19 @@ async def sync(task_id: str, params: dict , app: FastAPI):
     try:
         # Update to processing status
         supabase.table("tasks").update({"status": "processing"}).eq("id", task_id).execute()
-        aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").eq("branch_code", params["branch"].upper()).execute().data
+        aadhaar_cards = []
+        start = 0
+        while True:
+            batch = supabase.table("students2025") \
+                .select("aadhaar_card_number") \
+                .range(start, start + 1000 - 1) \
+                .execute().data
+            
+            if not batch:
+                break
+            
+            aadhaar_cards.extend(batch)
+            start += 1000
         result = supabase.table('degree_code_counts').select('*').execute().data
         d={}
         for i in result:
@@ -245,7 +257,7 @@ async def sync(task_id: str, params: dict , app: FastAPI):
         data_from_sheets = read_google_sheet(sheets_service,SPREADSHEET_ID,RANGE)
 
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
-
+        print(len(aadhaar_cards))
         if data_from_sheets is None:
             data_from_sheets = []
         data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
@@ -437,23 +449,49 @@ def update_student(
 def read_users_me(current_user: dict = Depends(get_current_user)):
     return {"User": current_user['username'],"role":current_user['role']}
 
+
 @app.get("/students/{department}")
-async def get_students_by_department(department: str,
-    current_user:dict=Depends(get_current_user)
-    ):
+async def get_students_by_department(
+    department: str,
+    current_user: dict = Depends(get_current_user)
+):
     try:
         if current_user["role"] != "admin" and current_user["role"] != department:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to export this department's data"
             )
+
+        # Function to fetch all data in chunks of 1000
+        def fetch_all_students(query):
+            all_data = []
+            start = 0
+            chunk_size = 1000
+            
+            while True:
+                chunk = query.range(start, start + chunk_size - 1).execute()
+                all_data.extend(chunk.data)
+
+                if len(chunk.data) < chunk_size:
+                    break  # No more data
+
+                start += chunk_size
+            return all_data
+
+        # Build base query
         if department.lower() == "admin":
-            response = supabase.table("students2025").select("*").execute()
+            query = supabase.table("students2025").select("*")
         else:
-            response = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
-                .execute()
-        return {"students": response.data}
+            query = (
+                supabase.table("students2025")
+                .select("*")
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+            )
+
+        students = fetch_all_students(query)
+
+        return {"students": students}
+
     except Exception as e:
         return {"error": str(e)}
 

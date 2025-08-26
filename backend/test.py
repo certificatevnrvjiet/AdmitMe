@@ -177,4 +177,18 @@ async def sync():
     except Exception as e:
        print(e)
 if __name__ == "__main__":
-    asyncio.run(sync())
+    aadhaar_cards = []
+    start = 0
+    while True:
+        batch = supabase.table("students2025") \
+            .select("aadhaar_card_number") \
+            .range(start, start + 1000 - 1) \
+            .execute().data
+        
+        if not batch:
+            break
+        
+        aadhaar_cards.extend(batch)
+        start += 1000
+
+    print(len(aadhaar_cards))
