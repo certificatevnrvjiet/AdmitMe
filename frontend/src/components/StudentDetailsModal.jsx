@@ -7,7 +7,7 @@ import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 import useDisableBrowserZoom from './useDisableBrowserZoom';
 
-const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
+const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeight = 80, footerHeight = 100 }) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
@@ -568,18 +568,22 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         }
     };
 
+    const safeAreaStyle = { top: headerHeight, bottom: footerHeight, left: 0, right: 0 };
+    const modalMaxHeight = `calc(100vh - ${headerHeight + footerHeight + 8}px)`; // tighter padding for more vertical space
+
     return isOpen ? (
-        <div className="fixed top-[64px] bottom-[90px] left-0 right-0 z-50 flex items-center justify-center">
+        <div className="fixed z-[150] flex items-start justify-center pt-4 md:pt-6 pb-2 px-4 md:px-6" style={safeAreaStyle}>
             {/* Blurry Backdrop */}
             <div
-                className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+                className="fixed z-[140] bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+                style={safeAreaStyle}
                 onClick={onClose}
             />
             
             {/* Modal */}
             <div
-                className="relative z-10 bg-white rounded-lg shadow-lg max-w-6xl w-full flex flex-col"
-                style={{ maxHeight: 'calc(100vh - 128px)' }}
+                className="relative z-[150] bg-white rounded-lg shadow-lg max-w-6xl w-full h-full flex flex-col overflow-hidden"
+                style={{ maxHeight: modalMaxHeight }}
             >
                 {/* Top Action Bar */}
                 <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
@@ -647,17 +651,17 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                     </div>
                 </div>
 
-                <div className="flex flex-row">
+                <div className="flex flex-row h-full min-h-0">
                     {/* Left: Image Tabs and Image Display */}
-                    <div className="w-2/3 p-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="w-2/3 p-3 md:p-4 flex flex-col min-h-0" style={{ maxHeight: '100%' }}>
                         {/* Image Tabs */}
-                        <div className="mb-4">
+                        <div className="mb-2">
                             <ScrollableTabs tabs={imageTabs} activeTab={activeImageTab} setActiveTab={setActiveImageTab} />
                         </div>
                         
                         {/* Image Display with Zoom */}
                         <div 
-                            className="flex-1 border rounded-lg p-4 relative overflow-hidden" 
+                            className="flex-1 border rounded-lg p-2 md:p-4 relative overflow-hidden min-h-0" 
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             onWheel={handleWheel}
                         >
@@ -761,7 +765,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                     </div>
 
                     {/* Right: Form Tabs and Content */}
-                    <div className="w-1/3 p-4 flex flex-col border-l" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="w-1/3 p-3 md:p-4 flex flex-col border-l min-h-0" style={{ maxHeight: '100%' }}>
                         <ScrollableTabs tabs={formTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                         {/* Tab Content */}
                         <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
