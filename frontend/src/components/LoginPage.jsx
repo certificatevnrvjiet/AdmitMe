@@ -47,7 +47,7 @@ const LoginPage = () => {
            backgroundPosition: 'center',
          }}>
       {/* Overlay */}
-      <div className={`absolute inset-0 ${isDarkMode ? 'bg-gray-900 bg-opacity-75' : 'bg-gradient-to-br from-blue-50/70 to-indigo-100/70'}`}></div>
+      <div className={`absolute inset-0 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-gray-950/80 to-gray-900/70' : 'bg-gradient-to-br from-blue-50/70 to-indigo-100/70'}`}></div>
       
       {/* Content */}
       <div className={`max-w-md w-full p-8 rounded-xl shadow-2xl relative z-10 mx-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
