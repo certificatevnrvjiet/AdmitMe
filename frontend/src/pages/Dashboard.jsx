@@ -340,7 +340,7 @@ const Dashboard = () => {
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {department.toUpperCase()} Department Dashboard
+               {department.toLowerCase() === "admin" ? "Admin Dashboard" : `${department.toUpperCase()} Department Dashboard`}
             </h2>
           </div>
 

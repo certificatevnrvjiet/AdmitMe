@@ -38,10 +38,10 @@ function Vnrheader() {
       }, [role]);
 
     return (
-        <header className={`shadow-lg fixed top-0 left-0 w-full z-50 px-5 py-2 pt-6 pb-6 ${
+        <header id="app-header" className={`shadow-lg fixed top-0 left-0 w-full z-50 px-5 py-2 ${
             isDarkMode ? 'bg-gray-800 shadow-gray-900' : 'bg-white shadow-gray-200'
         }`}>
-            <div className='flex justify-between items-center max-w-7xl mx-auto'>
+            <div className='flex justify-between items-center max-w-6xl mx-auto'>
                 <div className='lg:flex md:flex items-center justify-center flex-1'>
                     <img className="w-12 h-12 mx-3" src={image} alt="VNR Logo" />
                     <div className="text-center">

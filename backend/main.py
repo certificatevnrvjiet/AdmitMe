@@ -511,15 +511,27 @@ async def export_students_excel(
                 detail="You don't have permission to export this department's data"
             )
         
-        # Get students from database
+        # Pagination helper (same as GET /students/{department})
+        def fetch_all_students(query):
+            all_data = []
+            start = 0
+            chunk_size = 1000
+            while True:
+                chunk = query.range(start, start + chunk_size - 1).execute()
+                all_data.extend(chunk.data or [])
+                if not chunk.data or len(chunk.data) < chunk_size:
+                    break
+                start += chunk_size
+            return all_data
+
+        # Get students from database (with pagination)
         if department.lower() == "admin":
-            response = supabase.table("students2025").select("*").execute()
+            base_query = supabase.table("students2025").select("*")
         else:
-            response = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
-                .execute()
-        
-        students_data = response.data or []
+            base_query = supabase.table("students2025").select("*") \
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+
+        students_data = fetch_all_students(base_query)
         
         # Apply filters (same logic as frontend)
         filtered_students = []
@@ -658,15 +670,26 @@ async def save_to_drive_sheet(
                 detail="You don't have permission to update this department's sheet"
             )
 
-        # Get students from database (same as export)
-        if department.lower() == "admin":
-            response = supabase.table("students2025").select("*").execute()
-        else:
+        # Pagination helper (same as GET /students/{department})
+        def fetch_all_students(query):
+            all_data = []
+            start = 0
+            chunk_size = 1000
+            while True:
+                chunk = query.range(start, start + chunk_size - 1).execute()
+                all_data.extend(chunk.data or [])
+                if not chunk.data or len(chunk.data) < chunk_size:
+                    break
+                start += chunk_size
+            return all_data
 
-            response = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}") \
-                .execute()
-        students_data = response.data or []
+        # Get students from database (with pagination; same as export)
+        if department.lower() == "admin":
+            base_query = supabase.table("students2025").select("*")
+        else:
+            base_query = supabase.table("students2025").select("*") \
+                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+        students_data = fetch_all_students(base_query)
 
         # Apply filters
         filtered_students = []

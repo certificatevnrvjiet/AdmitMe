@@ -58,7 +58,7 @@ const UserManagement = () => {
   // Department options
   const departments = [
     'admin', 'cse', 'ece', 'eee', 'me', 'ce', 'it', 'aiml', 'csbs', 'cseds', 
-    'csecys', 'cseiot', 'aids', 'ae', 'vlsi', 'biotechnology', 'roboticsandai'
+    'csecys', 'cseiot', 'aids', 'ae', 'vlsi', 'biotechnology', 'roboticsandai','eie'
   ];
 
   // Rights options
@@ -213,8 +213,13 @@ const handleDeleteUser = async (userId, userEmail) => {
     );
   }
 
+  const headerEl = typeof document !== 'undefined' ? document.getElementById('app-header') : null;
+  const footerEl = typeof document !== 'undefined' ? document.getElementById('app-footer') : null;
+  const headerPx = headerEl?.offsetHeight ?? 0;
+  const topPadding = headerPx ? headerPx + 8 : undefined;
+
   return (
-    <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} style={topPadding ? { paddingTop: topPadding } : { paddingTop: '10vh' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -348,10 +353,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Create New User</h2>
               <button
@@ -486,10 +491,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Edit User</h2>
               <button
@@ -574,10 +579,10 @@ const handleDeleteUser = async (userId, userEmail) => {
 
       {/* Change Password Modal */}
       {showPasswordModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl ${
+        <div className="fixed left-0 right-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ top: (headerPx || '10vh'), bottom: (footerEl?.offsetHeight || '12vh') }}>
+          <div className={`w-full max-w-md p-6 rounded-lg shadow-xl overflow-y-auto ${
             isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
+          }`} style={{ maxHeight: headerPx && footerEl?.offsetHeight ? `calc(100vh - ${headerPx + footerEl.offsetHeight}px)` : 'calc(100vh - 22vh)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Change Password</h2>
               <button

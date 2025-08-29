@@ -7,7 +7,7 @@ import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 import useDisableBrowserZoom from './useDisableBrowserZoom';
 
-const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
+const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh = 10, footerHeightVh = 12 }) => {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editedStudent, setEditedStudent] = useState(student || {}); // Initialize with the passed student
@@ -17,6 +17,27 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const isLE = student?.student_type?.toLowerCase() === 'le';
     // Track the active academic sub-section (10th, 12th, Diploma)
     const [activeAcademicSection, setActiveAcademicSection] = useState(isLE ? 'Diploma' : '10th');
+
+    // Branch codes for dropdown (using uppercase values to match database format)
+    const branchCodes = [
+        { value: 'AIDS', label: 'AIDS' },
+        { value: 'AE', label: 'AE' },
+        { value: 'CE', label: 'CE' },
+        { value: 'CSBS', label: 'CSBS' },
+        { value: 'CSE', label: 'CSE' },
+        { value: 'AML', label: 'AML' },
+        { value: 'CSEDS', label: 'CSE-DS' },
+        { value: 'CSECYS', label: 'CSE-CYS' },
+        { value: 'CSEIOT', label: 'CSE-IOT' },
+        { value: 'EEE', label: 'EEE' },
+        { value: 'ECE', label: 'ECE' },
+        { value: 'EIE', label: 'EIE' },
+        { value: 'IT', label: 'IT' },
+        { value: 'ME', label: 'ME' },
+        { value: 'VLSI', label: 'VLSI' },
+        { value: 'BIOTECHNOLOGY', label: 'Biotechnology' },
+        { value: 'RAI', label: 'Robotics and AI' },
+    ];
 
     // Mapping from form tab to default image tab
     const tabToImageTab = {
@@ -63,6 +84,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
+    const [rotationAngle, setRotationAngle] = useState(0); // Add rotation state
 
     // Use custom hook to disable browser zoom when modal is open
     useDisableBrowserZoom(isOpen);
@@ -73,6 +95,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         setImageError(false);
         setImageLoading(true); // Set loading to true when student changes
         setZoomLevel(1); // Reset zoom when student changes
+        setRotationAngle(0); // Reset rotation when student changes
     }, [student]);
 
     const validateStudentId = (id) => {
@@ -210,6 +233,15 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         setZoomLevel(1);
     };
 
+    // Handle rotation functionality
+    const handleRotate = () => {
+        setRotationAngle(prev => (prev + 90) % 360);
+    };
+
+    const handleResetRotation = () => {
+        setRotationAngle(0);
+    };
+
     const getImageSource = () => {
         let imageField = '';
         switch (activeImageTab) {
@@ -277,29 +309,56 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
 
     if (!isOpen) return null;
 
-    const renderField = (label, field, type = 'text', readOnly = false) => {
+    const renderField = (label, field, type = 'text', readOnly = false, options = null) => {
     const isDOB = field === 'date_of_birth';
     const isMarksField = [
         'tenth_maximum_marks', 'tenth_total_marks_cgpa',
         'twelfth_maximum_marks', 'twelfth_total_marks'
     ].includes(field);
+    const isDropdown = options && isEditing && !readOnly;
+    
     return (
         <div className="mb-4 relative">
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
-            <input
-                type={type}
-                value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
-                onChange={(e) => handleInputChange(field, e.target.value)}
-                readOnly={!isEditing || readOnly}
-                min={isMarksField && type === 'number' ? 0 : undefined}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
-                    isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
-            />
+            {isDropdown ? (
+                <select
+                    value={editedStudent[field] || ''}
+                    onChange={(e) => handleInputChange(field, e.target.value)}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                        isDarkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                >
+                    {!editedStudent[field] && <option value="">Select {label}</option>}
+                    {options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                    {/* Add current value as option if it doesn't exist in the list */}
+                    {editedStudent[field] && !options.find(opt => opt.value === editedStudent[field]) && (
+                        <option value={editedStudent[field]}>
+                            {editedStudent[field]} (Current)
+                        </option>
+                    )}
+                </select>
+            ) : (
+                <input
+                    type={type}
+                    value={isDOB ? formatDateDMY(editedStudent[field]) : (editedStudent[field] || '')}
+                    onChange={(e) => handleInputChange(field, e.target.value)}
+                    readOnly={!isEditing || readOnly}
+                    min={isMarksField && type === 'number' ? 0 : undefined}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm ${
+                        isDarkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                    } ${!isEditing || readOnly ? 'bg-opacity-50' : ''}`}
+                />
+            )}
             {/* Calendar Picker for DOB in Edit Mode */}
-            {isDOB && isEditing && !readOnly && (
+            {isDOB && isEditing && !readOnly && !isDropdown && (
                 <div className="absolute top-[33px] right-2">
                     <input
                         type="date"
@@ -390,7 +449,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                         <div>
                             <h5 className="font-medium mb-4">Basic Details</h5>
                             {renderField('College Code', 'college_code')}
-                            {renderField('Branch Code', 'branch_code')}
+                            {renderField('Branch Code', 'branch_code', 'text', false, branchCodes)}
                             {renderField('Admission Category', 'admission_category')}
                             {renderField('UG Code', 'degree_code')}
                         </div>
@@ -520,23 +579,36 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
         }
     };
 
+    // Prefer DOM-measured header/footer if available for perfect alignment
+    const headerEl = typeof document !== 'undefined' ? document.getElementById('app-header') : null;
+    const footerEl = typeof document !== 'undefined' ? document.getElementById('app-footer') : null;
+    const headerPx = headerEl?.offsetHeight ?? 0;
+    const footerPx = footerEl?.offsetHeight ?? 0;
+    const safeAreaStyle = headerPx && footerPx
+        ? { top: headerPx + 1, bottom: footerPx + 2, left: 0, right: 0 }
+        : { top: `${headerHeightVh}vh`, bottom: `${footerHeightVh}vh`, left: 0, right: 0 };
+    const modalMaxHeight = headerPx && footerPx
+        ? `calc(100vh - ${headerPx + footerPx + 4}px)`
+        : `calc(100vh - ${headerHeightVh + footerHeightVh}vh - 4px)`;
+
     return isOpen ? (
-        <div className="fixed top-[64px] bottom-[90px] left-0 right-0 z-50 flex items-center justify-center">
+        <div className="fixed z-[150] flex items-start justify-center pt-1 md:pt-2 pb-2 px-4 md:px-6" style={safeAreaStyle}>
             {/* Blurry Backdrop */}
             <div
-                className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+                className="fixed z-[140] bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+                style={safeAreaStyle}
                 onClick={onClose}
             />
             
             {/* Modal */}
             <div
-                className="relative z-10 bg-white rounded-lg shadow-lg max-w-6xl w-full flex flex-col"
-                style={{ maxHeight: 'calc(100vh - 128px)' }}
+                className="relative z-[150] bg-white rounded-lg shadow-lg max-w-6xl w-full h-full flex flex-col overflow-hidden"
+                style={{ maxHeight: modalMaxHeight }}
             >
                 {/* Top Action Bar */}
-                <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex justify-between space-x-2">
+                <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-1 md:p-2 flex justify-between space-x-2">
                     <h3
-                        className={`text-xl font-medium ${
+                        className={`text-lg md:text-xl font-medium ${
                             isDarkMode ? 'text-white' : 'text-gray-900'
                         }`}
                     >
@@ -599,17 +671,17 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                     </div>
                 </div>
 
-                <div className="flex flex-row">
+                <div className="flex flex-row h-full min-h-0">
                     {/* Left: Image Tabs and Image Display */}
-                    <div className="w-2/3 p-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="w-2/3 p-2 md:p-3 flex flex-col min-h-0" style={{ maxHeight: '100%' }}>
                         {/* Image Tabs */}
-                        <div className="mb-4">
+                        <div className="mb-2">
                             <ScrollableTabs tabs={imageTabs} activeTab={activeImageTab} setActiveTab={setActiveImageTab} />
                         </div>
                         
                         {/* Image Display with Zoom */}
                         <div 
-                            className="flex-1 border rounded-lg p-4 relative overflow-hidden" 
+                            className="flex-1 border rounded-lg p-2 md:p-3 relative overflow-hidden min-h-0" 
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                             onWheel={handleWheel}
                         >
@@ -634,6 +706,15 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={handleRotate}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-600"
+                                    title="Rotate 90°"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
                                 </button>
                                 <button
@@ -687,7 +768,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                                                     alt={`${activeImageTab} Document`}
                                                     className="object-contain rounded-lg shadow-lg transition-transform duration-200"
                                                     style={{ 
-                                                        transform: `scale(${zoomLevel})`,
+                                                        transform: `scale(${zoomLevel}) rotate(${rotationAngle}deg)`,
                                                         maxWidth: '100%',
                                                         maxHeight: '100%',
                                                         display: imageLoading ? 'none' : 'block'
@@ -713,7 +794,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student}) => {
                     </div>
 
                     {/* Right: Form Tabs and Content */}
-                    <div className="w-1/3 p-4 flex flex-col border-l" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="w-1/3 p-2 md:p-3 flex flex-col border-l min-h-0" style={{ maxHeight: '100%' }}>
                         <ScrollableTabs tabs={formTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
                         {/* Tab Content */}
                         <div className="flex-1 overflow-y-auto mt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
