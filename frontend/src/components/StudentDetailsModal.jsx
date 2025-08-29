@@ -319,7 +319,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     
     return (
         <div className="mb-4 relative">
-            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}:</label>
+            <label className={`block text-sm font-medium text-gray-700`}>{label}:</label>
             {isDropdown ? (
                 <select
                     value={editedStudent[field] || ''}
@@ -608,9 +608,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                 {/* Top Action Bar */}
                 <div className="w-full bg-white rounded-lg border border-gray-200 dark:border-gray-700 p-1 md:p-2 flex justify-between space-x-2">
                     <h3
-                        className={`text-lg md:text-xl font-medium ${
-                            isDarkMode ? 'text-white' : 'text-gray-900'
-                        }`}
+                        className={`text-lg md:text-xl font-medium `}
                     >
                         Student Details - {editedStudent.student_name}
                     </h3>
@@ -618,9 +616,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                         {!isEditing && (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white`}
                             >
-                                <FiEdit2 className={isDarkMode ? 'text-white' : 'text-gray-600'} />
+                                <FiEdit2 />
                             </button>
                         )}
                         {isEditing && (
@@ -664,9 +662,9 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                         )}
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white"
                         >
-                            <IoClose className={isDarkMode ? 'text-white' : 'text-gray-600'} size={20} />
+                            <IoClose size={20} />
                         </button>
                     </div>
                 </div>
