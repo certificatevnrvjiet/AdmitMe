@@ -45,7 +45,7 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-ORIGINS = [FRONTEND_URL,"http://localhost:5173"]
+ORIGINS = [FRONTEND_URL,"http://localhost:5173",'http://192.168.37.250:5173']
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)  # Adjust based on rate limits
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)  # Control subtask throughput
 
@@ -713,7 +713,7 @@ async def save_to_drive_sheet(
 
         # Sheet name and range
         sheet_name = 'Sheet1'  # Adjust as needed
-        range_name = "Sheet1!A1:CZ1000"  # Adjust as needed
+        range_name = "Sheet1!A1:CZ3000"  # Adjust as needed
 
 
         # Prepare all rows: header + data

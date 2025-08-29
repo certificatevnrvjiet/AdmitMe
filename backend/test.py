@@ -6,6 +6,7 @@ from models.StudentModel import Student
 import asyncio
 import logging
 
+Management_spreadsheet_Id="1wn9mqz7HY-cnVdxS4Z0tLF061HJoFi_VrV1ZFjjXwp8"
 
 
 def get_short_form(full_form):
@@ -124,7 +125,7 @@ async def sync():
     """Process all subtasks with progress tracking"""
     try:
        
-        data_from_sheets = read_google_sheet(sheets_service,"1fJ6nY_FtS4EY4c0tewN-IG6Ub9TcEdFtQ-shPu7XnP0",'Sheet1!C2:AS220')
+        data_from_sheets = read_google_sheet(sheets_service,Management_spreadsheet_Id,'Sheet1!C2:AZ700')
         seen = set()
         filtered_data = []
         for row in reversed(data_from_sheets):
