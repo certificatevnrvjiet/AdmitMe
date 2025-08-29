@@ -422,11 +422,11 @@ const Dashboard = () => {
             <select
               onChange={handleStudentTypeFilterChange}
               value={StudenttypeFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
+              className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
             >
               <option value="regular">Regular</option>
               <option value="le">LE</option>
@@ -443,11 +443,11 @@ const Dashboard = () => {
             <select
               onChange={handleStatusFilterChange}
               value={statusFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
+              className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
             >
               <option value="all">All Status</option>
               <option value="verified">Verified</option>
@@ -467,11 +467,11 @@ const Dashboard = () => {
             <select
               onChange={handleTenthBoardFilterChange}
               value={TenthboardFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
+              className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
             >
               <option value="all">All Tenth Boards</option>
               <option value="tg bse">TG BSE</option>
@@ -494,11 +494,11 @@ const Dashboard = () => {
             <select
               onChange={handleTwelfthBoardFilterChange}
               value={TwelfthboardFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
+              className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
             >
               <option value="all">All Twelfth Boards</option>
               <option value="tg bie">TG BIE</option>
@@ -523,11 +523,11 @@ const Dashboard = () => {
               <select
                 onChange={handleBranchFilterChange}
                 value={branchFilter}
-                className={`appearance-none w-full md:w-auto bg-transparent border ${
-                  isDarkMode
-                    ? 'border-gray-600 text-white bg-gray-700'
-                    : 'border-gray-300 text-gray-700 bg-white'
-                } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                isDarkMode
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
               >
                 <option value="all">All Branches</option>
                 <option value="aids">AIDS</option>
@@ -583,11 +583,11 @@ const Dashboard = () => {
             <select
               onChange={handleGenderFilterChange}
               value={GenderFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
+              className={`appearance-none w-full md:w-auto border rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  ? 'bg-gray-700 text-white border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300'
+              } `}
             >
               <option value="all">All Gender</option>
               <option value="female">Female</option>
