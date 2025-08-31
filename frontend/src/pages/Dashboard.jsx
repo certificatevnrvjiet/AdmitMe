@@ -381,22 +381,13 @@ const Dashboard = () => {
                     <span>{downloadLoading ? 'Downloading...' : 'Download Excel'}</span>
                   </button>
                   <button 
-                    className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${downloadLoading ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                    className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-500 text-white hover:bg-green-600'} ${SavingtoDrive ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     onClick={handleSavetoDrive}
                     disabled={SavingtoDrive}
                   >
                     <FaGoogleDrive className="text-white-600 text-xl" />
                     <span>{SavingtoDrive ? 'Saving...' : 'Save To Drive'}</span>
                   </button>
-                  {userRole === 'admin' && (
-                    <Link
-                      to="/user-management"
-                      className={`w-full px-4 py-2 rounded-md flex items-center justify-center space-x-2 ${isDarkMode ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
-                    >
-                      <IoPeople className="w-4 h-4" />
-                      <span>User Management</span>
-                    </Link>
-                  )}
                 </div>
               </div>
             </div>
