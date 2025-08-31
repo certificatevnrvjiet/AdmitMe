@@ -500,6 +500,7 @@ async def export_students_excel(
     department: str,
     search_term: str = "",
     status_filter: str = "all",
+    admission_category_filter: str = "all",
     current_user: dict = Depends(get_current_user)
 ):
     """Export filtered students as Excel file"""
@@ -549,6 +550,10 @@ async def export_students_excel(
                 
             # Apply status filter
             if status_filter != 'all' and student_data.get('status', '').lower() != status_filter:
+                continue
+                
+            # Apply admission category filter
+            if admission_category_filter != 'all' and student_data.get('admission_category', '').lower() != admission_category_filter.lower():
                 continue
                 
             filtered_students.append(student_data)
@@ -634,6 +639,7 @@ async def save_to_drive_sheet(
     department: str,
     search_term: str = "",
     status_filter: str = "all",
+    admission_category_filter: str = "all",
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -700,6 +706,8 @@ async def save_to_drive_sheet(
             if department != 'admin' and student_data.get('branch_code', '').lower() != department:
                 continue
             if status_filter != 'all' and student_data.get('status', '').lower() != status_filter:
+                continue
+            if admission_category_filter != 'all' and student_data.get('admission_category', '').lower() != admission_category_filter.lower():
                 continue
             filtered_students.append(student_data)
 
