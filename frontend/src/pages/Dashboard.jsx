@@ -39,6 +39,7 @@ const Dashboard = () => {
   const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all');
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
   const [StudenttypeFilter, setStudentTypeFilter] = useState('regular'); // Default to Regular
+  const [admissionCategoryFilter, setAdmissionCategoryFilter] = useState('all');
 
   const fetchStudents = async () => {
     try {
@@ -121,9 +122,10 @@ const Dashboard = () => {
       const matchesTenthBoard = TenthboardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === TenthboardFilter;
       const matchesTwelfthBoard = TwelfthboardFilter === 'all' ? true : s.twelfth_board_name?.toLowerCase() === TwelfthboardFilter;
       const matchesStudentType = StudenttypeFilter=== 'all' ? true : s.student_type?.toLowerCase() === StudenttypeFilter;
+      const matchesAdmissionCategory = admissionCategoryFilter === 'all' ? true : s.admission_category?.toLowerCase() === admissionCategoryFilter.toLowerCase();
       // Add LE/Regular filter here if you want to filter students based on LE state
       // Example: const matchesLe = Le ? s.is_le : !s.is_le;
-      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard && matchesStudentType;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard && matchesStudentType && matchesAdmissionCategory;
     })
   );
 
@@ -163,6 +165,10 @@ const Dashboard = () => {
   };
   const handleStudentTypeFilterChange = (e) => {
     setStudentTypeFilter(e.target.value);
+  }
+
+  const handleAdmissionCategoryFilterChange = (e) => {
+    setAdmissionCategoryFilter(e.target.value);
   }
 
   const handleSort = (key) => {
@@ -249,6 +255,7 @@ const Dashboard = () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
+      if (admissionCategoryFilter !== 'all') params.append('admission_category_filter', admissionCategoryFilter);
   
       const response = await API.get(`/export-students/${department}`, {
         params,
@@ -296,6 +303,7 @@ const Dashboard = () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search_term', searchTerm);
       if (statusFilter !== 'all') params.append('status_filter', statusFilter);
+      if (admissionCategoryFilter !== 'all') params.append('admission_category_filter', admissionCategoryFilter);
   
       await API.post(`/save-to-drive/${department}`, null, { params });
   
@@ -410,213 +418,239 @@ const Dashboard = () => {
 <div className={`mt-8 shadow-sm rounded-lg mb-10 ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
   <div className="p-6">
     <div className="mb-4">
-      <h3 className="text-lg font-medium text-indigo-400 mb-4">
-        Student Verification Activity
-      </h3>
+             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+         <h3 className="text-lg font-medium text-indigo-400 mb-4 md:mb-0">
+           Student Verification Activity
+         </h3>
+         
+         {/* Search Bar - Aligned with heading */}
+         <div className="relative w-full md:w-96">
+           <input
+             type="text"
+             placeholder="Search by Student Name..."
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+             className={`w-full pl-6 pr-10 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg ${
+               isDarkMode
+                 ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400'
+                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+             }`}
+           />
+           <IoSearchSharp className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400" />
+         </div>
+       </div>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        {/* Filter Controls Group */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-4 w-full">
-          {/* StudentType Filter */}
-          <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleStudentTypeFilterChange}
-              value={StudenttypeFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="regular">Regular</option>
-              <option value="le">LE</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div>  
-          {/* Status Filter */}
-          <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleStatusFilterChange}
-              value={statusFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="all">All Status</option>
-              <option value="verified">Verified</option>
-              <option value="pending">Pending</option>
-              <option value="not viewed">Not Viewed</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div>
 
-          {/* TenthBoard Filter */}
-          <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleTenthBoardFilterChange}
-              value={TenthboardFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="all">All Tenth Boards</option>
-              <option value="tg bse">TG BSE</option>
-              <option value="cbse">CBSE</option>
-              <option value="icse">ICSE</option>
-              <option value="ap bse">AP BSE</option>
-              <option value="idbp">IDBP</option>
-              <option value="ace and a level">ACE and A Level</option>
-              <option value="other">Other</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div>
-          {/* TwelfthBoardFilter */}
-              <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleTwelfthBoardFilterChange}
-              value={TwelfthboardFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="all">All Twelfth Boards</option>
-              <option value="tg bie">TG BIE</option>
-              <option value="cbse">CBSE</option>
-              <option value="icse">ICSE</option>
-              <option value="ap bie">AP BIE</option>
-              <option value="ibdp">IDBP</option>
-              <option value="ace and a level">ACE and A Level</option>
-              <option value="other">Other</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div>
+       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+         {/* Filter Controls Group */}
+         <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-4 w-full">
+           {/* StudentType Filter */}
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleStudentTypeFilterChange}
+               value={StudenttypeFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="regular">Regular</option>
+               <option value="le">LE</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>  
 
-          {/* Branch Filter */}
-          {department === 'admin' && (
-            <div className="relative w-full md:w-auto">
-              <select
-                onChange={handleBranchFilterChange}
-                value={branchFilter}
-                className={`appearance-none w-full md:w-auto bg-transparent border ${
-                  isDarkMode
-                    ? 'border-gray-600 text-white bg-gray-700'
-                    : 'border-gray-300 text-gray-700 bg-white'
-                } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-              >
-                <option value="all">All Branches</option>
-                <option value="aids">AIDS</option>
-                <option value="ae">AE</option>
-                <option value="ce">CE</option>
-                <option value="csbs">CSBS</option>
-                <option value="cse">CSE</option>
-                <option value="aml">AML</option>
-                <option value="cseds">CSE-DS</option>
-                <option value="csecys">CSE-CYS</option>
-                <option value="cseiot">CSE-IOT</option>
-                <option value="eee">EEE</option>
-                <option value="ece">ECE</option>
-                <option value="eie">EIE</option>
-                <option value="it">IT</option>
-                <option value="me">ME</option>
-                <option value="vlsi">VLSI</option>
-                <option value="biotechnology">Biotechnology</option>
-                <option value="rai">Robotics and AI</option>
-              </select>
-              <RiArrowDropDownLine
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                  isDarkMode ? 'text-white' : 'text-gray-700'
-                }`}
-                size={20}
-              />
-            </div>
-          )}
-          {/* Region Filter
-          <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleRegionFilterChange}
-              value={regionFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="all">All Regions</option>
-              <option value="within_state">Within State</option>
-              <option value="outside_state">Other State</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div> */}
-          {/* Gender Filter */}
-          <div className="relative w-full md:w-auto">
-            <select
-              onChange={handleGenderFilterChange}
-              value={GenderFilter}
-              className={`appearance-none w-full md:w-auto bg-transparent border ${
-                isDarkMode
-                  ? 'border-gray-600 text-white bg-gray-700'
-                  : 'border-gray-300 text-gray-700 bg-white'
-              } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-            >
-              <option value="all">All Gender</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
-            <RiArrowDropDownLine
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-                isDarkMode ? 'text-white' : 'text-gray-700'
-              }`}
-              size={20}
-            />
-          </div>
-          {/* Search Box */}
-          <div className="relative w-full md:w-64">
-            <input
-              type="text"
-              placeholder="Search by Name"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-6 pr-10 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                isDarkMode
-                  ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
-            />
-            <IoSearchSharp className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          </div>
-        </div>
-      </div>
+           {/* Admission Category Filter */}
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleAdmissionCategoryFilterChange}
+               value={admissionCategoryFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Categories</option>
+               <option value="Cat-B">Cat-B</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>
+           {/* Status Filter */}
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleStatusFilterChange}
+               value={statusFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Status</option>
+               <option value="verified">Verified</option>
+               <option value="pending">Pending</option>
+               <option value="not viewed">Not Viewed</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>
+
+           {/* TenthBoard Filter */}
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleTenthBoardFilterChange}
+               value={TenthboardFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Tenth Boards</option>
+               <option value="tg bse">TG BSE</option>
+               <option value="cbse">CBSE</option>
+               <option value="icse">ICSE</option>
+               <option value="ap bse">AP BSE</option>
+               <option value="idbp">IDBP</option>
+               <option value="ace and a level">ACE and A Level</option>
+               <option value="other">Other</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>
+           {/* TwelfthBoardFilter */}
+               <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleTwelfthBoardFilterChange}
+               value={TwelfthboardFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Twelfth Boards</option>
+               <option value="tg bie">TG BIE</option>
+               <option value="cbse">CBSE</option>
+               <option value="icse">ICSE</option>
+               <option value="ap bie">AP BIE</option>
+               <option value="ibdp">IDBP</option>
+               <option value="ace and a level">ACE and A Level</option>
+               <option value="other">Other</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>
+
+           {/* Branch Filter */}
+           {department === 'admin' && (
+             <div className="relative w-full md:w-auto">
+               <select
+                 onChange={handleBranchFilterChange}
+                 value={branchFilter}
+                 className={`appearance-none w-full md:w-auto bg-transparent border ${
+                   isDarkMode
+                     ? 'border-gray-600 text-white bg-gray-700'
+                     : 'border-gray-300 text-gray-700 bg-white'
+                   } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+               >
+                 <option value="all">All Branches</option>
+                 <option value="aids">AIDS</option>
+                 <option value="ae">AE</option>
+                 <option value="ce">CE</option>
+                 <option value="csbs">CSBS</option>
+                 <option value="cse">CSE</option>
+                 <option value="aml">AML</option>
+                 <option value="cseds">CSE-DS</option>
+                 <option value="csecys">CSE-CYS</option>
+                 <option value="cseiot">CSE-IOT</option>
+                 <option value="eee">EEE</option>
+                 <option value="ece">ECE</option>
+                 <option value="eie">EIE</option>
+                 <option value="it">IT</option>
+                 <option value="me">ME</option>
+                 <option value="vlsi">VLSI</option>
+                 <option value="biotechnology">Biotechnology</option>
+                 <option value="rai">Robotics and AI</option>
+               </select>
+               <RiArrowDropDownLine
+                 className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                   isDarkMode ? 'text-white' : 'text-gray-700'
+                 }`}
+                 size={20}
+               />
+             </div>
+           )}
+           {/* Region Filter
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleRegionFilterChange}
+               value={regionFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Regions</option>
+               <option value="within_state">Within State</option>
+               <option value="outside_state">Other State</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div> */}
+           {/* Gender Filter */}
+           <div className="relative w-full md:w-auto">
+             <select
+               onChange={handleGenderFilterChange}
+               value={GenderFilter}
+               className={`appearance-none w-full md:w-auto bg-transparent border ${
+                 isDarkMode
+                   ? 'border-gray-600 text-white bg-gray-700'
+                   : 'border-gray-300 text-gray-700 bg-white'
+               } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+             >
+               <option value="all">All Gender</option>
+               <option value="female">Female</option>
+               <option value="male">Male</option>
+             </select>
+             <RiArrowDropDownLine
+               className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
+                 isDarkMode ? 'text-white' : 'text-gray-700'
+               }`}
+               size={20}
+             />
+           </div>
+         </div>
+       </div>
     </div>
               <div className="overflow-x-auto">
                 <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
