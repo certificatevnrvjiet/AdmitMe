@@ -2,6 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 from models.SheetModel import SheetStudent
 from models.SheetModelLE import SheetStudentLE
+from models.SheetModelB import SheetModelB
 from datetime import datetime
 
 class Student(BaseModel):
@@ -53,6 +54,9 @@ class Student(BaseModel):
     parent_email: Optional[str] = ""
     father_phone: Optional[str] = ""
     mother_phone: Optional[str] = ""
+    student_passport_no: Optional[str] = ""
+    father_passport_no: Optional[str] = ""
+    mother_passport_no: Optional[str] = ""
     vnr_email: Optional[str] = ""
     student_email: Optional[str] = ""
     father_email: Optional[str] = ""
@@ -226,4 +230,70 @@ class Student(BaseModel):
             eapcet_rank_card_link=flat_student.ecet_rank_card,  # ECET rank card instead of EAPCET
             transfer_certificate_link=flat_student.transfer_certificate,
             student_type="LE"  # Mark as Lateral Entry student
+        )
+
+    @classmethod
+    def from_flat_BStudent(cls, flat_student: 'SheetModelB') -> 'Student':
+        return cls(
+            student_name=flat_student.student_name_10th,
+            father_name=flat_student.fathers_name_10th,
+            mother_name=flat_student.mothers_name_10th,
+            date_of_birth=flat_student.date_of_birth,
+            gender=flat_student.gender,
+            aadhaar_card_number=flat_student.aadhaar_card_number,
+            student_passport_no=flat_student.student_passport_no,
+            father_passport_no=flat_student.father_passport_no,
+            mother_passport_no=flat_student.mother_passport_no,
+            eapcet_ht_no=flat_student.eapcet_hall_ticket_no,
+            eapcet_rank=flat_student.eapcet_rank,
+            jee_ht_no=flat_student.jee_hall_ticket_no,
+            jee_mains_rank=flat_student.jee_crl_rank,
+            mother_tongue=flat_student.mother_tongue,
+            student_phone=flat_student.student_phone_number,
+            father_phone=flat_student.father_phone_number,
+            mother_phone=flat_student.mother_phone_number,
+            student_email=flat_student.student_email,
+            father_email=flat_student.father_email,
+            mother_email=flat_student.mother_email,
+            parent_email=(
+                flat_student.mother_email
+                if flat_student.primary_contact_person == "Mother"
+                else flat_student.father_email
+            ),
+            parent_phone=(
+                flat_student.mother_phone_number
+                if flat_student.primary_contact_person == "Mother"
+                else flat_student.father_phone_number
+            ),
+            father_profession_and_designation=flat_student.father_profession_and_designation,
+            mother_profession_and_designation=flat_student.mother_profession_and_designation,
+            address_dno=flat_student.door_no,
+            address_street=flat_student.street_name,
+            address_village_town=flat_student.village_name,
+            address_mandal=flat_student.mandal_name,
+            address_district=flat_student.district_name,
+            address_state=flat_student.state_name,
+            address_pincode=flat_student.pincode,
+            rural_urban=flat_student.rural_urban,
+            ews_status=flat_student.ews_status,
+            category_name=flat_student.caste_category,
+            caste_as_per_tc=flat_student.caste_as_per_tc,
+            ebc_status=flat_student.ebc_status,
+            income=flat_student.annual_income_of_parent,
+            nationality=flat_student.nationality,
+            religion=flat_student.religion,
+            minority=flat_student.minority,
+            blood_group=flat_student.blood_group,
+            ph_status=flat_student.ph_status,
+            scribe=flat_student.ph_scribe,
+            tenth_board_name=flat_student.tenth_board,
+            twelfth_board_name=flat_student.twelfth_board_name,
+            tenth_memo_link=flat_student.tenth_memo,
+            twelfth_memo_link=flat_student.twelfth_memo,
+            aadhaar_link=flat_student.aadhaar_card,
+            eapcet_rank_card_link=flat_student.eapcet_rank_card,
+            jee_rank_card_link=flat_student.jee_rank_card,
+            transfer_certificate_link=flat_student.transfer_certificate,
+            student_type="regular",
+            admission_category="Cat-B"
         )

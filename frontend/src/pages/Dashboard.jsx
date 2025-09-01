@@ -325,6 +325,23 @@ const Dashboard = () => {
     return `${day}/${month}/${year}`;
   }
 
+  // Helper to get stats per department
+  const getDepartmentStats = () => {
+    const departments = [
+      'cse', 'ece', 'eee', 'mech', 'civil', 'aids', 'ae', 'ce', 'csbs', 'aml', 'cseds', 'csecys', 'cseiot', 'eie', 'it', 'vlsi', 'biotechnology', 'rai'
+    ];
+    return departments.map(dept => {
+      const deptStudents = students.filter(s => (s.branch_code || '').toLowerCase() === dept);
+      return {
+        name: getDepartmentName(dept),
+        total: deptStudents.length,
+        verified: deptStudents.filter(s => (s.status || '').toLowerCase() === 'verified').length,
+        pending: deptStudents.filter(s => (s.status || '').toLowerCase() === 'pending').length,
+        notViewed: deptStudents.filter(s => (s.status || '').toLowerCase() === 'not viewed').length,
+      };
+    }).filter(stat => stat.total > 0);
+  };
+
   return (
     <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
       {selectedStudent && (

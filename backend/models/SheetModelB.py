@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 
-class StudentSheetB(BaseModel):
+class SheetModelB(BaseModel):
     student_name_10th: Optional[str] = ""
     fathers_name_10th: Optional[str] = ""
     mothers_name_10th: Optional[str] = ""
