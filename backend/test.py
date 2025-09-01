@@ -1,7 +1,7 @@
 from GoogleService import authenticate_service_account, download_image_from_drive,read_google_sheet
 from googleapiclient.discovery import build
 from database import supabase
-from models.SheetModelLE import SheetStudentLE
+from models.SheetModelB import SheetModelB
 from models.StudentModel import Student
 import asyncio
 import logging
@@ -45,17 +45,24 @@ sheets_service=build('sheets', 'v4', credentials=credentials)
 drive_service=build('drive', 'v3', credentials=credentials)
 
 
-async def process_student(student_data: SheetStudentLE, branch: str):
+async def process_student(student_data: SheetModelB):
     print("\nStrted Extracting......")
     """Process 6 extract calls in parallel for one subtask"""
-    print("started processing student", student_data.name_of_the_student)
-    student = Student.from_flat_leStudent(student_data)
-    branch=get_short_form(branch)
-    student.degree_code = branch.upper()
-    student.branch_code = branch.upper()
+    print("started processing student", student_data.student_name_10th)
+    student = Student.from_flat_BStudent(student_data)
+    # for i in student:
+    #         print(i)
     student.status = "Not Viewed"
     board = student.twelfth_board_name
-    prompt = prompts[-1]  # Default prompt for most boards
+    prompt = prompts[4]  # Default prompt for most boards
+    if board in ("TG BIE", "AP BIE"):
+        prompt=prompts[4]
+    elif board == "ACE and A Level":
+        prompt=prompts[5]
+    elif board == "ICSC":
+        prompt=prompts[6]
+    elif board == "CBSE":
+        prompt=prompts[7]
     links_prompts = [
         (student.tenth_memo_link, prompts[0]),
         (student.twelfth_memo_link, prompt),
@@ -106,7 +113,7 @@ async def process_student(student_data: SheetStudentLE, branch: str):
         student_dict = student.model_dump()
         # print(student_dict)
         # for i in student_dict:
-        #     print(i,student_dict[i])
+            # print(i,student_dict[i])
         # Insert into Supabase
         response = supabase.table("students2025").insert(student_dict).execute()
         # print(response)
@@ -125,7 +132,7 @@ async def sync():
     """Process all subtasks with progress tracking"""
     try:
        
-        data_from_sheets = read_google_sheet(sheets_service,Management_spreadsheet_Id,'Sheet1!C2:AZ700')
+        data_from_sheets = read_google_sheet(sheets_service,Management_spreadsheet_Id,'Sheet1!C2:AZ1000')
         seen = set()
         filtered_data = []
         for row in reversed(data_from_sheets):
@@ -140,31 +147,39 @@ async def sync():
         # u909
         if data_from_sheets is None:
             data_from_sheets = []
+        aadhaar_cards = []
+        start = 0
+        while True:
+            batch = supabase.table("students2025") \
+                .select("aadhaar_card_number") \
+                .range(start, start + 1000 - 1) \
+                .execute().data
             
-        aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").execute().data
+            if not batch:
+                break
+            
+            aadhaar_cards.extend(batch)
+            start += 1000
+        # aadhaar_cards=supabase.table("students2025").select("aadhaar_card_number").execute().data
 
         # aadharindex=data_from_sheets[0].index("Aadhaar Card Number")
         aadhaar_cards=[i["aadhaar_card_number"] for i in aadhaar_cards]
         # print("\naadhaar cards in db",len(aadhaar_cards))
-
+        # print(data_from_sheets[0][5] in aadhaar_cards)
         data_from_sheets = [row for row in data_from_sheets if row[5] not in aadhaar_cards]  # Filter out already synced students
 
         # print("Data from sheets:", data_from_sheets[1])
         # h
-        # print(len(data_from_sheets))
+        # print((data_from_sheets))
         # lkjhgfd
         for i, student in enumerate(data_from_sheets):
             row = student
-            field_names = list(SheetStudentLE.model_fields.keys())
+            field_names = list(SheetModelB.model_fields.keys())
             flatstudent_dict = dict(zip(field_names, row))
-            student = SheetStudentLE(**flatstudent_dict)
-            # print()
-            # for i in student:
-            #     print(i)
-            # print()
-            # h
+            student = SheetModelB(**flatstudent_dict)
+            
             async with SUBTASK_SEMAPHORE:
-                subtask_result = await process_student(student,student.branch_opted)
+                subtask_result = await process_student(student)
                 
                 # Update progress every 10% of tasks
                 # if (i + 1) % max(1, no_of_students // 10) == 0:
@@ -178,18 +193,4 @@ async def sync():
     except Exception as e:
        print(e)
 if __name__ == "__main__":
-    aadhaar_cards = []
-    start = 0
-    while True:
-        batch = supabase.table("students2025") \
-            .select("aadhaar_card_number") \
-            .range(start, start + 1000 - 1) \
-            .execute().data
-        
-        if not batch:
-            break
-        
-        aadhaar_cards.extend(batch)
-        start += 1000
-
-    print(len(aadhaar_cards))
+    asyncio.run(sync())

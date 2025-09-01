@@ -94,7 +94,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
         while not done:
             status, done = downloader.next_chunk()
         fh.seek(0)
-        print("Hi")
+        # print("Hi")
         # Handle PDF files
         if mime_type == "application/pdf":
             # print(mime_type)
