@@ -520,7 +520,7 @@ const Dashboard = () => {
                } rounded-md py-2 pl-4 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
              >
                <option value="all">All Categories</option>
-               <option value="Cat-B">Cat-B</option>
+               <option value="Management">Management</option>
              </select>
              <RiArrowDropDownLine
                className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
