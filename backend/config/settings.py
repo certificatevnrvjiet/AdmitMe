@@ -11,3 +11,8 @@ SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 GOOGLE_CREDENTIALS= os.getenv("GOOGLE_CREDENTIALS")
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
+# JWT Configuration
+SECRET_KEY = os.getenv('SECRET_KEY', "your-secret-key-change-me") # Fallback for dev, but should be in .env
+ALGORITHM = os.getenv('ALGORITHM', "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 # Expiration time in minutes
+

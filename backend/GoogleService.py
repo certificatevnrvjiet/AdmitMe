@@ -54,6 +54,21 @@ def authenticate_service_account():
         print(f"An error occurred during authentication: {e}")
         return None
 
+
+def get_sheets_service():
+    """Returns an authorized Sheets API service instance."""
+    creds = authenticate_service_account()
+    if not creds:
+        raise Exception("Failed to authenticate with Google Sheets API")
+    return build('sheets', 'v4', credentials=creds)
+
+def get_drive_service():
+    """Returns an authorized Drive API service instance."""
+    creds = authenticate_service_account()
+    if not creds:
+        raise Exception("Failed to authenticate with Google Drive API")
+    return build('drive', 'v3', credentials=creds)
+
 def read_google_sheet(service, spreadsheet_id, range_name):
     """Reads data from a Google Sheet."""
     print(f"\n--- Reading Google Sheet: {spreadsheet_id} (Range: {range_name}) ---")
