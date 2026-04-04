@@ -19,4 +19,9 @@ export const getImageUrl = (fileId) => {
   return `${API.defaults.baseURL}/image/${fileId}`;
 };
 
+export const getStudentDocumentUrl = (studentId, docType) => {
+  if (!studentId || !docType) return null;
+  return `${API.defaults.baseURL}/students/${studentId}/documents/${docType}`;
+};
+
 export default API;

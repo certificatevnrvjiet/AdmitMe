@@ -89,9 +89,11 @@ const FilterBar = ({
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 options={[
                                     { value: "all", label: "All Status" },
-                                    { value: "verified", label: "Verified" },
-                                    { value: "pending", label: "Pending" },
-                                    { value: "not viewed", label: "Not Viewed" }
+                                    { value: "approved", label: "Approved" },
+                                    { value: "under_review", label: "Under Review" },
+                                    { value: "submitted", label: "Submitted" },
+                                    { value: "rejected", label: "Rejected" },
+                                    { value: "resubmission_required", label: "Resubmission Required" }
                                 ]}
                             />
 
@@ -137,7 +139,7 @@ const FilterBar = ({
                                         { value: "ce", label: "CE" },
                                         { value: "csbs", label: "CSBS" },
                                         { value: "cse", label: "CSE" },
-                                        { value: "aml", label: "AML" },
+                                        { value: "aiml", label: "AIML" },
                                         { value: "cseds", label: "CSE-DS" },
                                         { value: "csecys", label: "CSE-CYS" },
                                         { value: "cseiot", label: "CSE-IOT" },
@@ -148,7 +150,7 @@ const FilterBar = ({
                                         { value: "me", label: "ME" },
                                         { value: "vlsi", label: "VLSI" },
                                         { value: "biotechnology", label: "Biotechnology" },
-                                        { value: "rai", label: "Robotics and AI" }
+                                        { value: "roboticsandai", label: "Robotics and AI" }
                                     ]}
                                 />
                             )}

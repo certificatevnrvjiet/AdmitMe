@@ -40,15 +40,15 @@ const Dashboard = () => {
 
   // Context & Hooks
   const { isDarkMode } = useTheme();
-  const { isAuthenticated, role: userRole } = useContext(AuthContext);
+  const { isAuthenticated, role: userRole, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const wsRef = useRef(null);
 
   // Derived State
   const total_students_processed = students.length;
-  const not_viewed_students = students.filter(s => s.status === 'Not Viewed').length;
-  const verified_students = students.filter(s => s.status === 'Verified').length;
-  const pending_students = students.filter(s => s.status === 'Pending').length;
+  const submitted_students = students.filter(s => (s.status || '').toLowerCase() === 'submitted').length;
+  const approved_students = students.filter(s => (s.status || '').toLowerCase() === 'approved').length;
+  const under_review_students = students.filter(s => (s.status || '').toLowerCase() === 'under_review').length;
 
   // Effects
   useEffect(() => {
@@ -59,8 +59,14 @@ const Dashboard = () => {
         setUser(res.data);
         setdepartment(res.data.role);
       })
-      .catch(() => setUser(null));
-  }, [isAuthenticated]);
+      .catch((err) => {
+        setUser(null);
+        if (err?.response?.status === 401) {
+          logout();
+          navigate('/');
+        }
+      });
+  }, [isAuthenticated, logout, navigate]);
 
   useEffect(() => {
     if (department) {
@@ -70,7 +76,7 @@ const Dashboard = () => {
 
   // WebSocket Effect
   useEffect(() => {
-    const ws = createWebSocket("/ws/notifications");
+    const ws = createWebSocket();
     if (!ws) return;
 
     wsRef.current = ws;
@@ -101,7 +107,12 @@ const Dashboard = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const res = await API.get(`/students/${department}`);
+      let res;
+      try {
+        res = await API.get('/students');
+      } catch {
+        res = await API.get(`/students/${department}`);
+      }
       setStudents(res.data.students || []);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -329,9 +340,9 @@ const Dashboard = () => {
               students={students}
               isDarkMode={isDarkMode}
               userRole={userRole}
-              not_viewed_students={not_viewed_students}
-              verified_students={verified_students}
-              pending_students={pending_students}
+              submitted_students={submitted_students}
+              approved_students={approved_students}
+              under_review_students={under_review_students}
               total_students_processed={total_students_processed}
             />
           </div>

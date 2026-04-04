@@ -1,39 +1,75 @@
 from typing import Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, UploadFile, File
 from io import BytesIO
 from openpyxl import Workbook
 from datetime import datetime
-from services.auth_service import get_current_user
+from PIL import Image
+import fitz
+from services.auth_service import get_current_user, can_access_student_record
 from database import supabase
 from models.StudentModel import Student
-from GoogleService import download_image_from_drive
+from models.DocumentModel import DocumentUploadResponse
+from models.VerificationModel import VerificationUpdate
+from services.catalog_service import normalize_branch_code, program_branch_catalog, normalize_student_branch_fields
+from services.status_service import normalize_status, is_transition_allowed, canonicalize_student_status
+from services.document_service import (
+    normalize_doc_type,
+    build_object_key,
+    calculate_checksum,
+    create_or_update_document,
+    fetch_student,
+    list_students_for_role,
+    migrate_legacy_documents,
+    resolve_student_document_ref,
+    validate_upload_and_detect_mime,
+)
 
 router = APIRouter()
 
 # In-memory cache for file_id to image bytes
 image_cache: Dict[str, bytes] = {}
+MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
+
+
+def _db_datetime(value: datetime | None = None) -> str:
+    dt = value or datetime.utcnow()
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _pdf_to_png_bytes(pdf_bytes: bytes) -> bytes | None:
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if len(doc) == 0:
+            return None
+        page = doc[-1]
+        pix = page.get_pixmap()
+        image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        output = BytesIO()
+        image.save(output, format="PNG")
+        return output.getvalue()
+    except Exception:
+        return None
 
 @router.get("/image/{file_id}")
 async def get_image(
     file_id: str,
-    request: Request
+    request: Request,
+    current_user: dict = Depends(get_current_user),
 ):
-    """Serve images from Google Drive by file ID, with in-memory caching"""
+    """Serve images from Google Drive by file ID, with in-memory caching."""
     try:
-        if not hasattr(request.app.state, 'drive_service') or not request.app.state.drive_service:
-            # Try to init if missing or just fail gracefully? 
-            # In lifespan we init it. If it failed there, it's None.
-             raise HTTPException(status_code=500, detail="Drive service not available")
+        providers = getattr(request.app.state, "storage_providers", {})
+        gdrive_provider = providers.get("gdrive")
+        if not gdrive_provider:
+            raise HTTPException(status_code=500, detail="Drive storage provider not available")
   
         # Check cache first
         if file_id in image_cache:
-            # print("Cache hit for file_id:", file_id)
             image_bytes = image_cache[file_id]
         else:
-            # Download image from Google Drive
-            image_bytes = await download_image_from_drive(file_id, request.app.state.drive_service)
+            image_bytes = gdrive_provider.get_bytes(file_id)
             if image_bytes:
-                image_cache[file_id] = image_bytes  # Cache the result
+                image_cache[file_id] = image_bytes
                 if len(image_cache) > 99:
                     image_cache.clear()
         
@@ -46,8 +82,238 @@ async def get_image(
             headers={"Cache-Control": "public, max-age=3600"}  # Cache for 1 hour
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve image: {str(e)}")
+
+
+@router.get("/meta/programs-branches")
+async def get_programs_branches():
+    return program_branch_catalog()
+
+
+@router.get("/students")
+async def list_students(
+    current_user: dict = Depends(get_current_user),
+):
+    """Standardized students list endpoint with role-based access."""
+    try:
+        students = list_students_for_role(current_user)
+        return {"students": students}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list students: {str(e)}")
+
+
+@router.get("/students/id/{student_id}")
+async def get_student_by_id(
+    student_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Fetch one student by Aadhaar/student id."""
+    student = fetch_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if not can_access_student_record(current_user, student):
+        raise HTTPException(status_code=403, detail="You don't have permission to access this student")
+
+    return {"student": student}
+
+
+@router.patch("/students/{student_id}/verification")
+async def update_student_verification(
+    student_id: str,
+    payload: VerificationUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("rights") == "Read Only":
+        raise HTTPException(status_code=403, detail="You don't have enough permissions")
+
+    student = fetch_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if not can_access_student_record(current_user, student):
+        raise HTTPException(status_code=403, detail="You don't have permission to update this student")
+
+    next_status = normalize_status(payload.status)
+    current_status = normalize_status(student.get("status"))
+    if not is_transition_allowed(current_status, next_status):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Invalid status transition: {current_status} -> {next_status}",
+        )
+
+    update_payload = {
+        "status": next_status,
+        "verification_remarks": payload.remarks or "",
+        "reviewed_by": payload.reviewed_by or current_user.get("username"),
+        "reviewed_at": _db_datetime(payload.reviewed_at),
+        "Time_updated": _db_datetime(),
+    }
+
+    response = (
+        supabase.table("students2025")
+        .update(update_payload)
+        .eq("aadhaar_card_number", student_id)
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    return {
+        "message": "Verification status updated",
+        "student_id": student_id,
+        "status": next_status,
+        "remarks": payload.remarks or "",
+        "reviewed_by": update_payload["reviewed_by"],
+        "reviewed_at": update_payload["reviewed_at"],
+    }
+
+
+@router.post("/students/{student_id}/documents/{doc_type}", response_model=DocumentUploadResponse)
+async def upload_student_document(
+    student_id: str,
+    doc_type: str,
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("rights") == "Read Only":
+        raise HTTPException(status_code=403, detail="You don't have enough permissions")
+
+    normalized_doc_type = normalize_doc_type(doc_type)
+    student = fetch_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if not can_access_student_record(current_user, student):
+        raise HTTPException(status_code=403, detail="You don't have permission to upload documents for this student")
+
+    payload = await file.read()
+    if not payload:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(payload) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="File exceeds max size of 5MB")
+
+    try:
+        content_type = validate_upload_and_detect_mime(payload, file.filename, file.content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    storage = request.app.state.storage
+    object_key = build_object_key(student_id, normalized_doc_type, file.filename or "")
+    saved_key = storage.save(object_key, payload, content_type=content_type)
+    checksum = calculate_checksum(payload)
+
+    document_row = create_or_update_document(
+        student_id=student_id,
+        doc_type=normalized_doc_type,
+        provider=storage.name,
+        object_key=saved_key,
+        mime_type=content_type,
+        size_bytes=len(payload),
+        checksum=checksum,
+        status="submitted",
+    )
+
+    preview_url = f"/students/{student_id}/documents/{normalized_doc_type}"
+    return DocumentUploadResponse(
+        document_id=document_row.get("id"),
+        doc_type=normalized_doc_type,
+        status=document_row.get("status", "submitted"),
+        provider=document_row.get("provider", storage.name),
+        object_key=document_row.get("object_key", saved_key),
+        preview_url=preview_url,
+    )
+
+
+@router.get("/students/{student_id}/documents/{doc_type}")
+async def get_student_document(
+    student_id: str,
+    doc_type: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    normalized_doc_type = normalize_doc_type(doc_type)
+    student = fetch_student(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if not can_access_student_record(current_user, student):
+        raise HTTPException(status_code=403, detail="You don't have permission to access this document")
+
+    doc_ref = resolve_student_document_ref(student, student_id, normalized_doc_type)
+    if not doc_ref:
+        raise HTTPException(status_code=404, detail="Document reference not found")
+
+    providers = getattr(request.app.state, "storage_providers", {})
+    active_provider_name = getattr(request.app.state.storage, "name", "")
+    providers.setdefault(active_provider_name, request.app.state.storage)
+    provider = providers.get(doc_ref.provider)
+    if not provider:
+        raise HTTPException(status_code=500, detail=f"Storage provider not configured: {doc_ref.provider}")
+
+    cache_key = f"{doc_ref.provider}:{doc_ref.key}"
+    image_bytes = image_cache.get(cache_key)
+    if image_bytes is None:
+        image_bytes = provider.get_bytes(doc_ref.key)
+        if image_bytes:
+            image_cache[cache_key] = image_bytes
+            if len(image_cache) > 99:
+                image_cache.clear()
+
+    if not image_bytes:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    media_type = "application/octet-stream"
+    if doc_ref.provider == "gdrive":
+        media_type = "image/png"
+    if doc_ref.key.lower().endswith(".pdf"):
+        converted = _pdf_to_png_bytes(image_bytes)
+        if converted:
+            image_bytes = converted
+            media_type = "image/png"
+        else:
+            media_type = "application/pdf"
+    elif doc_ref.key.lower().endswith(".png"):
+        media_type = "image/png"
+    elif doc_ref.key.lower().endswith((".jpg", ".jpeg")):
+        media_type = "image/jpeg"
+
+    return Response(
+        content=image_bytes,
+        media_type=media_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@router.post("/documents/migrate-legacy")
+async def migrate_legacy_docs(
+    request: Request,
+    limit: int = 0,
+    current_user: dict = Depends(get_current_user),
+):
+    if (current_user.get("role") or "").lower() != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can run migration")
+
+    students = list_students_for_role({"role": "admin"})
+    target_storage = request.app.state.storage
+    providers = getattr(request.app.state, "storage_providers", {})
+    providers.setdefault(target_storage.name, target_storage)
+
+    result = migrate_legacy_documents(
+        students=students,
+        target_storage=target_storage,
+        providers=providers,
+        limit=limit if limit > 0 else None,
+    )
+    return {
+        "message": "Legacy document migration completed",
+        "target_provider": target_storage.name,
+        "result": result,
+    }
 
 @router.get("/students/{department}")
 async def get_students_by_department(
@@ -55,7 +321,22 @@ async def get_students_by_department(
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        if current_user["role"] != "admin" and current_user["role"] != department:
+        role = (current_user.get("role") or "").lower()
+        normalized_department = department.lower()
+        if normalized_department != "admin":
+            try:
+                normalized_department = normalize_branch_code(normalized_department)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid department code")
+
+        normalized_role = role
+        if role != "admin":
+            try:
+                normalized_role = normalize_branch_code(role)
+            except ValueError:
+                pass
+
+        if normalized_role != "admin" and normalized_role != normalized_department:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to export this department's data"
@@ -78,21 +359,24 @@ async def get_students_by_department(
             return all_data
 
         # Build base query
-        if department.lower() == "admin":
+        if normalized_department == "admin":
             query = supabase.table("students2025").select("*")
         else:
             query = (
                 supabase.table("students2025")
                 .select("*")
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
             )
 
         students = fetch_all_students(query)
+        students = [normalize_student_branch_fields(canonicalize_student_status(s)) for s in students]
 
         return {"students": students}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=f"Failed to fetch students: {str(e)}")
 
 @router.put("/student/{aadhaar_card_number}")
 def update_student(
@@ -106,10 +390,32 @@ def update_student(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have enough permissions"
         )
+
+    student = fetch_student(aadhaar_card_number)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    if not can_access_student_record(current_user, student):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this student",
+        )
     
     # Convert Student model to dictionary
     student_dict = updated_student.model_dump()
-    student_dict["Time_updated"] = datetime.utcnow().isoformat() + "Z"
+    if student_dict.get("status"):
+        student_dict["status"] = normalize_status(student_dict.get("status"))
+        if not is_transition_allowed(student.get("status"), student_dict["status"]):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Invalid status transition: {normalize_status(student.get('status'))} -> {student_dict['status']}",
+            )
+    for field in ("branch_code", "degree_code"):
+        if student_dict.get(field):
+            try:
+                student_dict[field] = normalize_branch_code(student_dict[field]).upper()
+            except ValueError:
+                pass
+    student_dict["Time_updated"] = _db_datetime()
 
     try:
         # Attempt to update the student in Supabase
@@ -145,8 +451,22 @@ async def export_students_excel(
 ):
     """Export filtered students as Excel file"""
     try:
+        normalized_department = department.lower()
+        if normalized_department != "admin":
+            try:
+                normalized_department = normalize_branch_code(normalized_department)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid department code")
+
+        normalized_role = (current_user.get("role") or "").lower()
+        if normalized_role != "admin":
+            try:
+                normalized_role = normalize_branch_code(normalized_role)
+            except ValueError:
+                pass
+
         # Verify user permissions
-        if current_user["role"] != "admin" and current_user["role"] != department:
+        if normalized_role != "admin" and normalized_role != normalized_department:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to export this department's data"
@@ -166,11 +486,11 @@ async def export_students_excel(
             return all_data
 
         # Get students from database (with pagination)
-        if department.lower() == "admin":
+        if normalized_department == "admin":
             base_query = supabase.table("students2025").select("*")
         else:
             base_query = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
 
         students_data = fetch_all_students(base_query)
         
@@ -179,13 +499,14 @@ async def export_students_excel(
         for student in students_data:
             # Flatten student data if needed
             student_data = student.get('data', student)
+            student_data = normalize_student_branch_fields(canonicalize_student_status(student_data))
             
             # Apply search filter
             if search_term and search_term.lower() not in student_data.get('student_name', '').lower():
                 continue
                 
             # Apply department filter
-            if department != 'admin' and student_data.get('branch_code', '').lower() != department:
+            if normalized_department != 'admin' and student_data.get('branch_code', '').lower() != normalized_department:
                 continue
                 
             # Apply status filter
@@ -225,7 +546,7 @@ async def export_students_excel(
         
         # Generate filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"students_{department}_{timestamp}.xlsx"
+        filename = f"students_{normalized_department}_{timestamp}.xlsx"
         
         return Response(
             content=excel_file.getvalue(),
@@ -271,8 +592,22 @@ async def save_to_drive_sheet(
     }
 
     try:
+        normalized_department = department.lower()
+        if normalized_department != "admin":
+            try:
+                normalized_department = normalize_branch_code(normalized_department)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid department code")
+
+        normalized_role = (current_user.get("role") or "").lower()
+        if normalized_role != "admin":
+            try:
+                normalized_role = normalize_branch_code(normalized_role)
+            except ValueError:
+                pass
+
         # Permissions
-        if current_user["role"] != "admin" and current_user["role"] != department:
+        if normalized_role != "admin" and normalized_role != normalized_department:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to update this department's sheet"
@@ -292,20 +627,21 @@ async def save_to_drive_sheet(
             return all_data
 
         # Get students from database (with pagination)
-        if department.lower() == "admin":
+        if normalized_department == "admin":
             base_query = supabase.table("students2025").select("*")
         else:
             base_query = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{department.upper()},branch_code.eq.{department.upper()}")
+                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
         students_data = fetch_all_students(base_query)
 
         # Apply filters
         filtered_students = []
         for student in students_data:
             student_data = student.get('data', student)
+            student_data = normalize_student_branch_fields(canonicalize_student_status(student_data))
             if search_term and search_term.lower() not in student_data.get('student_name', '').lower():
                 continue
-            if department != 'admin' and student_data.get('branch_code', '').lower() != department:
+            if normalized_department != 'admin' and student_data.get('branch_code', '').lower() != normalized_department:
                 continue
             if status_filter != 'all' and student_data.get('status', '').lower() != status_filter:
                 continue
@@ -333,7 +669,7 @@ async def save_to_drive_sheet(
 
         # Overwrite the sheet with new data
         sheets_service.spreadsheets().values().update(
-            spreadsheetId=SPREADSHEET_IDs[department.lower()],
+            spreadsheetId=SPREADSHEET_IDs[normalized_department],
             range=range_name,
             valueInputOption="RAW",
             body={"values": all_rows}

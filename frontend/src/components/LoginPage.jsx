@@ -1,5 +1,6 @@
 import { useState, useContext , useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { useTheme } from '../context/ThemeContext';
 import API from "../api"; // Adjust the import path as necessary
 import { useAuth, AuthContext } from "../auth/AuthContext";
@@ -112,6 +113,16 @@ const LoginPage = () => {
             >
               Sign in
             </button>
+            <Link
+              to="/student-portal"
+              className={`mt-3 inline-flex w-full justify-center rounded-md border px-4 py-2 text-sm font-medium ${
+                isDarkMode
+                  ? "border-gray-600 text-gray-100 hover:bg-gray-700"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Student Admission Form
+            </Link>
           </div>
         </form>
       </div>

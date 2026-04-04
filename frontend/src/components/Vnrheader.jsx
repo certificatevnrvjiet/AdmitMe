@@ -11,7 +11,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 
 function Vnrheader() {
     const { isDarkMode, toggleTheme } = useTheme();
-    const { token, logout ,role} = useAuth();
+    const { token, logout, role, isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState(null);
@@ -30,12 +30,23 @@ function Vnrheader() {
       };
 
       useEffect(() => {
+        if (!isAuthenticated || !token) {
+          setUser(null);
+          return;
+        }
+
         API.get('/me')
-          .then(res =>{ 
+          .then(res => { 
             setUser(res.data.User);
           })
-          .catch(() => setUser(null));
-      }, [role]);
+          .catch((err) => {
+            setUser(null);
+            if (err?.response?.status === 401) {
+              logout();
+              navigate("/");
+            }
+          });
+      }, [isAuthenticated, token, role, logout, navigate]);
 
     return (
         <header id="app-header" className={`shadow-lg fixed top-0 left-0 w-full z-50 px-5 py-2 ${

@@ -1,10 +1,15 @@
 import re
-from GoogleService import download_image_from_drive,process_image_with_gemini
+from GoogleService import process_image_with_gemini
 import json
 from tenacity import retry, stop_after_attempt, wait_exponential
 import asyncio
 import logging
 import time
+from io import BytesIO
+from PIL import Image
+import fitz
+from services.document_service import parse_document_ref
+from storage.gdrive import GoogleDriveStorageProvider
 
 
 prompt_SSC = '''Extract the following structured data from the image:
@@ -122,6 +127,40 @@ just Dictionary no other stuff.
 
 prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter,prompt_Diploma]
 
+def _parse_gemini_json(response_text: str) -> dict:
+    text = (response_text or "").strip()
+    if not text:
+        return {}
+
+    # 1) Direct JSON
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
+    # 2) Fenced JSON block
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
+    if fence_match:
+        try:
+            parsed = json.loads(fence_match.group(1))
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+    # 3) Largest object-looking block
+    object_match = re.search(r"(\{.*\})", text, flags=re.DOTALL)
+    if object_match:
+        try:
+            parsed = json.loads(object_match.group(1))
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+    raise ValueError("Unable to parse JSON object from Gemini response")
 
 
 
@@ -130,16 +169,40 @@ prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Int
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
 async def extract(linkstr: str, prompt: str, drive_service) -> dict:
     """Process single image with retry logic"""
+    providers = {
+        "gdrive": GoogleDriveStorageProvider(drive_service)
+    }
+    return await extract_from_document_ref(linkstr, prompt, providers)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
+async def extract_from_document_ref(document_ref: str, prompt: str, storage_providers: dict) -> dict:
+    """Process a document using provider:key ref or legacy URL."""
     try:
-        # Extract Google Drive file ID
-        # await rate_limited()
-        file_id = re.search(r'id=([a-zA-Z0-9_-]+)', linkstr).group(1)
-        
-        # Download image
-        image_bytes = await download_image_from_drive(file_id,drive_service)
+        parsed_ref = parse_document_ref(document_ref)
+        if not parsed_ref:
+            raise ValueError(f"Invalid document ref: {document_ref}")
+
+        provider = storage_providers.get(parsed_ref.provider)
+        if not provider:
+            raise ValueError(f"No storage provider configured for: {parsed_ref.provider}")
+
+        image_bytes = await asyncio.to_thread(provider.get_bytes, parsed_ref.key)
         if not image_bytes:
-            raise ValueError("Empty image data from Drive")
+            raise ValueError("Empty image data from storage")
         
+        # Convert PDF bytes to image bytes when required
+        if image_bytes[:4] == b"%PDF":
+            pdf_doc = fitz.open(stream=image_bytes, filetype="pdf")
+            if len(pdf_doc) == 0:
+                raise ValueError("PDF has no pages")
+            page = pdf_doc[-1]
+            pix = page.get_pixmap()
+            image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            image_out = BytesIO()
+            image.save(image_out, format="PNG")
+            image_bytes = image_out.getvalue()
+
         # Process with Gemini
         response_text = await asyncio.to_thread(
             process_image_with_gemini, 
@@ -148,12 +211,11 @@ async def extract(linkstr: str, prompt: str, drive_service) -> dict:
         )
         
         # Parse response
-        print(f"\n\nResponse from Gemini: {response_text}\n\n")
-        return json.loads(response_text.split("```")[1][5:])
+        return _parse_gemini_json(response_text)
     
     except Exception as e:
-        logging.error(f"Extract failed: {linkstr} - {str(e)}")
-        return {"error": str(e), "link": linkstr}
+        logging.error(f"Extract failed: {document_ref} - {str(e)}")
+        return {"error": str(e), "link": document_ref}
 
 #sample links
 

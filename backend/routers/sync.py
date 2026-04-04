@@ -5,7 +5,7 @@ from services.auth_service import get_current_user
 from GoogleService import read_google_sheet
 from models.SheetModel import SheetStudent
 from models.StudentModel import Student
-from extractor import extract, prompts
+from extractor import extract_from_document_ref, prompts
 from config.settings import SPREADSHEET_ID
 import asyncio
 import logging
@@ -47,14 +47,14 @@ async def process_student(student_data: SheetStudent, branch: str, app):
     student = Student.from_flat_student(student_data)
     student.degree_code = branch.upper()
     student.branch_code = branch.upper()
-    student.status = "Not Viewed"
+    student.status = "submitted"
     board = student.twelfth_board_name
     prompt = prompts[4]  # Default prompt for most boards
     if board in ("TG BIE", "AP BIE"):
         prompt = prompts[4]
     elif board == "ACE and A Level":
         prompt = prompts[5]
-    elif board == "ICSC":
+    elif board == "ICSE":
         prompt = prompts[6]
     elif board == "CBSE":
         prompt = prompts[7]
@@ -63,31 +63,37 @@ async def process_student(student_data: SheetStudent, branch: str, app):
         (student.twelfth_memo_link, prompt),
         (student.transfer_certificate_link, prompts[3]),
     ]
+
+    providers = getattr(app.state, "storage_providers", {})
     async with GEMINI_SEMAPHORE:
         results = await asyncio.gather(*[
-            extract(link, prompt, app.state.drive_service)
+            extract_from_document_ref(link, prompt, providers)
             for link, prompt in links_prompts if link is not None
         ], return_exceptions=True)
-        Scores = results[1].get("Subject Scores", {}) if isinstance(results[1], dict) else {}
+        tenth_result = results[0] if len(results) > 0 else {}
+        twelfth_result = results[1] if len(results) > 1 else {}
+        transfer_result = results[2] if len(results) > 2 else {}
+
+        Scores = twelfth_result.get("Subject Scores", {}) if isinstance(twelfth_result, dict) else {}
         if Scores is None or not isinstance(Scores, dict):
             Scores = {}
             
-        student.tenth_school_name = safe_get(results[0], "tenth_school_name")
-        student.tenth_district_code = safe_get(results[0], "district_code")
-        student.identification_mark_1 = safe_get(results[0], "identification_marks1")
-        student.identification_mark_2 = safe_get(results[0], "identification_marks2")
-        student.tenth_ht_no = safe_get(results[0], "tenth_hall_ticket_no")
-        student.tenth_maximum_marks = safe_get(results[0], "tenth_max_marks/CGPA")
-        student.tenth_total_marks_cgpa = safe_get(results[0], "tenth_total_marks/CGPA")
-        student.tenth_percentage = safe_get(results[0], "tenth_percentage")
-        student.tenth_month_year = safe_get(results[0], "tenth_month_year")
-        student.twelfth_college_name = safe_get(results[2], "College Name")
-        student.twelfth_district_code = safe_get(results[0], "district_code")
-        student.twelfth_ht_no = safe_get(results[1], "Hall Ticket Number")
-        student.twelfth_maximum_marks = safe_get(results[1], "Max Marks")
-        student.twelfth_total_marks = safe_get(results[1], "Total Marks")
-        student.twelfth_percentage = safe_get(results[2], "Percentage")
-        student.twelfth_month_year = safe_get(results[1], "Month_year")
+        student.tenth_school_name = safe_get(tenth_result, "tenth_school_name")
+        student.tenth_district_code = safe_get(tenth_result, "district_code")
+        student.identification_mark_1 = safe_get(tenth_result, "identification_marks1")
+        student.identification_mark_2 = safe_get(tenth_result, "identification_marks2")
+        student.tenth_ht_no = safe_get(tenth_result, "tenth_hall_ticket_no")
+        student.tenth_maximum_marks = safe_get(tenth_result, "tenth_max_marks/CGPA")
+        student.tenth_total_marks_cgpa = safe_get(tenth_result, "tenth_total_marks/CGPA")
+        student.tenth_percentage = safe_get(tenth_result, "tenth_percentage")
+        student.tenth_month_year = safe_get(tenth_result, "tenth_month_year")
+        student.twelfth_college_name = safe_get(transfer_result, "College Name")
+        student.twelfth_district_code = safe_get(twelfth_result, "district_code")
+        student.twelfth_ht_no = safe_get(twelfth_result, "Hall Ticket Number")
+        student.twelfth_maximum_marks = safe_get(twelfth_result, "Max Marks")
+        student.twelfth_total_marks = safe_get(twelfth_result, "Total Marks")
+        student.twelfth_percentage = safe_get(twelfth_result, "Percentage")
+        student.twelfth_month_year = safe_get(twelfth_result, "Month_year")
         student.m1 = safe_get(Scores, "M1")
         student.m2 = safe_get(Scores, "M2")
         student.m3 = safe_get(Scores, "M3")
@@ -98,7 +104,7 @@ async def process_student(student_data: SheetStudent, branch: str, app):
         student.ch2 = safe_get(Scores, "C2")
         student.plab = safe_get(Scores, "P_Practicals")
         student.chlab = safe_get(Scores, "C_Practicals")
-        student.total = safe_get(results[1], "Total Marks")
+        student.total = safe_get(twelfth_result, "Total Marks")
        
         student_dict = student.model_dump()
         response = supabase.table("students2025").insert(student_dict).execute()
@@ -228,4 +234,3 @@ async def start_syncing(
 async def get_task_status(task_id: str):
     response = supabase.table("tasks").select("*").eq("id", task_id).execute()
     return response.data if response.data else {"error": "Task not found"}
-

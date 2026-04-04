@@ -1,146 +1,107 @@
-    # Student Verification System - VNRVJIET
+# AdmitMe - Student Verification & Management System
 
-    A web-based application for managing and verifying student documents and information at VNRVJIET (Vallurupalli Nageswara Rao Vignana Jyothi Institute of Engineering and Technology).
+A sophisticated web-based application designed for VNRVJIET (Vallurupalli Nageswara Rao Vignana Jyothi Institute of Engineering and Technology) to manage, verify, and automate student document processing during admissions.
 
-    ## Project Overview
+## 🚀 Key Features
 
-    This system provides a streamlined process for:
-    - Document verification and validation
-    - Student information management
-    - Department-wise student data organization
-    - Automated data extraction from documents using Google's Gemini AI
+1.  **AI-Powered Data Extraction**: Automatically extracts student data from Tenth, Twelfth, and Transfer Certificates using **Google Gemini AI**.
+2.  **Google Sheets Synchronization**: Seamlessly syncs student data from departmental Google Sheets into the central database.
+3.  **Department-Wise Management**: Role-based access for different departments (CSE, ECE, EEE, etc.) with department-specific dashboards.
+4.  **Admin Control**: Comprehensive user management, rights allocation, and cross-departmental data exports.
+5.  **Real-time Notifications**: WebSocket-based notifications for long-running synchronization tasks.
+6.  **Document Management**: Direct integration with Google Drive for serving and managing student memos and certificates with in-memory caching for performance.
 
-    ## Tech Stack
+## 🛠 Tech Stack
 
-    ### Frontend
-    - React (with Vite)
-    - TailwindCSS for styling
-    - React Router for navigation
-    - Context API for state management
-    - React Icons for UI elements
+### Frontend
+- **React (Vite)**
+- **TailwindCSS** for styling
+- **Context API** for state management
+- **Lucide React** & **React Icons** for UI elements
 
-    ### Backend
-    - FastAPI
-    - Firebase Admin SDK
-    - Google Cloud Services
-    - Google Drive API
-    - Google Gemini AI
-    - Python libraries:
-    - Pydantic for data validation
-    - python-multipart
-    - google-cloud-storage
-    - PIL (Python Imaging Library)
+### Backend
+- **FastAPI** (Python framework)
+- **Supabase** (PostgreSQL Database & data storage)
+- **Google Gemini AI** (Generative AI for document data extraction)
+- **Google Cloud APIs** (Drive & Sheets integrations)
+- **PyMuPDF** & **Pillow** (Document and image processing)
+- **Bcrypt** & **JWT** (Secure authentication)
 
-    ## Features
+## 📁 Project Structure
 
-    1. **Authentication System**
-    - Department-specific login
-    - Admin dashboard access
-    - Role-based authorization
+```text
+AdmitMe/
+├── frontend/             # React Vite application
+│   ├── src/
+│   │   ├── components/   # Reusable UI Components
+│   │   ├── context/      # Application State & Auth context
+│   │   ├── pages/        # Dashboard, Student Details, & Login pages
+│   │   └── assets/       # Styles & Images
+├── backend/              # FastAPI application
+│   ├── config/           # Application settings & Env loader
+│   ├── models/           # Pydantic models & Database schemas
+│   ├── routers/          # API endpoints (Auth, Students, Sync)
+│   ├── services/         # Business logic (Notifications, Auth service)
+│   ├── extractor.py      # Gemini AI extraction logic & prompts
+│   ├── GoogleService.py  # Google Drive & Sheets integration logic
+│   ├── database.py       # Supabase client initialization
+│   └── main.py           # Application entry point & WebSocket handler
+```
 
-    2. **Document Management**
-    - Upload and storage of critical documents
-    - Automated information extraction
-    - Document verification status tracking
+## ⚙️ Installation & Setup
 
-    3. **Student Information**
-    - Comprehensive student profiles
-    - Academic details
-    - Personal information
-    - Contact details
-    - Category and reservation details
+### Prerequisites
+- Node.js (v18+)
+- Python 3.9+
+- Supabase Project (with `users`, `students2025`, and `tasks` tables)
+- Google Cloud Service Account (with Drive, Sheets, and Generative AI access)
 
-    4. **Dashboard Features**
-    - Quick actions panel
-    - Verification statistics
-    - Student search functionality
-    - Status filtering
-    - Sorting capabilities
+### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-    5. **Dark Mode Support**
-    - System-wide theme switching
-    - Persistent theme preferences
+#### Environment Variables (`backend/.env`)
+Create a `.env` file in the `backend/` directory:
+```env
+# Supabase Configuration
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
 
-    ## Installation
+# Google API Configuration
+GOOGLE_API_KEY=your_gemini_api_key
+GOOGLE_CREDENTIALS=your_google_service_account_json_content
+SPREADSHEET_ID=your_main_google_sheet_id
 
-    ### Prerequisites
-    - Node.js (v14 or higher)
-    - Python 3.8+
-    - Google Cloud account with necessary APIs enabled
-    - Firebase project setup
+# Security Configuration
+SECRET_KEY=your_random_secret_string
+ALGORITHM=HS256
 
-    ### Frontend Setup
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
+# Application Configuration
+FRONTEND_URL=http://localhost:5173
+```
 
-    ### Backend Setup
-    ```bash
-    cd backend
-    pip install -r requirements.txt
-    uvicorn main:app --reload
-    ```
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-    ### Environment Variables
-    Create a `.env` file in the backend directory:
-    ```
-    GOOGLE_API_KEY=your_google_api_key
-    ```
+## 📡 Core API Endpoints
 
-    ## Project Structure
+- `POST /token` - Authenticate user and receive JWT.
+- `GET /me` - Retrieve current logged-in user profile.
+- `POST /sync/{branch}` - Trigger AI-based sync from Google Sheets.
+- `GET /students/{department}` - Fetch student records for a specific department.
+- `PUT /student/{aadhaar}` - Update student verification status and details.
+- `GET /image/{file_id}` - Proxy and cache student document images from Google Drive.
+- `WS /ws/{username}` - Real-time notification channel for background tasks.
 
-    ```
-    FieldProject/
-    ├── frontend/
-    │   ├── src/
-    │   │   ├── components/
-    │   │   ├── context/
-    │   │   ├── pages/
-    │   │   └── assets/
-    │   └── public/
-    └── backend/
-        ├── models/
-        ├── database.py
-        ├── extractor.py
-        ├── GoogleAuthService.py
-        └── main.py
-    ```
+## 📄 License
 
-    ## API Endpoints
-
-    - `POST /submit` - Submit student details and documents
-    - `GET /student/{student_id}` - Retrieve student information
-    - `GET /api/drive/image/{file_id}` - Fetch document images from Google Drive
-
-    ## Authentication
-
-    - Department-specific email domains (`@vnrvjiet.in`)
-    - Admin access with dedicated credentials
-    - Department-wise dashboard access control
-
-    ## Document Verification Process
-
-    1. Document upload through frontend interface
-    2. Automated data extraction using Google Gemini AI
-    3. Data validation and storage in Firebase
-    4. Status tracking and updates
-    5. Department-level verification workflow
-
-    ## Contributors
-
-    - L. Goutham
-    - G. Charmi Bai
-    - M. Akhila
-    - D. L. Sarvani
-
-    ## Project Guidance
-
-    - Dr. V. Baby, HOD [CSE, VNRVJIET]
-    - Dr. B.V. Kiranmayee, Professor [CSE, VNRVJIET]
-    - Mr. P. Sudheer Benarji, Assistant Professor [CSE, VNRVJIET]
-
-    ## License
-
-    This project is proprietary and confidential. All rights reserved by VNRVJIET.
+Proprietary and confidential. Developed for VNRVJIET.
+All rights reserved by VNRVJIET Department of CSE.

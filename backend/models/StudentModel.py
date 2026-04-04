@@ -82,6 +82,7 @@ class Student(BaseModel):
     address_pincode: Optional[str] = ""
     rural_urban: Optional[str] = ""
     admission_category: Optional[str] = ""
+    program_level: Optional[str] = ""
     section: Optional[str] = ""
     branch_code: Optional[str] = ""
     college_code: Optional[str] = "07"
@@ -180,7 +181,8 @@ class Student(BaseModel):
             eapcet_rank_card_link=flat_student.eapcet_rank_card,
             jee_rank_card_link=flat_student.jee_rank_card,
             transfer_certificate_link=flat_student.transfer_certificate,
-            student_type="regular"  # Mark as regular student
+            student_type="regular",  # Mark as regular student
+            program_level="BTECH",
         )
 
     @classmethod
@@ -229,7 +231,8 @@ class Student(BaseModel):
             aadhaar_link=flat_student.aadhaar_card,
             eapcet_rank_card_link=flat_student.ecet_rank_card,  # ECET rank card instead of EAPCET
             transfer_certificate_link=flat_student.transfer_certificate,
-            student_type="LE"  # Mark as Lateral Entry student
+            student_type="LE",  # Mark as Lateral Entry student
+            program_level="BTECH",
         )
 
     @classmethod
@@ -295,5 +298,6 @@ class Student(BaseModel):
             jee_rank_card_link=flat_student.jee_rank_card,
             transfer_certificate_link=flat_student.transfer_certificate,
             student_type="regular",
-            admission_category="Cat-B"
+            admission_category="Cat-B",
+            program_level="BTECH",
         )

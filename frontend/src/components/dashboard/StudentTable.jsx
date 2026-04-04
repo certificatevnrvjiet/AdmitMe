@@ -38,10 +38,19 @@ const StudentTable = ({
                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_name}</td>
                             <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{formatDateDMY(s.date_of_birth)}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${s.status === "Verified" ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800") :
-                                    s.status === "Pending" ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800") :
-                                        (isDarkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800")
-                                    }`}>{s.status}</span>
+                                <span
+                                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                        (s.status || "").toLowerCase() === "approved"
+                                            ? (isDarkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800")
+                                            : (s.status || "").toLowerCase() === "under_review"
+                                                ? (isDarkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800")
+                                                : (s.status || "").toLowerCase() === "submitted"
+                                                    ? (isDarkMode ? "bg-blue-900 text-blue-300" : "bg-blue-100 text-blue-800")
+                                                    : (isDarkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800")
+                                    }`}
+                                >
+                                    {s.status}
+                                </span>
                             </td>
                             <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>{s.branch_code}</td>
                         </tr>

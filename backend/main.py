@@ -1,10 +1,14 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from GoogleService import get_drive_service, get_sheets_service
-from config.settings import FRONTEND_URL
-from routers import auth, students, sync
+from config.settings import FRONTEND_URL, LOCAL_STORAGE_ROOT, SECRET_KEY, ALGORITHM
+from routers import auth, students, sync, applications
 from services.notification_service import register_connection, remove_connection
+from storage import get_storage_provider
+from storage.gdrive import GoogleDriveStorageProvider
+from storage.local import LocalStorageProvider
+from jose import jwt, JWTError
 import logging
 
 # Configure logging
@@ -14,14 +18,25 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
+    app.state.sheets_service = None
+    app.state.drive_service = None
+    local_provider = LocalStorageProvider(LOCAL_STORAGE_ROOT)
+    storage_providers = {"local": local_provider}
+
     try:
         app.state.sheets_service = get_sheets_service()
         app.state.drive_service = get_drive_service()
         logger.info("Google Services initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize Google Services: {e}")
-        app.state.sheets_service = None
-        app.state.drive_service = None
+        logger.warning(f"Google services unavailable: {e}")
+
+    if app.state.drive_service:
+        storage_providers["gdrive"] = GoogleDriveStorageProvider(app.state.drive_service)
+
+    # Explicitly fail startup for unsupported/misconfigured provider setups.
+    app.state.storage = get_storage_provider(app.state.drive_service)
+    storage_providers[app.state.storage.name] = app.state.storage
+    app.state.storage_providers = storage_providers
     
     yield
     # Shutdown logic
@@ -48,18 +63,26 @@ app.add_middleware(
 app.include_router(auth.router, tags=["Authentication"])
 app.include_router(students.router, tags=["Students"])
 app.include_router(sync.router, tags=["Sync"])
+app.include_router(applications.router, tags=["Applications"])
 
 @app.get("/")
 def read_root():
     return {"message": "AdmitMe API is running"}
 
-@app.websocket("/ws/{username}")
-async def websocket_endpoint(websocket: WebSocket, username: str):
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = (payload.get("sub") or "").strip().lower()
+        if not username:
+            raise JWTError("Missing subject")
+    except Exception:
+        await websocket.close(code=1008)
+        return
+
     await register_connection(username, websocket)
     try:
         while True:
-            # Keep the connection alive and listen for any client messages if needed
-            data = await websocket.receive_text()
-            # Echo or process if needed, for now just keep alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
         remove_connection(username)

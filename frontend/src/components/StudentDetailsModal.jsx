@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { IoClose } from 'react-icons/io5';
 import { FiEdit2, FiSave } from 'react-icons/fi';
-import { getImageUrl } from '../api';
+import { getImageUrl, getStudentDocumentUrl } from '../api';
 import API from '../api'
 import ScrollableTabs from './ScrollableTabs';
 import useDisableBrowserZoom from './useDisableBrowserZoom';
@@ -25,7 +25,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         { value: 'CE', label: 'CE' },
         { value: 'CSBS', label: 'CSBS' },
         { value: 'CSE', label: 'CSE' },
-        { value: 'AML', label: 'AML' },
+        { value: 'AIML', label: 'AIML' },
         { value: 'CSEDS', label: 'CSE-DS' },
         { value: 'CSECYS', label: 'CSE-CYS' },
         { value: 'CSEIOT', label: 'CSE-IOT' },
@@ -36,7 +36,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         { value: 'ME', label: 'ME' },
         { value: 'VLSI', label: 'VLSI' },
         { value: 'BIOTECHNOLOGY', label: 'Biotechnology' },
-        { value: 'RAI', label: 'Robotics and AI' },
+        { value: 'ROBOTICSANDAI', label: 'Robotics and AI' },
     ];
 
     // Mapping from form tab to default image tab
@@ -161,7 +161,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
           }
         try {
             setIsSaving(true);
-            editedStudent.status = 'Verified'; // Set status to Verified
+            editedStudent.status = 'approved';
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
@@ -180,7 +180,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
 
         try {
             setIsSaving(true);
-            editedStudent.status = 'Pending'; // Set status to Draft
+            editedStudent.status = 'under_review';
             editedStudent.Time_updated = new Date().toISOString(); // Mark as draft
             console.log(editedStudent.Time_updated);
             await onSave(editedStudent);
@@ -244,42 +244,57 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
 
     const getImageSource = () => {
         let imageField = '';
+        let docType = '';
         switch (activeImageTab) {
             case 'Aadhaar Card':
                 imageField = 'aadhaar_link';
+                docType = 'aadhaar';
                 break;
             case 'Transfer Certificate':
                 imageField = 'transfer_certificate_link';
+                docType = 'transfer_certificate';
                 break;
             case '10th Memo':
                 imageField = 'tenth_memo_link';
+                docType = 'tenth_memo';
                 break;
             case '12th Memo':
                 imageField = 'twelfth_memo_link';
+                docType = 'twelfth_memo';
                 break;
             case 'JEE Rank Card':
                 imageField = 'jee_rank_card_link';
+                docType = 'jee_rank_card';
                 break;
             case 'EAPCET Rank Card':
                 imageField = 'eapcet_rank_card_link';
+                docType = 'eapcet_rank_card';
                 break;
             case 'Diploma Certificate':
                 imageField = 'twelfth_memo_link'; // Assuming diploma is same as 12th memo
+                docType = 'twelfth_memo';
                 break;
             case 'ECET Rank Card':
                 imageField = 'eapcet_rank_card_link';
+                docType = 'eapcet_rank_card';
                 break;
             default:
                 imageField = 'aadhaar_link';
+                docType = 'aadhaar';
                 break;
         }
-        
+
+        const studentId = editedStudent?.aadhaar_card_number;
+        if (studentId && docType) {
+            return getStudentDocumentUrl(studentId, docType);
+        }
+
         if (editedStudent[imageField]) {
+            // Legacy fallback to existing image endpoint when student id is unavailable
             const linkstr = editedStudent[imageField];
             const match = linkstr.match(/id=([a-zA-Z0-9_-]+)/);
             const fileId = match ? match[1] : null;
-            const imageUrl = getImageUrl(fileId);
-            return imageUrl;
+            return getImageUrl(fileId);
         }
         return null;
     };
@@ -648,15 +663,15 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                                             </svg>
                                             Saving...
                                         </span>
-                                    ) : <span className={isDarkMode ? 'text-green-300' : 'text-green-600'}>Mark as Verified</span>}
+                                    ) : <span className={isDarkMode ? 'text-green-300' : 'text-green-600'}>Mark as Approved</span>}
                                 </button>
                                 <button
                                     onClick={handleDraft}
                                     disabled={isSaving}
                                     className="p-2 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-700"
-                                    title="Save as Draft"
+                                    title="Move to Under Review"
                                 >
-                                    <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Mark as Pending</span>
+                                    <span className={isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}>Mark as Under Review</span>
                                 </button>
                             </>
                         )}

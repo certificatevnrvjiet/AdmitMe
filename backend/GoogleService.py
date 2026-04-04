@@ -19,11 +19,14 @@ import json
 
 DRIVE_SEMAPHORE = asyncio.Semaphore(1)
 
-
-
-creds_dict = json.loads(GOOGLE_CREDENTIALS)
-
-
+def _load_creds_dict():
+    raw = GOOGLE_CREDENTIALS
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
 
 SCOPES = [
     # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
@@ -39,6 +42,9 @@ SCOPES = [
 def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
     try:
+        creds_dict = _load_creds_dict()
+        if not creds_dict:
+            raise ValueError("GOOGLE_CREDENTIALS is missing or invalid JSON")
 
         credentials = service_account.Credentials.from_service_account_info(
             creds_dict, scopes=SCOPES
@@ -139,7 +145,7 @@ async def download_image_from_drive(file_id: str, cred) -> bytes | None:
     async with DRIVE_SEMAPHORE:
         
         creds = cred
-        if not creds:
+        if creds and getattr(creds, "expired", False):
             creds.refresh(Request())
         
         # Run synchronous download in thread
