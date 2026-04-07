@@ -53,8 +53,10 @@ AdmitMe/
 ### Prerequisites
 - Node.js (v18+)
 - Python 3.9+
-- Supabase Project (with `users`, `students2025`, and `tasks` tables)
-- Google Cloud Service Account (with Drive, Sheets, and Generative AI access)
+- MySQL Server (Local) or a Supabase Project
+- Google Cloud Service Account (with Generative AI and optionally Drive & Sheets access)
+
+*(Note: The project supports either a Local MySQL database or a Supabase cloud database. See `backend/MYSQL_ENV_SETUP.md` or `backend/DB_ENV_SETUP.md` for deep-dive database setups).*
 
 ### 1. Backend Setup
 ```bash
@@ -64,30 +66,45 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-#### Environment Variables (`backend/.env`)
-Create a `.env` file in the `backend/` directory:
-```env
-# Supabase Configuration
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
-
-# Google API Configuration
-GOOGLE_API_KEY=your_gemini_api_key
-GOOGLE_CREDENTIALS=your_google_service_account_json_content
-SPREADSHEET_ID=your_main_google_sheet_id
-
-# Security Configuration
-SECRET_KEY=your_random_secret_string
-ALGORITHM=HS256
-
-# Application Configuration
-FRONTEND_URL=http://localhost:5173
+#### Environment Variables
+Copy the example environment file and fill in your details:
+```bash
+cp .env.example .env
 ```
+Ensure you choose the correct `DB_PROVIDER` (`mysql` or `supabase`), configure the database credentials, and set up your `GOOGLE_API_KEY` for AI features.
+
+#### Database Initialization
+Run the bootstrap SQL script against your chosen database to create the required tables (`users`, `students2025`, `tasks`, `documents`, etc.).
+- **MySQL:** `mysql -u root -p < migrations/000_bootstrap_core_schema_mysql.sql`
+- **Supabase:** Run `migrations/000_bootstrap_core_schema.sql` in your SQL Editor.
+
+*(Make sure to seed your first Admin user as explained in the setup guides!)*
+
+#### Start the Backend
+```bash
+# Create local storage directory if required
+mkdir -p data/admitme
+
+# Start the API server
+uvicorn main:app --reload
+```
+The API will run on `http://127.0.0.1:8000`.
 
 ### 2. Frontend Setup
 ```bash
-cd frontend
+cd ../frontend
 npm install
+```
+
+#### Environment Variables
+Copy the frontend environment example:
+```bash
+cp .env.example .env
+```
+Confirm `VITE_API_BASE_URL` is mapped to your backend correctly.
+
+#### Start the Frontend
+```bash
 npm run dev
 ```
 
