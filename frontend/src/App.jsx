@@ -4,6 +4,8 @@ import LoginPage from "./components/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import StudentPortal from "./pages/StudentPortal";
+import LandingPage from "./pages/LandingPage";
+import StudentForm from "./pages/StudentForm";
 import Footer from "./components/Footer";
 import Vnrheader from "./components/Vnrheader";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -21,7 +23,9 @@ function App() {
             <Vnrheader />
             <main className="flex-grow mt-16 mb-16 overflow-y-auto">
               <Routes>
-                <Route path="/" element={<LoginPage />} />
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/student-form" element={<StudentForm />} />
+                <Route path="/admin-login" element={<LoginPage />} />
                 <Route path="/student-portal" element={<StudentPortal />} />
                 <Route
                   path="/dashboard"
