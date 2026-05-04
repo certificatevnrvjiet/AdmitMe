@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from services.auth_service import authenticate_user, create_access_token, get_current_user, oauth2_scheme
-from models.UserModel import UserCreate, UserUpdate, PasswordChange
+from models.UserModel import UserCreate, UserUpdate, PasswordChange, StudentRegister
 from database import supabase
 from config.settings import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -47,6 +47,19 @@ def _issue_token(form_data: OAuth2PasswordRequestForm):
     return {"access_token": access_token, "token_type": "bearer", "role": normalized_role}
 
 
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _safe_user(user: dict) -> dict:
+    return {
+        "id": user.get("id"),
+        "email": user.get("email"),
+        "dept": user.get("dept"),
+        "rights": user.get("rights"),
+    }
+
+
 @router.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return _issue_token(form_data)
@@ -55,6 +68,53 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 @router.post("/auth/login")
 def login_standard(form_data: OAuth2PasswordRequestForm = Depends()):
     return _issue_token(form_data)
+
+
+@router.post("/auth/student/register", status_code=status.HTTP_201_CREATED)
+def register_student(payload: StudentRegister):
+    normalized_email = (str(payload.email) or "").strip().lower()
+    password = payload.password or ""
+
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    try:
+        existing_user = supabase.table("users").select("id").eq("email", normalized_email).limit(1).execute()
+        if existing_user.data:
+            raise HTTPException(status_code=400, detail="An account already exists for this email")
+
+        user_dict = {
+            "email": normalized_email,
+            "dept": "student",
+            "rights": "Read Only",
+            "password": _hash_password(password),
+        }
+        response = supabase.table("users").insert(user_dict).execute()
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create student account")
+
+        access_token = create_access_token(
+            data={
+                "sub": normalized_email,
+                "role": "student",
+                "dept_scope": "student",
+                "token_version": 1,
+            },
+            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        )
+        return {
+            "message": "Student account created successfully",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "role": "student",
+            "user": _safe_user(response.data[0]),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/verify-token")
 def verify_token(token: str = Depends(oauth2_scheme)):
@@ -126,14 +186,10 @@ async def create_user(user_data: UserCreate, current_user: dict = Depends(get_cu
             raise HTTPException(status_code=400, detail="User with this email already exists")
         
         # Create user (hash password)
-        pwd_bytes = user_data.password.encode('utf-8')
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(pwd_bytes, salt)
-        
         user_dict = user_data.model_dump()
         user_dict["email"] = normalized_email
         user_dict["dept"] = (user_dict.get("dept") or "").strip().lower()
-        user_dict['password'] = hashed_password.decode('utf-8')
+        user_dict['password'] = _hash_password(user_data.password)
         
         response = supabase.table("users").insert(user_dict).execute()
         
@@ -183,13 +239,7 @@ async def update_user(user_id: str, user_data: UserUpdate, current_user: dict = 
         if not response.data:
             raise HTTPException(status_code=404, detail="User not found")
         updated_user = response.data[0]
-        safe_user = {
-            "id": updated_user.get("id"),
-            "email": updated_user.get("email"),
-            "dept": updated_user.get("dept"),
-            "rights": updated_user.get("rights"),
-        }
-        return {"message": "User updated successfully", "user": safe_user}
+        return {"message": "User updated successfully", "user": _safe_user(updated_user)}
     except HTTPException:
         raise
     except Exception as e:
@@ -202,7 +252,7 @@ async def change_password(user_id: str, payload: PasswordChange, current_user: d
     if payload.new_password != payload.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
-    hashed = bcrypt.hashpw(payload.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    hashed = _hash_password(payload.new_password)
     try:
         response = (
             supabase.table("users")

@@ -106,7 +106,7 @@ const FilterBar = ({
                                     { value: "cbse", label: "CBSE" },
                                     { value: "icse", label: "ICSE" },
                                     { value: "ap bse", label: "AP BSE" },
-                                    { value: "idbp", label: "IDBP" },
+                                    { value: "ibdp", label: "IBDP" },
                                     { value: "ace and a level", label: "ACE and A Level" },
                                     { value: "other", label: "Other" }
                                 ]}
@@ -121,7 +121,7 @@ const FilterBar = ({
                                     { value: "cbse", label: "CBSE" },
                                     { value: "icse", label: "ICSE" },
                                     { value: "ap bie", label: "AP BIE" },
-                                    { value: "idbp", label: "IDBP" },
+                                    { value: "ibdp", label: "IBDP" },
                                     { value: "ace and a level", label: "ACE and A Level" },
                                     { value: "other", label: "Other" }
                                 ]}

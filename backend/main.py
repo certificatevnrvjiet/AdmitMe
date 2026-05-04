@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from GoogleService import get_drive_service, get_sheets_service
 from config.settings import FRONTEND_URL, LOCAL_STORAGE_ROOT, SECRET_KEY, ALGORITHM
-from routers import auth, students, sync, applications
+from routers import auth, students, sync, applications, engines, forms
 from services.notification_service import register_connection, remove_connection
 from storage import get_storage_provider
 from storage.gdrive import GoogleDriveStorageProvider
@@ -46,17 +46,24 @@ app = FastAPI(lifespan=lifespan, title="AdmitMe API")
 
 # CORS configuration
 ORIGINS = [
-    FRONTEND_URL, 
-    "http://localhost:5173", 
-    "http://192.168.37.250:5173"
+    origin
+    for origin in {
+        FRONTEND_URL,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://192.168.37.250:5173",
+    }
+    if origin
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ORIGINS,
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Type"],
 )
 
 # Include Routers
@@ -64,6 +71,8 @@ app.include_router(auth.router, tags=["Authentication"])
 app.include_router(students.router, tags=["Students"])
 app.include_router(sync.router, tags=["Sync"])
 app.include_router(applications.router, tags=["Applications"])
+app.include_router(engines.router, tags=["Engines"])
+app.include_router(forms.router, tags=["Forms"])
 
 @app.get("/")
 def read_root():

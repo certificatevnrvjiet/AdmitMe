@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Request, Response, status
 
 from database import supabase
 from models.ApplicationModel import StudentApplicationRequest, StudentApplicationResponse
@@ -19,6 +19,7 @@ from services.document_service import (
     normalize_doc_type,
     validate_upload_and_detect_mime,
 )
+from routers.engines import queue_engine_run
 
 router = APIRouter()
 
@@ -232,19 +233,27 @@ async def _upload_application_document_core(
 @router.post("/applications", response_model=StudentApplicationResponse)
 async def create_student_application(
     payload: StudentApplicationRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
-    return await _create_application_core(payload, current_user)
+    response = await _create_application_core(payload, current_user)
+    queue_engine_run(background_tasks, response.student_id, request, current_user, [])
+    return response
 
 
 @router.post("/public/applications", response_model=StudentApplicationResponse)
 async def create_student_application_legacy(
     payload: StudentApplicationRequest,
+    request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     _set_deprecation_headers(response, "/applications")
-    return await _create_application_core(payload, current_user)
+    result = await _create_application_core(payload, current_user)
+    queue_engine_run(background_tasks, result.student_id, request, current_user, [])
+    return result
 
 
 @router.post("/applications/{student_id}/documents/{doc_type}", response_model=DocumentUploadResponse)
@@ -252,10 +261,13 @@ async def upload_application_document(
     student_id: str,
     doc_type: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
-    return await _upload_application_document_core(student_id, doc_type, request, file, current_user)
+    result = await _upload_application_document_core(student_id, doc_type, request, file, current_user)
+    queue_engine_run(background_tasks, student_id, request, current_user, [result.doc_type])
+    return result
 
 
 @router.post("/public/applications/{student_id}/documents/{doc_type}", response_model=DocumentUploadResponse)
@@ -264,8 +276,11 @@ async def upload_application_document_legacy(
     doc_type: str,
     request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
     _set_deprecation_headers(response, f"/applications/{student_id}/documents/{doc_type}")
-    return await _upload_application_document_core(student_id, doc_type, request, file, current_user)
+    result = await _upload_application_document_core(student_id, doc_type, request, file, current_user)
+    queue_engine_run(background_tasks, student_id, request, current_user, [result.doc_type])
+    return result

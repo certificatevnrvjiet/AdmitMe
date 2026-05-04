@@ -14,6 +14,11 @@ class UserCreate(BaseModel):
     rights: str
     password: str
 
+class StudentRegister(BaseModel):
+    email: EmailStr
+    password: str
+    confirm_password: str
+
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     dept: Optional[str] = None

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import FeatureCard from '../components/FeatureCard'
-import FloatingAdminButton from '../components/FloatingAdminButton'
 
 function useScrollScale() {
   const [scale, setScale] = React.useState(1)
@@ -80,7 +79,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className="min-h-screen text-gray-900 relative overflow-x-hidden"
+      className="min-h-[calc(100vh-65px)] text-gray-900 relative overflow-x-hidden"
       style={{
         backgroundImage: 'url(https://vnrvjiet.ac.in/assets/images/Numbers-Image.png)',
         backgroundSize: 'cover',
@@ -89,7 +88,6 @@ export default function LandingPage() {
     >
       {/* subtle overlay like LoginPage */}
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-blue-50/60 to-indigo-100/60" />
-      <FloatingAdminButton />
 
       {/* HERO */}
       <section className="min-h-[75vh] flex items-center justify-center">
@@ -122,7 +120,7 @@ export default function LandingPage() {
               <h3 className="text-3xl font-semibold">Student Portal</h3>
               <p className="text-gray-600 max-w-xl">Submit your application, upload documents, and track your admission status in real time.</p>
                 <div>
-                <Button onClick={() => navigate('/student-portal')} variant="red">Apply Now</Button>
+                <Button onClick={() => navigate('/student-login')} variant="red">Student Login</Button>
                 </div>
             </div>
           </Card>

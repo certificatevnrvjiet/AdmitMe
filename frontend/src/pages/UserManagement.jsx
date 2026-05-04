@@ -11,10 +11,8 @@ import {
   IoEye, 
   IoEyeOff, 
   IoClose,
-  IoCheckmark,
   IoPerson,
   IoShield,
-  IoMail
 } from "react-icons/io5";
 import API from '../api'
 
@@ -28,6 +26,7 @@ const UserManagement = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeUserGroup, setActiveUserGroup] = useState('staff');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
@@ -57,7 +56,7 @@ const UserManagement = () => {
 
   // Department options
   const departments = [
-    'admin', 'cse', 'ece', 'eee', 'me', 'ce', 'it', 'aiml', 'csbs', 'cseds', 
+    'admin', 'student', 'cse', 'ece', 'eee', 'me', 'ce', 'it', 'aiml', 'csbs', 'cseds', 
     'csecys', 'cseiot', 'aids', 'ae', 'vlsi', 'biotechnology', 'roboticsandai','eie'
   ];
 
@@ -191,15 +190,22 @@ const handleDeleteUser = async (userId, userEmail) => {
     setShowPasswordModal(true);
   };
 
-  const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.dept.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.rights.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const isStudentUser = (user) => (user.dept || '').toLowerCase() === 'student';
+  const staffUsers = users.filter(user => !isStudentUser(user));
+  const studentUsers = users.filter(isStudentUser);
+  const visibleUsers = activeUserGroup === 'students' ? studentUsers : staffUsers;
+  const filteredUsers = visibleUsers.filter(user => {
+    const term = searchTerm.toLowerCase();
+    return (
+      (user.email || '').toLowerCase().includes(term) ||
+      (user.dept || '').toLowerCase().includes(term) ||
+      (user.rights || '').toLowerCase().includes(term)
+    );
+  });
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-[calc(100vh-65px)] flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
         <div className="text-xl">Loading users...</div>
       </div>
     );
@@ -207,7 +213,7 @@ const handleDeleteUser = async (userId, userEmail) => {
 
   if (error) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-[calc(100vh-65px)] flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
         <div className="text-xl text-red-500">Error: {error}</div>
       </div>
     );
@@ -216,10 +222,9 @@ const handleDeleteUser = async (userId, userEmail) => {
   const headerEl = typeof document !== 'undefined' ? document.getElementById('app-header') : null;
   const footerEl = typeof document !== 'undefined' ? document.getElementById('app-footer') : null;
   const headerPx = headerEl?.offsetHeight ?? 0;
-  const topPadding = headerPx ? headerPx + 8 : undefined;
 
   return (
-    <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} style={topPadding ? { paddingTop: topPadding } : { paddingTop: '10vh' }}>
+    <div className={`min-h-[calc(100vh-65px)] p-6 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -229,12 +234,34 @@ const handleDeleteUser = async (userId, userEmail) => {
           </p>
         </div>
 
+        <div className={`mb-6 inline-flex rounded-lg border p-1 ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+          {[
+            { key: 'staff', label: `Admins & Staff (${staffUsers.length})` },
+            { key: 'students', label: `Students (${studentUsers.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveUserGroup(tab.key)}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                activeUserGroup === tab.key
+                  ? 'bg-blue-600 text-white'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Search and Create */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search users by email, department, or rights..."
+              placeholder={`Search ${activeUserGroup === 'students' ? 'student users' : 'admin and staff users'}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`w-full px-4 py-2 rounded-lg border ${
@@ -245,7 +272,16 @@ const handleDeleteUser = async (userId, userEmail) => {
             />
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setCreateForm({
+                email: '',
+                dept: activeUserGroup === 'students' ? 'student' : '',
+                rights: activeUserGroup === 'students' ? 'Read Only' : '',
+                password: '',
+                confirmPassword: ''
+              });
+              setShowCreateModal(true);
+            }}
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <IoAdd className="w-5 h-5" />

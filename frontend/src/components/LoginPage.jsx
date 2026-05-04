@@ -1,5 +1,5 @@
 import { useState, useContext , useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
 import { useTheme } from '../context/ThemeContext';
 import API from "../api"; // Adjust the import path as necessary
@@ -13,16 +13,21 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDarkMode } = useTheme();
   const { login } = useAuth();
 
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, isAuthLoading, role } = useContext(AuthContext);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard"); // or any other route you want
+    if (!isAuthLoading && isAuthenticated) {
+      if (role === "student") {
+        navigate("/student-portal/btech-2026", { replace: true });
+        return;
+      }
+      navigate(location.state?.from || "/dashboard", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isAuthLoading, role, navigate, location.state]);
 
 
   const handleSubmit = async (e) => {
@@ -33,15 +38,19 @@ const LoginPage = () => {
 
     try {
       const res = await API.post("/token", form);
+      if (res.data.role === "student") {
+        setError("Please use the student login page for admission form access.");
+        return;
+      }
       login(res.data.access_token, res.data.role); // Assuming the token contains the role
       navigate("/dashboard");
-    } catch (err) {
-      alert("Invalid credentials");
+    } catch {
+      setError("Invalid credentials");
     }
   };
 
   return (
-    <div className="h-screen flex items-center justify-center relative"
+    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center relative"
          style={{
            backgroundImage: 'url(https://vnrvjiet.ac.in/assets/images/Numbers-Image.png)',
            backgroundSize: 'cover',
@@ -114,7 +123,7 @@ const LoginPage = () => {
               Sign in
             </button>
             <Link
-              to="/student-portal"
+              to="/student-login"
               className={`mt-3 inline-flex w-full justify-center rounded-md border px-4 py-2 text-sm font-medium ${
                 isDarkMode
                   ? "border-gray-600 text-gray-100 hover:bg-gray-700"

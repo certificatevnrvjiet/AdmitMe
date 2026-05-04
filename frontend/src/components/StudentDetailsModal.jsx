@@ -83,8 +83,11 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     const [isSaving, setIsSaving] = useState(false); // Add this state
     const [imageLoading, setImageLoading] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [documentObjectUrl, setDocumentObjectUrl] = useState(null);
     const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
     const [rotationAngle, setRotationAngle] = useState(0); // Add rotation state
+    const [comparisonResults, setComparisonResults] = useState([]);
+    const [engineStatus, setEngineStatus] = useState("");
 
     // Use custom hook to disable browser zoom when modal is open
     useDisableBrowserZoom(isOpen);
@@ -97,6 +100,21 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         setZoomLevel(1); // Reset zoom when student changes
         setRotationAngle(0); // Reset rotation when student changes
     }, [student]);
+
+    const fetchComparisonResults = React.useCallback(async () => {
+        const studentId = student?.aadhaar_card_number;
+        if (!studentId || !isOpen) return;
+        try {
+            const { data } = await API.get(`/students/${studentId}/comparison-results`);
+            setComparisonResults(data.comparison_results || []);
+        } catch {
+            setComparisonResults([]);
+        }
+    }, [student?.aadhaar_card_number, isOpen]);
+
+    React.useEffect(() => {
+        fetchComparisonResults();
+    }, [fetchComparisonResults]);
 
     const validateStudentId = (id) => {
         if (!id) return true; // Allow empty/null
@@ -156,7 +174,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
 
     const handleSave = async () => {
       if (!validateStudentId(editedStudent.ht_no)) {
-              alert('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
+              setEngineStatus('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
               return;
           }
         try {
@@ -165,7 +183,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
-            alert(error.message || 'Failed to save changes. Please try again.');
+            setEngineStatus(error.message || 'Failed to save changes. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -174,7 +192,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     const handleDraft = async () => {
 
           if (!validateStudentId(editedStudent.ht_no)) {
-              alert('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
+              setEngineStatus('Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric');
               return;
           }
 
@@ -182,13 +200,39 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
             setIsSaving(true);
             editedStudent.status = 'under_review';
             editedStudent.Time_updated = new Date().toISOString(); // Mark as draft
-            console.log(editedStudent.Time_updated);
             await onSave(editedStudent);
             setIsEditing(false);
         } catch (error) {
-            alert(error.message || 'Failed to save draft. Please try again.');
+            setEngineStatus(error.message || 'Failed to save draft. Please try again.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleRunEngines = async () => {
+        const studentId = editedStudent?.aadhaar_card_number;
+        if (!studentId) return;
+        try {
+            setEngineStatus("Engine run queued...");
+            const { data } = await API.post(`/students/${studentId}/engine-runs`, { force: true });
+            setEngineStatus(`Engine run queued. Task ID: ${data.task_id}`);
+        } catch (error) {
+            setEngineStatus(error.response?.data?.detail || error.message || "Failed to start engine run");
+        }
+    };
+
+    const handleOverrideComparison = async (fieldName, currentValue) => {
+        const studentId = editedStudent?.aadhaar_card_number;
+        if (!studentId) return;
+        try {
+            await API.patch(`/students/${studentId}/comparison-results/${fieldName}`, {
+                field_name: fieldName,
+                reviewer_override: !currentValue,
+                reviewer_notes: !currentValue ? "Reviewer accepted this mismatch." : "",
+            });
+            await fetchComparisonResults();
+        } catch (error) {
+            setEngineStatus(error.response?.data?.detail || error.message || "Failed to update comparison");
         }
     };
 
@@ -236,10 +280,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     // Handle rotation functionality
     const handleRotate = () => {
         setRotationAngle(prev => (prev + 90) % 360);
-    };
-
-    const handleResetRotation = () => {
-        setRotationAngle(0);
     };
 
     const getImageSource = () => {
@@ -299,6 +339,43 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         return null;
     };
 
+    const imageSource = React.useMemo(
+        () => getImageSource(),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [activeImageTab, editedStudent?.aadhaar_card_number, editedStudent?.aadhaar_link, editedStudent?.transfer_certificate_link, editedStudent?.tenth_memo_link, editedStudent?.twelfth_memo_link, editedStudent?.jee_rank_card_link, editedStudent?.eapcet_rank_card_link]
+    );
+
+    React.useEffect(() => {
+        let objectUrl = null;
+        let cancelled = false;
+
+        if (!isOpen || !imageSource) {
+            setDocumentObjectUrl(null);
+            setImageLoading(false);
+            return undefined;
+        }
+
+        setImageLoading(true);
+        setImageError(false);
+        API.get(imageSource, { responseType: 'blob' })
+            .then((response) => {
+                if (cancelled) return;
+                objectUrl = URL.createObjectURL(response.data);
+                setDocumentObjectUrl(objectUrl);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setDocumentObjectUrl(null);
+                setImageLoading(false);
+                setImageError(true);
+            });
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [imageSource, isOpen]);
+
     // Update image loading state whtime_updaen image tab changes
     React.useEffect(() => {
         setImageError(false);
@@ -310,8 +387,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     function formatDateDMY(dateString) {
       if (!dateString) return '';
       // If already in DD/MM/YYYY or DD-MM-YYYY, return as is
-      if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateString)) {
-        return dateString.replace(/\-/g, '/'); // convert DD-MM-YYYY to DD/MM/YYYY
+      if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(dateString)) {
+        return dateString.replace(/-/g, '/'); // convert DD-MM-YYYY to DD/MM/YYYY
       }
       // Try to parse ISO or US format
       const date = new Date(dateString);
@@ -321,8 +398,6 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
       const year = date.getFullYear();
       return `${day}/${month}/${year}`;
     }
-
-    if (!isOpen) return null;
 
     const renderField = (label, field, type = 'text', readOnly = false, options = null) => {
     const isDOB = field === 'date_of_birth';
@@ -418,6 +493,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         'Contact Details',
         'Category & Status',
         'Address',
+        'Comparison',
     ];
 
     // Image tabs
@@ -440,6 +516,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
             'EAPCET Rank Card',
         ];
     }, [isLE]);
+
+    if (!isOpen) return null;
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -589,6 +667,74 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                         {renderField('Scribe Needed', 'scribe')}
                     </div>
                 );
+            case 'Comparison': {
+                const mismatches = comparisonResults.filter((row) => row.match_status !== 'match' && !row.reviewer_override);
+                return (
+                    <div className="space-y-4">
+                        <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-800">Engine Comparison</p>
+                                    <p className="text-xs text-gray-600">
+                                        {comparisonResults.length
+                                            ? `${mismatches.length} fields need attention out of ${comparisonResults.length}.`
+                                            : 'No comparison results yet.'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleRunEngines}
+                                    className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                >
+                                    Run Engines
+                                </button>
+                            </div>
+                            {engineStatus && <p className="mt-2 text-xs text-blue-700">{engineStatus}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            {comparisonResults.map((row) => {
+                                const isMismatch = row.match_status !== 'match' && !row.reviewer_override;
+                                return (
+                                    <div
+                                        key={`${row.field_name}-${row.id}`}
+                                        className={`rounded-md border p-3 text-sm ${
+                                            isMismatch
+                                                ? row.severity === 'high'
+                                                    ? 'border-red-200 bg-red-50'
+                                                    : 'border-amber-200 bg-amber-50'
+                                                : 'border-green-100 bg-green-50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="font-semibold text-gray-800">{row.field_name?.replace(/_/g, ' ')}</span>
+                                            <span className="rounded-full bg-white px-2 py-0.5 text-xs uppercase text-gray-600">
+                                                {row.reviewer_override ? 'override' : row.match_status}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 grid gap-2">
+                                            <div>
+                                                <span className="text-xs text-gray-500">Filled</span>
+                                                <p className="break-words text-gray-800">{row.filled_value || '-'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Extracted</span>
+                                                <p className="break-words text-gray-800">{row.extracted_value || '-'}</p>
+                                            </div>
+                                        </div>
+                                        {row.match_status === 'mismatch' && (
+                                            <button
+                                                onClick={() => handleOverrideComparison(row.field_name, row.reviewer_override)}
+                                                className="mt-2 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                                            >
+                                                {row.reviewer_override ? 'Remove Override' : 'Accept Mismatch'}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            }
             default:
                 return null;
         }
@@ -743,7 +889,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                             
                             {/* Scrollable Image Container */}
                             <div className="w-full h-full overflow-auto">
-                                {getImageSource() ? (
+                                {imageSource ? (
                                     <>
                                         {imageLoading && (
                                             <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
@@ -774,10 +920,10 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                                                     <p className="mt-2 text-sm">Image not available</p>
                                                 </div>
                                             </div>
-                                        ) : (
+                                        ) : documentObjectUrl ? (
                                             <div className="flex justify-center items-center min-h-full p-4">
                                                 <img
-                                                    src={getImageSource()}
+                                                    src={documentObjectUrl || ""}
                                                     alt={`${activeImageTab} Document`}
                                                     className="object-contain rounded-lg shadow-lg transition-transform duration-200"
                                                     style={{ 
@@ -790,7 +936,7 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                                                     onError={handleImageError}
                                                 />
                                             </div>
-                                        )}
+                                        ) : null}
                                     </>
                                 ) : (
                                     <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg text-gray-500">

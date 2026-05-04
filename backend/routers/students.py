@@ -1,5 +1,5 @@
 from typing import Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response, Request, UploadFile, File
 from io import BytesIO
 from openpyxl import Workbook
 from datetime import datetime
@@ -23,6 +23,7 @@ from services.document_service import (
     resolve_student_document_ref,
     validate_upload_and_detect_mime,
 )
+from routers.engines import queue_engine_run
 
 router = APIRouter()
 
@@ -177,6 +178,7 @@ async def upload_student_document(
     student_id: str,
     doc_type: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
@@ -219,7 +221,7 @@ async def upload_student_document(
     )
 
     preview_url = f"/students/{student_id}/documents/{normalized_doc_type}"
-    return DocumentUploadResponse(
+    result = DocumentUploadResponse(
         document_id=document_row.get("id"),
         doc_type=normalized_doc_type,
         status=document_row.get("status", "submitted"),
@@ -227,6 +229,8 @@ async def upload_student_document(
         object_key=document_row.get("object_key", saved_key),
         preview_url=preview_url,
     )
+    queue_engine_run(background_tasks, student_id, request, current_user, [normalized_doc_type])
+    return result
 
 
 @router.get("/students/{student_id}/documents/{doc_type}")

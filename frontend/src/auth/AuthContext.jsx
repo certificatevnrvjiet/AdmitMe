@@ -20,7 +20,7 @@ const verifyToken = async (token) => {
       role: response.data.role,
       expiresAt: response.data.expires
     };
-  } catch (error) {
+  } catch {
     return {
       isValid: false,
       user: null,
@@ -33,14 +33,14 @@ const verifyToken = async (token) => {
 // ✅ Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [role, setRole] = useState(null);
   const [token, setToken] = useState(null);
 
   // Load auth state from localStorage on app load
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
-    const savedRole = localStorage.getItem("role");
-    
+
     const verifyAndSetToken = async () => {
       if (savedToken) {
         const verification = await verifyToken(savedToken);
@@ -52,6 +52,7 @@ export const AuthProvider = ({ children }) => {
           logout(); // Clear invalid token
         }
       }
+      setIsAuthLoading(false);
     };
 
     verifyAndSetToken();
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, login, logout, role }}>
+    <AuthContext.Provider value={{ isAuthenticated, isAuthLoading, token, login, logout, role }}>
       {children}
     </AuthContext.Provider>
   );

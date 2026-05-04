@@ -125,8 +125,8 @@ const Dashboard = () => {
   // Format date as DD/MM/YYYY
   function formatDateDMY(dateString) {
     if (!dateString) return '';
-    if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateString)) {
-      return dateString.replace(/\-/g, '/');
+    if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(dateString)) {
+      return dateString.replace(/-/g, '/');
     }
     const date = new Date(dateString);
     if (isNaN(date)) return dateString;
@@ -187,7 +187,7 @@ const Dashboard = () => {
 
   const handleSaveStudent = async (updatedStudent) => {
     try {
-      const response = await API.put(
+      await API.put(
         `/student/${updatedStudent.aadhaar_card_number}`,
         updatedStudent
       );
@@ -198,13 +198,11 @@ const Dashboard = () => {
           : student
       ));
 
-      try {
-        await handleSavetoDrive();
-      } catch (driveError) { }
+      await handleSavetoDrive();
 
       handleCloseModal();
     } catch (error) {
-      alert(
+      toast.error(
         error.response?.data?.detail ||
         error.message ||
         'Failed to update student details. Please try again.'
@@ -270,7 +268,7 @@ const Dashboard = () => {
       document.body.removeChild(a);
 
     } catch (error) {
-      alert(
+      toast.error(
         error.response?.data?.detail ||
         error.message ||
         'Failed to download Excel file. Please try again.'
@@ -290,7 +288,7 @@ const Dashboard = () => {
 
       await API.post(`/save-to-drive/${department}`, null, { params });
     } catch (error) {
-      alert(
+      toast.error(
         error.response?.data?.detail ||
         error.message ||
         'Failed to Save To Drive. Please try again.'
@@ -304,8 +302,20 @@ const Dashboard = () => {
     return <Navigate to="/" replace />;
   }
 
+  if (userRole === 'student') {
+    return <Navigate to="/student-portal" replace />;
+  }
+
+  if (loading) {
+    return <div className={`min-h-[calc(100vh-65px)] p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-800'}`}>Loading students...</div>;
+  }
+
+  if (error) {
+    return <div className={`min-h-[calc(100vh-65px)] p-6 ${isDarkMode ? 'bg-gray-800 text-red-300' : 'bg-gray-100 text-red-700'}`}>Error: {error}</div>;
+  }
+
   return (
-    <div className={`min-h-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+    <div className={`min-h-[calc(100vh-65px)] ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
       {selectedStudent && (
         <StudentDetailsModal
           student={selectedStudent}
@@ -321,6 +331,9 @@ const Dashboard = () => {
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               {department.toLowerCase() === "admin" ? "Admin Dashboard" : `${department.toUpperCase()} Department Dashboard`}
             </h2>
+            {user?.User && (
+              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{user.User}</span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

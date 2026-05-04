@@ -1,13 +1,9 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import React, { useState } from 'react';
+import React from 'react';
 
 export default function ChildMenu({ onSelect, Name, l }) {
-
-  const [selectedItem, setSelectedItem] = useState(0);
-
   const handleItemClick=(item)=>{
-    setSelectedItem(item);
     onSelect(item);
   }
   // Function to handle item click and send the selected item to the parent
@@ -16,7 +12,7 @@ export default function ChildMenu({ onSelect, Name, l }) {
     <Menu as="div" className="relative inline-block mx-3 text-left basis-1/3">
       <div>
         <MenuButton className="inline-flex w-full pr-3 justify-center rounded-md bg-white text-sm font-semibold text-gray-900 hover:bg-gray-50">
-          
+          {Name}
           <ChevronDownIcon aria-hidden="true" className="-mr-1 size-5 text-gray-400" />
         </MenuButton>
       </div>

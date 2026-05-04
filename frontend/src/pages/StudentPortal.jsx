@@ -1,475 +1,620 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import API from "../api";
 import { useAuth } from "../auth/AuthContext";
 
-const tenthBoardOptions = ["TG BSE", "CBSE", "AP BSE", "ACE and A Level", "IBDP", "ICSE", "Other"];
-const twelfthBoardOptions = ["TG BIE", "CBSE", "AP BIE", "ACE and A Level", "IBDP", "ICSE", "Other"];
-const casteOptions = ["OC", "BC-A", "BC-B", "BC-C", "BC-D", "BC-E", "SC", "ST"];
-const incomeOptions = ["Below 1 lakhs", "Below 1.5 lakhs", "Below 2 lakhs", "Below 2.5 lakhs", "Below 8 lakhs", "Above 8 lakhs"];
-const bloodGroups = ["A +", "A -", "B +", "B -", "O +", "O -", "AB +", "AB -"];
-const programOptions = [
-  { value: "BTECH", label: "B.Tech" },
-  { value: "MTECH", label: "M.Tech" },
+const branchOptions = [
+  "aids", "ae", "ce", "csbs", "cse", "aiml", "cseds", "csecys", "cseiot",
+  "eee", "ece", "eie", "it", "me", "vlsi", "biotechnology", "roboticsandai",
 ];
-const fallbackCatalog = {
-  programs: [
-    {
-      code: "BTECH",
-      label: "B.Tech",
-      branches: [
-        { code: "aids", label: "AIDS" },
-        { code: "ae", label: "AE" },
-        { code: "ce", label: "CE" },
-        { code: "csbs", label: "CSBS" },
-        { code: "cse", label: "CSE" },
-        { code: "aiml", label: "AIML" },
-        { code: "cseds", label: "CSE-DS" },
-        { code: "csecys", label: "CSE-CYS" },
-        { code: "cseiot", label: "CSE-IOT" },
-        { code: "eee", label: "EEE" },
-        { code: "ece", label: "ECE" },
-        { code: "eie", label: "EIE" },
-        { code: "it", label: "IT" },
-        { code: "me", label: "ME" },
-        { code: "vlsi", label: "VLSI" },
-        { code: "biotechnology", label: "Biotechnology" },
-        { code: "roboticsandai", label: "Robotics and AI" },
-      ],
-    },
-    {
-      code: "MTECH",
-      label: "M.Tech",
-      branches: [
-        { code: "cse", label: "CSE" },
-        { code: "ece", label: "ECE" },
-        { code: "eee", label: "EEE" },
-        { code: "me", label: "ME" },
-        { code: "vlsi", label: "VLSI" },
-      ],
-    },
+
+const digitOnlyFields = new Set([
+  "student_phone",
+  "father_phone",
+  "mother_phone",
+  "parent_phone",
+  "aadhaar_card_number",
+]);
+
+const defaultValueFor = (field) => {
+  if (field.field_type === "select" && field.options?.length) return field.options[0];
+  if (field.field_key === "branch_code") return "cse";
+  if (field.field_key === "degree_code") return "cse";
+  if (field.field_key === "program_level") return "BTECH";
+  if (field.field_key === "admission_category") return "Convenor";
+  return "";
+};
+
+const fallbackAdmissionForm = {
+  id: "default-admission",
+  title: "B.Tech 2026 Admission Form",
+  description: "Submit B.Tech 2026 admission details and supporting documents.",
+  slug: "btech-2026",
+  status: "published",
+  fields: [
+    { section: "Personal", field_key: "student_name", label: "Name of the Student", field_type: "text", required: true, sort_order: 10 },
+    { section: "Personal", field_key: "father_name", label: "Father's Name", field_type: "text", required: true, sort_order: 20 },
+    { section: "Personal", field_key: "mother_name", label: "Mother's Name", field_type: "text", required: true, sort_order: 30 },
+    { section: "Personal", field_key: "date_of_birth", label: "Date of Birth", field_type: "date", required: true, sort_order: 40 },
+    { section: "Personal", field_key: "gender", label: "Gender", field_type: "select", required: true, options: ["Male", "Female", "Transgender"], sort_order: 50 },
+    { section: "Personal", field_key: "aadhaar_card_number", label: "Aadhaar Card Number", field_type: "text", required: true, sort_order: 60 },
+    { section: "Contact", field_key: "mother_tongue", label: "Mother Tongue", field_type: "text", required: true, sort_order: 70 },
+    { section: "Contact", field_key: "student_phone", label: "Student Phone Number", field_type: "tel", required: true, sort_order: 80 },
+    { section: "Contact", field_key: "father_phone", label: "Father Phone Number", field_type: "tel", required: true, sort_order: 90 },
+    { section: "Contact", field_key: "mother_phone", label: "Mother Phone Number", field_type: "tel", required: true, sort_order: 100 },
+    { section: "Contact", field_key: "student_email", label: "Student Email", field_type: "email", required: true, sort_order: 110 },
+    { section: "Address", field_key: "address_dno", label: "Door No", field_type: "text", required: true, sort_order: 120 },
+    { section: "Address", field_key: "address_street", label: "Street Name", field_type: "text", required: true, sort_order: 130 },
+    { section: "Address", field_key: "address_village_town", label: "Village/Town", field_type: "text", required: true, sort_order: 140 },
+    { section: "Address", field_key: "address_mandal", label: "Mandal", field_type: "text", required: true, sort_order: 150 },
+    { section: "Address", field_key: "address_district", label: "District", field_type: "text", required: true, sort_order: 160 },
+    { section: "Address", field_key: "address_state", label: "State", field_type: "text", required: true, sort_order: 170 },
+    { section: "Address", field_key: "address_pincode", label: "Pincode", field_type: "text", required: true, sort_order: 180 },
+    { section: "Academic", field_key: "program_level", label: "Program", field_type: "select", required: true, options: ["BTECH", "MTECH"], sort_order: 190 },
+    { section: "Academic", field_key: "branch_code", label: "Branch", field_type: "select", required: true, options: branchOptions, sort_order: 200 },
+    { section: "Category", field_key: "caste_as_per_tc", label: "Caste as per TC", field_type: "text", required: true, sort_order: 205 },
+    { section: "Academic", field_key: "tenth_board_name", label: "10th Board", field_type: "select", required: true, options: ["TG BSE", "CBSE", "AP BSE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order: 210 },
+    { section: "Academic", field_key: "twelfth_board_name", label: "12th Board", field_type: "select", required: true, options: ["TG BIE", "CBSE", "AP BIE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order: 220 },
+    { section: "Documents", field_key: "tenth_memo", label: "10th Memo", field_type: "file", required: true, maps_to_student_field: false, sort_order: 230 },
+    { section: "Documents", field_key: "twelfth_memo", label: "12th Memo", field_type: "file", required: true, maps_to_student_field: false, sort_order: 240 },
+    { section: "Documents", field_key: "aadhaar", label: "Aadhaar Card", field_type: "file", required: true, maps_to_student_field: false, sort_order: 250 },
+    { section: "Documents", field_key: "transfer_certificate", label: "Transfer Certificate / Bonafide", field_type: "file", required: true, maps_to_student_field: false, sort_order: 260 },
   ],
 };
 
-const initialForm = {
-  student_name: "",
-  father_name: "",
-  mother_name: "",
-  date_of_birth: "",
-  gender: "Male",
-  aadhaar_card_number: "",
-  mother_tongue: "",
-  student_phone: "",
-  father_phone: "",
-  mother_phone: "",
-  student_email: "",
-  father_email: "",
-  mother_email: "",
-  father_profession_and_designation: "",
-  mother_profession_and_designation: "",
-  primary_contact_person: "Father",
-  address_dno: "",
-  address_street: "",
-  address_village_town: "",
-  address_mandal: "",
-  address_district: "",
-  address_state: "",
-  address_pincode: "",
-  rural_urban: "Rural",
-  ews_status: "No",
-  category_name: "OC",
-  caste_as_per_tc: "",
-  ebc_status: "No",
-  income: "Below 8 lakhs",
-  minority: "No",
-  blood_group: "O +",
-  ph_status: "No",
-  scribe: "No",
-  tenth_board_name: "TG BSE",
-  twelfth_board_name: "TG BIE",
-  eapcet_ht_no: "",
-  eapcet_rank: "",
-  jee_ht_no: "",
-  jee_mains_rank: "",
-  program_level: "BTECH",
-  branch_code: "cse",
-  degree_code: "cse",
-  admission_category: "Convenor",
+const buildInitialForm = (nextForm) => {
+  const initial = {};
+  (nextForm.fields || []).forEach((field) => {
+    if (field.field_type !== "file") initial[field.field_key] = defaultValueFor(field);
+  });
+  return initial;
 };
 
-const initialFiles = {
-  tenth_memo: null,
-  twelfth_memo: null,
-  aadhaar: null,
-  transfer_certificate: null,
-  eapcet_rank_card: null,
-  jee_rank_card: null,
-};
+const normalizeFormDefinition = (nextForm) => ({
+  ...nextForm,
+  fields: (nextForm.fields || []).map((field) => {
+    if (field.field_key === "caste_as_per_tc") {
+      return { ...field, required: true };
+    }
+    return field;
+  }),
+});
 
-const requiredDocTypes = ["tenth_memo", "twelfth_memo", "aadhaar", "transfer_certificate"];
-
-const StudentPortal = () => {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState(initialForm);
-  const [files, setFiles] = useState(initialFiles);
+export default function StudentPortal() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [formDefinition, setFormDefinition] = useState(null);
+  const [availableForms, setAvailableForms] = useState([]);
+  const [formResponses, setFormResponses] = useState({});
+  const [formsLoading, setFormsLoading] = useState(false);
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState({});
+  const [files, setFiles] = useState({});
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-  const [catalog, setCatalog] = useState(fallbackCatalog);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedResponse, setSubmittedResponse] = useState(null);
+  const [submittedLoading, setSubmittedLoading] = useState(false);
+  const [showSubmittedView, setShowSubmittedView] = useState(false);
   const { isAuthenticated, role } = useAuth();
-
-  const availableBranches = useMemo(() => {
-    const selectedProgram = catalog.programs.find(
-      (p) => p.code === String(form.program_level || "").toUpperCase()
-    );
-    return selectedProgram?.branches || [];
-  }, [catalog, form.program_level]);
+  const isFormsHome = !slug;
+  const isEditMode = searchParams.get("mode") === "edit";
 
   useEffect(() => {
+    if (isFormsHome) return undefined;
     let mounted = true;
-    API.get("/meta/programs-branches")
+    API.get(`/public/forms/${slug}`)
       .then((res) => {
         if (!mounted) return;
-        if (res?.data?.programs?.length) {
-          setCatalog(res.data);
-        }
+        const nextForm = normalizeFormDefinition(res.data.form);
+        setFormDefinition(nextForm);
+        setForm(buildInitialForm(nextForm));
       })
-      .catch(() => setCatalog(fallbackCatalog));
+      .catch(() => {
+        if (!mounted) return;
+        const nextForm = normalizeFormDefinition(fallbackAdmissionForm);
+        setFormDefinition(nextForm);
+        setForm(buildInitialForm(nextForm));
+      });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isFormsHome, slug]);
 
   useEffect(() => {
-    const currentBranch = String(form.branch_code || "").toLowerCase();
-    const validBranches = availableBranches.map((b) => String(b.code || "").toLowerCase());
-    if (validBranches.length && !validBranches.includes(currentBranch)) {
-      const nextBranch = validBranches[0];
-      setForm((prev) => ({ ...prev, branch_code: nextBranch, degree_code: nextBranch }));
-    }
-  }, [availableBranches, form.branch_code]);
+    if (!isFormsHome || !isAuthenticated || role !== "student") return undefined;
+    let mounted = true;
+    setFormsLoading(true);
+    setError("");
+    API.get("/public/forms")
+      .then(async (res) => {
+        if (!mounted) return;
+        const forms = res.data.forms || [];
+        setAvailableForms(forms);
+        const settled = await Promise.allSettled(
+          forms.map((formItem) => API.get(`/forms/${formItem.id}/responses/me`))
+        );
+        if (!mounted) return;
+        const nextResponses = {};
+        settled.forEach((entry, index) => {
+          if (entry.status === "fulfilled") {
+            nextResponses[forms[index].id] = entry.value.data.response;
+          }
+        });
+        setFormResponses(nextResponses);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setAvailableForms([fallbackAdmissionForm]);
+        setError(err?.response?.data?.detail || "Unable to load admission forms");
+      })
+      .finally(() => {
+        if (mounted) setFormsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isFormsHome, isAuthenticated, role]);
 
-  const stepTitle = useMemo(() => {
-    if (step === 1) return "Personal and Contact Details";
-    if (step === 2) return "Address, Category and Academic Details";
-    return "Document Uploads";
-  }, [step]);
+  const sections = useMemo(() => {
+    const groups = [];
+    const byName = new Map();
+    (formDefinition?.fields || []).forEach((field) => {
+      const section = field.section || "General";
+      if (!byName.has(section)) {
+        byName.set(section, []);
+        groups.push({ name: section, fields: byName.get(section) });
+      }
+      byName.get(section).push(field);
+    });
+    return groups.map((group) => ({
+      ...group,
+      fields: [...group.fields].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+    }));
+  }, [formDefinition]);
+
+  const activeSection = sections[step] || sections[0];
+
+  const fetchSubmittedResponse = async (formId) => {
+    if (!formId || !isAuthenticated || role !== "student") return;
+    setSubmittedLoading(true);
+    try {
+      const { data } = await API.get(`/forms/${formId}/responses/me`);
+      const response = data.response;
+      setSubmittedResponse(response);
+      setShowSubmittedView(!isEditMode);
+      if (response?.response_data) {
+        const nextValues = { ...buildInitialForm(formDefinition), ...response.response_data };
+        delete nextValues._custom;
+        setForm(nextValues);
+      }
+    } catch (err) {
+      if (err?.response?.status !== 404) {
+        setError(err?.response?.data?.detail || "Unable to load submitted form");
+      }
+      setSubmittedResponse(null);
+      setShowSubmittedView(false);
+    } finally {
+      setSubmittedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (formDefinition?.id && isAuthenticated && role === "student") {
+      fetchSubmittedResponse(formDefinition.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formDefinition?.id, isAuthenticated, role]);
 
   const updateField = (field, value) => {
+    const nextValue = digitOnlyFields.has(field) ? String(value || "").replace(/\D/g, "") : value;
     setForm((prev) => {
       if (field === "branch_code") {
-        const normalized = String(value || "").toLowerCase();
-        return { ...prev, branch_code: normalized, degree_code: normalized };
+        return { ...prev, branch_code: String(nextValue || "").toLowerCase(), degree_code: String(nextValue || "").toLowerCase() };
       }
-      if (field === "program_level") {
-        return { ...prev, program_level: String(value || "").toUpperCase() };
-      }
-      return { ...prev, [field]: value };
+      return { ...prev, [field]: nextValue };
     });
   };
 
-  const validateStep = () => {
+  const validateSection = () => {
     setError("");
-
-    if (step === 1) {
-      const required = [
-        "student_name",
-        "father_name",
-        "mother_name",
-        "date_of_birth",
-        "aadhaar_card_number",
-        "mother_tongue",
-        "student_phone",
-        "father_phone",
-        "mother_phone",
-        "student_email",
-        "father_profession_and_designation",
-        "mother_profession_and_designation",
-      ];
-      for (const field of required) {
-        if (!String(form[field] || "").trim()) {
-          setError(`Please fill ${field.replace(/_/g, " ")}`);
-          return false;
-        }
+    for (const field of activeSection?.fields || []) {
+      if (field.required && field.field_type !== "file" && !String(form[field.field_key] || "").trim()) {
+        setError(`Please fill ${field.label}`);
+        return false;
       }
+      if (field.required && field.field_type === "file" && !files[field.field_key]) {
+        setError(`Please upload ${field.label}`);
+        return false;
+      }
+    }
+    if (activeSection?.fields?.some((field) => field.field_key === "aadhaar_card_number")) {
       const aadhaar = String(form.aadhaar_card_number || "").replace(/\D/g, "");
       if (aadhaar.length !== 12) {
         setError("Aadhaar number must be 12 digits");
         return false;
       }
-      if (!/^\d{10}$/.test(String(form.student_phone || ""))) {
-        setError("Student phone number must be 10 digits");
+    }
+    for (const field of activeSection?.fields || []) {
+      if ((field.field_type === "tel" || digitOnlyFields.has(field.field_key)) && /\D/.test(String(form[field.field_key] || ""))) {
+        setError(`${field.label} must contain digits only`);
         return false;
       }
     }
-
-    if (step === 2) {
-      const required = [
-        "address_dno",
-        "address_street",
-        "address_village_town",
-        "address_mandal",
-        "address_district",
-        "address_state",
-        "address_pincode",
-        "tenth_board_name",
-        "twelfth_board_name",
-        "program_level",
-        "branch_code",
-      ];
-      for (const field of required) {
-        if (!String(form[field] || "").trim()) {
-          setError(`Please fill ${field.replace(/_/g, " ")}`);
-          return false;
-        }
-      }
-    }
-
-    if (step === 3) {
-      for (const docType of requiredDocTypes) {
-        if (!files[docType]) {
-          setError(`Please upload required document: ${docType.replace(/_/g, " ")}`);
-          return false;
-        }
-      }
-    }
-
     return true;
   };
 
-  const nextStep = () => {
-    if (!validateStep()) return;
-    setStep((prev) => Math.min(prev + 1, 3));
-  };
-
-  const prevStep = () => {
-    setError("");
-    setStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleFileChange = (docType, file) => {
-    setFiles((prev) => ({ ...prev, [docType]: file || null }));
-  };
-
-  const submitApplication = async () => {
-    if (!validateStep()) return;
-
+  const submit = async () => {
+    if (!validateSection()) return;
+    if (!isAuthenticated || role !== "student") {
+      return;
+    }
     setIsSubmitting(true);
     setError("");
-
     try {
-      const payload = {
+      const responseData = {
         ...form,
         aadhaar_card_number: String(form.aadhaar_card_number || "").replace(/\D/g, ""),
         branch_code: String(form.branch_code || "").toLowerCase(),
         degree_code: String(form.degree_code || form.branch_code || "").toLowerCase(),
         program_level: String(form.program_level || "BTECH").toUpperCase(),
       };
-
-      const response = await API.post("/applications", payload);
-      const studentId = response?.data?.student_id;
-      const applicationReference = response?.data?.application_reference;
-
-      if (!studentId) {
-        throw new Error("Application submitted but no student ID returned");
-      }
-
-      const docUploadOrder = [
-        "tenth_memo",
-        "twelfth_memo",
-        "aadhaar",
-        "transfer_certificate",
-        "eapcet_rank_card",
-        "jee_rank_card",
-      ];
-
-      for (const docType of docUploadOrder) {
-        const file = files[docType];
+      const response = await API.post(`/forms/${formDefinition.id}/responses`, {
+        response_data: responseData,
+      });
+      const studentId = response.data.student_id;
+      const uploadFields = (formDefinition.fields || []).filter((field) => field.field_type === "file");
+      for (const field of uploadFields) {
+        const file = files[field.field_key];
         if (!file) continue;
-
         const formData = new FormData();
         formData.append("file", file);
-        await API.post(`/applications/${studentId}/documents/${docType}`, formData, {
+        await API.post(`/applications/${studentId}/documents/${field.field_key}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
-
-      setResult({ studentId, applicationReference });
-      setStep(1);
-      setForm(initialForm);
-      setFiles(initialFiles);
+      setResult(response.data);
+      await fetchSubmittedResponse(formDefinition.id);
+      toast.success("Application submitted successfully");
     } catch (err) {
-      if ([401, 403].includes(err?.response?.status)) {
-        setError("Please sign in with your student account to submit applications.");
-      } else {
-        setError(err?.response?.data?.detail || err?.message || "Failed to submit application");
-      }
+      setError(err?.response?.data?.detail || err?.message || "Failed to submit application");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const renderInput = (label, field, type = "text") => (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
-      <input
-        type={type}
-        value={form[field] || ""}
-        onChange={(e) => updateField(field, e.target.value)}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-      />
-    </label>
-  );
+  const downloadBlob = async (url, fallbackName) => {
+    try {
+      const response = await API.get(url, { responseType: "blob" });
+      const disposition = response.headers?.["content-disposition"] || "";
+      const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const plainMatch = disposition.match(/filename="?([^"]+)"?/i);
+      const filename = encodedMatch?.[1]
+        ? decodeURIComponent(encodedMatch[1])
+        : plainMatch?.[1] || fallbackName;
+      const objectUrl = URL.createObjectURL(response.data);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Download failed");
+    }
+  };
 
-  const renderSelect = (label, field, options) => (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
-      <select
-        value={form[field] || ""}
-        onChange={(e) => updateField(field, e.target.value)}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-      >
-        {options.map((opt) => {
-          const option = typeof opt === "string" ? { value: opt, label: opt } : opt;
-          return (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-          );
-        })}
-      </select>
-    </label>
-  );
+  const documentDownloadName = (field, doc) => {
+    const mime = String(doc?.mime_type || "").toLowerCase();
+    const extension = mime.includes("png")
+      ? "png"
+      : mime.includes("jpeg") || mime.includes("jpg")
+      ? "jpg"
+      : mime.includes("pdf")
+      ? "pdf"
+      : "bin";
+    return `${field.field_key}.${extension}`;
+  };
+
+  const renderField = (field) => {
+    if (field.field_type === "file") {
+      return (
+        <label key={field.field_key} className="block rounded-md border border-gray-200 p-3">
+          <span className="mb-2 block text-sm font-medium text-gray-700">
+            {field.label}{field.required ? " *" : ""}
+          </span>
+          <input
+            type="file"
+            accept=".pdf,image/*"
+            onChange={(event) => setFiles((prev) => ({ ...prev, [field.field_key]: event.target.files?.[0] || null }))}
+            className="w-full text-sm"
+          />
+          {field.help_text && <p className="mt-1 text-xs text-gray-500">{field.help_text}</p>}
+        </label>
+      );
+    }
+
+    const options = field.field_key === "branch_code" && !field.options?.length ? branchOptions : field.options || [];
+    if (field.field_type === "select" || options.length) {
+      return (
+        <label key={field.field_key} className="block">
+          <span className="mb-1 block text-sm font-medium text-gray-700">
+            {field.label}{field.required ? " *" : ""}
+          </span>
+          <select
+            value={form[field.field_key] || ""}
+            onChange={(event) => updateField(field.field_key, event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          >
+            {options.map((option) => (
+              <option key={option} value={option}>{String(option).toUpperCase()}</option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+
+    return (
+      <label key={field.field_key} className="block">
+        <span className="mb-1 block text-sm font-medium text-gray-700">
+          {field.label}{field.required ? " *" : ""}
+        </span>
+        {field.field_type === "textarea" ? (
+          <textarea
+            value={form[field.field_key] || ""}
+            onChange={(event) => updateField(field.field_key, event.target.value)}
+            className="min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        ) : (
+          <input
+            type={field.field_type === "tel" ? "text" : field.field_type || "text"}
+            inputMode={field.field_type === "tel" || digitOnlyFields.has(field.field_key) ? "numeric" : undefined}
+            pattern={field.field_type === "tel" || digitOnlyFields.has(field.field_key) ? "[0-9]*" : undefined}
+            value={form[field.field_key] || ""}
+            onChange={(event) => updateField(field.field_key, event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        )}
+      </label>
+    );
+  };
+
+  const renderSubmittedView = () => {
+    const responseData = submittedResponse?.response_data || {};
+    const documentByType = new Map((submittedResponse?.documents || []).map((doc) => [doc.doc_type, doc]));
+    return (
+      <div className="mt-6 space-y-5">
+        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-semibold">Submitted application</p>
+              <p className="mt-1">
+                Status: <strong>{submittedResponse?.status || "submitted"}</strong>
+                {submittedResponse?.student_id ? <> | Student ID: <strong>{submittedResponse.student_id}</strong></> : null}
+              </p>
+              {submittedResponse?.application_reference && (
+                <p className="mt-1">Reference: <strong>{submittedResponse.application_reference}</strong></p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSubmittedView(false);
+                setError("");
+              }}
+              className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-green-800 shadow-sm hover:bg-green-100"
+            >
+              Edit / Resubmit
+            </button>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => downloadBlob(`/forms/${formDefinition.id}/responses/me/application.pdf`, "application.pdf")}
+              className="rounded-md bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800"
+            >
+              Download Filled Application PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadBlob(`/forms/${formDefinition.id}/responses/me/documents.pdf`, "uploaded-documents.pdf")}
+              className="rounded-md border border-green-300 bg-white px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-100"
+            >
+              Download All Documents PDF
+            </button>
+          </div>
+        </div>
+
+        {sections.map((section) => (
+          <section key={section.name} className="rounded-md border border-gray-200 bg-white p-4">
+            <h2 className="text-lg font-semibold text-gray-900">{section.name}</h2>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              {section.fields.map((field) => {
+                const doc = documentByType.get(field.field_key);
+                const value = field.field_type === "file"
+                  ? (doc ? `${doc.status || "uploaded"} (${doc.mime_type || doc.provider || "document"})` : "Not uploaded")
+                  : responseData[field.field_key];
+                return (
+                  <div key={field.field_key} className="rounded-md bg-gray-50 px-3 py-2">
+                    <p className="text-xs font-medium uppercase text-gray-500">{field.label}</p>
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="break-words text-sm text-gray-900">{String(value || "-")}</p>
+                      {field.field_type === "file" && doc && (
+                        <button
+                          type="button"
+                          onClick={() => downloadBlob(
+                            `/forms/${formDefinition.id}/responses/me/documents/${field.field_key}/download`,
+                            documentDownloadName(field, doc)
+                          )}
+                          className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                        >
+                          Download
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  };
+
+  if (!isAuthenticated || role !== "student") {
+    return <Navigate to="/student-login" replace />;
+  }
+
+  if (isFormsHome) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">Student Admission Forms</h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Select a published form, view submitted applications, or continue editing a form.
+            </p>
+            {formsLoading && (
+              <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                Loading your forms...
+              </div>
+            )}
+            {error && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {(availableForms.length ? availableForms : [fallbackAdmissionForm]).map((formItem) => {
+                const response = formResponses[formItem.id];
+                return (
+                  <article key={formItem.id || formItem.slug} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">{formItem.title}</h2>
+                        <p className="mt-1 text-sm text-gray-600">{formItem.description}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
+                        response ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {response ? "Submitted" : "Not filled"}
+                      </span>
+                    </div>
+                    {response && (
+                      <div className="mt-4 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                        <p>Student ID: <strong>{response.student_id || "-"}</strong></p>
+                        <p>Status: <strong>{response.status || "submitted"}</strong></p>
+                        {response.application_reference && <p>Reference: <strong>{response.application_reference}</strong></p>}
+                      </div>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {response && (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/student-portal/${formItem.slug}?view=submitted`)}
+                          className="rounded-md border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                        >
+                          View Submitted
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/student-portal/${formItem.slug}${response ? "?mode=edit" : ""}`)}
+                        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                      >
+                        {response ? "Edit / Resubmit" : "Fill Form"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  if (!formDefinition && !error) {
+    return <div className="min-h-screen px-4 py-8 text-center text-gray-600">Loading admission form...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-8">
-      <div className="mx-auto max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900">Student Admissions Portal</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Multi-step admissions form for all programs (local-first storage).
-        </p>
-        {(!isAuthenticated || role !== "student") && (
-          <p className="mt-2 text-sm text-amber-700">
-            Sign in with a student account before final submission.
-          </p>
+    <div className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="mx-auto max-w-5xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900">{formDefinition?.title || "Student Admissions Portal"}</h1>
+        <p className="mt-1 text-sm text-gray-600">{formDefinition?.description}</p>
+        {submittedLoading && (
+          <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            Checking your submitted form...
+          </div>
+        )}
+        {submittedResponse && !showSubmittedView && (
+          <div className="mt-4 flex flex-col gap-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-800 md:flex-row md:items-center md:justify-between">
+            <span>You already submitted this form. You can view it any time.</span>
+            <button
+              type="button"
+              onClick={() => setShowSubmittedView(true)}
+              className="rounded-md bg-white px-3 py-2 font-semibold text-blue-700 shadow-sm"
+            >
+              View Submitted Form
+            </button>
+          </div>
         )}
 
-        <div className="mt-6 grid grid-cols-3 gap-2 text-sm">
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className={`rounded-md px-3 py-2 text-center font-medium ${
-                step >= n ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
-              }`}
+        {showSubmittedView && submittedResponse ? renderSubmittedView() : (
+          <>
+        <div className="mt-6 grid gap-2 text-sm" style={{ gridTemplateColumns: `repeat(${Math.max(sections.length, 1)}, minmax(0, 1fr))` }}>
+          {sections.map((section, index) => (
+            <button
+              key={section.name}
+              type="button"
+              onClick={() => {
+                if (index <= step || validateSection()) setStep(index);
+              }}
+              className={`rounded-md px-3 py-2 text-center font-medium ${step >= index ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
             >
-              Step {n}
-            </div>
+              {section.name}
+            </button>
           ))}
         </div>
 
-        <h2 className="mt-6 text-lg font-semibold text-gray-900">{stepTitle}</h2>
-
-        {error && (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
+        {error && <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         {result && (
           <div className="mt-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-            Application submitted successfully. Reference: <strong>{result.applicationReference}</strong>, Student ID:{" "}
-            <strong>{result.studentId}</strong>
+            Application submitted successfully. Reference: <strong>{result.application_reference}</strong>, Student ID:{" "}
+            <strong>{result.student_id}</strong>
           </div>
         )}
 
-        {step === 1 && (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {renderInput("Name of the Student *", "student_name")}
-            {renderInput("Father's Name *", "father_name")}
-            {renderInput("Mother's Name *", "mother_name")}
-            {renderInput("Date of Birth *", "date_of_birth", "date")}
-            {renderSelect("Gender *", "gender", ["Male", "Female", "Transgender"])}
-            {renderInput("Aadhaar Card Number *", "aadhaar_card_number")}
-            {renderInput("Mother Tongue *", "mother_tongue")}
-            {renderInput("Student Phone Number *", "student_phone")}
-            {renderInput("Father Phone Number *", "father_phone")}
-            {renderInput("Mother Phone Number *", "mother_phone")}
-            {renderInput("Student Email *", "student_email", "email")}
-            {renderInput("Father Email", "father_email", "email")}
-            {renderInput("Mother Email", "mother_email", "email")}
-            {renderInput("Father Profession and Designation *", "father_profession_and_designation")}
-            {renderInput("Mother Profession and Designation *", "mother_profession_and_designation")}
-            {renderSelect("Primary Contact Person *", "primary_contact_person", ["Father", "Mother"])}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {renderInput("Door No *", "address_dno")}
-            {renderInput("Street Name *", "address_street")}
-            {renderInput("Village Name *", "address_village_town")}
-            {renderInput("Mandal Name *", "address_mandal")}
-            {renderInput("District Name *", "address_district")}
-            {renderInput("State Name *", "address_state")}
-            {renderInput("Pincode *", "address_pincode")}
-            {renderSelect("Rural / Urban *", "rural_urban", ["Rural", "Urban"])}
-            {renderSelect("EWS Status *", "ews_status", ["Yes", "No"])}
-            {renderSelect("Caste Category *", "category_name", casteOptions)}
-            {renderInput("Caste as per TC", "caste_as_per_tc")}
-            {renderSelect("EBC Status *", "ebc_status", ["Yes", "No"])}
-            {renderSelect("Annual Income of Parent *", "income", incomeOptions)}
-            {renderSelect("Minority *", "minority", ["Yes", "No"])}
-            {renderSelect("Blood Group *", "blood_group", bloodGroups)}
-            {renderSelect("PH Status *", "ph_status", ["Yes", "No"])}
-            {renderSelect("PH Scribe *", "scribe", ["Yes", "No"])}
-            {renderSelect("Program *", "program_level", programOptions)}
-            {renderSelect("Branch *", "branch_code", availableBranches)}
-            {renderSelect("10th Board *", "tenth_board_name", tenthBoardOptions)}
-            {renderSelect("12th Board Name *", "twelfth_board_name", twelfthBoardOptions)}
-            {renderInput("EAPCET Hall Ticket No", "eapcet_ht_no")}
-            {renderInput("EAPCET Rank", "eapcet_rank")}
-            {renderInput("JEE Hall Ticket No", "jee_ht_no")}
-            {renderInput("JEE CRL Rank", "jee_mains_rank")}
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {[
-              ["10th MEMO *", "tenth_memo"],
-              ["12th MEMO *", "twelfth_memo"],
-              ["Aadhaar Card *", "aadhaar"],
-              ["Transfer Certificate / Bonafide *", "transfer_certificate"],
-              ["EAPCET Rank Card", "eapcet_rank_card"],
-              ["JEE Rank Card", "jee_rank_card"],
-            ].map(([label, docType]) => (
-              <label key={docType} className="block rounded-md border border-gray-200 p-3">
-                <span className="mb-2 block text-sm font-medium text-gray-700">{label}</span>
-                <input
-                  type="file"
-                  accept=".pdf,image/*"
-                  onChange={(e) => handleFileChange(docType, e.target.files?.[0] || null)}
-                  className="w-full text-sm"
-                />
-              </label>
-            ))}
-            <p className="text-xs text-gray-500 md:col-span-2">
-              Allowed file types: PDF/JPG/JPEG/PNG. Max size per file: 5MB.
-            </p>
-          </div>
-        )}
+        <h2 className="mt-6 text-lg font-semibold text-gray-900">{activeSection?.name}</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {(activeSection?.fields || []).map(renderField)}
+          {activeSection?.name === "Documents" && (
+            <p className="text-xs text-gray-500 md:col-span-2">Allowed file types: PDF/JPG/JPEG/PNG. Max size per file: 5MB.</p>
+          )}
+        </div>
 
         <div className="mt-6 flex items-center justify-between">
           <button
-            onClick={prevStep}
-            disabled={step === 1 || isSubmitting}
+            onClick={() => {
+              setError("");
+              setStep((prev) => Math.max(prev - 1, 0));
+            }}
+            disabled={step === 0 || isSubmitting}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Previous
           </button>
-
-          {step < 3 ? (
+          {step < sections.length - 1 ? (
             <button
-              onClick={nextStep}
+              onClick={() => validateSection() && setStep((prev) => Math.min(prev + 1, sections.length - 1))}
               disabled={isSubmitting}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -477,7 +622,7 @@ const StudentPortal = () => {
             </button>
           ) : (
             <button
-              onClick={submitApplication}
+              onClick={submit}
               disabled={isSubmitting}
               className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -485,9 +630,10 @@ const StudentPortal = () => {
             </button>
           )}
         </div>
+          </>
+        )}
       </div>
+      <ToastContainer />
     </div>
   );
-};
-
-export default StudentPortal;
+}
