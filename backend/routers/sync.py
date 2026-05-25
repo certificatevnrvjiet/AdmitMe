@@ -16,24 +16,6 @@ router = APIRouter()
 GEMINI_SEMAPHORE = asyncio.Semaphore(30)
 SUBTASK_SEMAPHORE = asyncio.Semaphore(10)
 
-# Store active WebSocket connections logic remains in main for now or needs a dedicated manager
-# For this router, we need access to notify_user. 
-# We will import the notify_user function from main via a slightly circular dependency or refactor notify_user to a service/manager.
-# For now, let's keep the websocket endpoint in main and pass notification logic via a callback or just event bus.
-# Simpler approach: make notify_user available in app state or import it if possible. 
-# To avoid circular imports, let's assume we can attach the notify function to app.state or similar.
-# Actually, the notify_user function in main depends on active_connections.
-# Let's move the websocket logic to main and just call a helper here? 
-# Or better: move active_connections and notify_user to a new `services/notification.py`.
-
-# However, for this refactor, let's try to keep it simple. We will leave WebSocket endpoint in main.py 
-# and passing the `app` object allows us to access state, but `notify_user` isn't in state.
-# We will just redefine `notify_user` here if we move `active_connections` or import it.
-# Let's keep `notify_user` in this file or a shared service.
-# Ideally, `active_connections` should be a singleton service.
-
-# Let's create a notification service to solve this cleanly.
-
 from services.notification_service import notify_user
 
 def safe_get(result, key):
@@ -208,6 +190,10 @@ async def start_syncing(
     request: Request,
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    Initializes a background syncing task for a given branch and returns the task ID.
+    Enforces role-based permissions to ensure users only sync their authorized branches.
+    """
     # Verify if user has permission to sync this branch
     if current_user["role"] != "admin" and current_user["role"] != branch:
         raise HTTPException(
@@ -232,5 +218,8 @@ async def start_syncing(
 
 @router.get("/task-status/{task_id}")
 async def get_task_status(task_id: str):
+    """
+    Fetches the current status and progress of a background syncing task.
+    """
     response = supabase.table("tasks").select("*").eq("id", task_id).execute()
     return response.data if response.data else {"error": "Task not found"}

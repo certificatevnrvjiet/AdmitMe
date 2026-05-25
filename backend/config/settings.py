@@ -19,6 +19,7 @@ MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 GOOGLE_CREDENTIALS= os.getenv("GOOGLE_CREDENTIALS")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
 # Storage configuration

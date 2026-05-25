@@ -121,6 +121,10 @@ def _first(raw: dict[str, Any], *keys: str) -> str:
 
 
 def parse_extraction(doc_type: str, raw: dict[str, Any]) -> dict[str, str]:
+    """
+    Parses the raw JSON output from the Gemini LLM and maps the keys to the database schema.
+    Handles multiple document types (e.g., tenth_memo, aadhaar, transfer_certificate).
+    """
     if not isinstance(raw, dict) or raw.get("error"):
         return {}
 
@@ -234,6 +238,11 @@ def _prompt_for_doc(doc_type: str, student: dict[str, Any]) -> str:
 
 
 def replace_comparison_results(student: dict[str, Any], parsed_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Compares the newly parsed LLM extraction fields against the values the student submitted.
+    Deletes the old comparison results and saves the new match/mismatch statuses.
+    It normalizes fields (names, numbers, dates) to avoid trivial mismatches.
+    """
     student_id = student.get("aadhaar_card_number")
     supabase.table("comparison_results").delete().eq("student_id", student_id).execute()
 
@@ -287,6 +296,13 @@ async def run_engine_for_student(
     username: str | None = None,
     doc_types: list[str] | None = None,
 ) -> dict[str, Any]:
+    """
+    Main background engine logic for a single student. 
+    1. Fetches document files from storage.
+    2. Invokes LLM extraction and tracks it in `extraction_runs`.
+    3. Parses output and tracks in `parsed_extractions`.
+    4. Triggers comparison logic.
+    """
     student = fetch_student(student_id)
     if not student:
         raise ValueError("Student not found")

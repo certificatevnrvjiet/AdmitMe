@@ -1,5 +1,5 @@
 from fastapi import Request
-from config.settings import GOOGLE_API_KEY,GOOGLE_CREDENTIALS
+from config.settings import GOOGLE_API_KEY, GOOGLE_CREDENTIALS, GEMINI_MODEL
 from googleapiclient.discovery import build
 from io import BytesIO
 from googleapiclient.http import MediaIoBaseDownload
@@ -29,9 +29,6 @@ def _load_creds_dict():
         return None
 
 SCOPES = [
-    # 'https://www.googleapis.com/auth/drive.readonly',  # Read-only access to Google Drive files
-    # 'https://www.googleapis.com/auth/spreadsheets.readonly' # Read-only access to Google Sheets
-    # For full access, use:
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets'
 ]
@@ -115,10 +112,9 @@ def download_drive_image_as_bytes(file_id, drive_service):
         while not done:
             status, done = downloader.next_chunk()
         fh.seek(0)
-        # print("Hi")
+        
         # Handle PDF files
         if mime_type == "application/pdf":
-            # print(mime_type)
             pdf_doc = fitz.open(stream=fh.read(), filetype="pdf")
             if len(pdf_doc) == 0:
                 raise Exception(f"PDF file {file_name} has no pages")
@@ -127,7 +123,6 @@ def download_drive_image_as_bytes(file_id, drive_service):
             image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
         # Handle image files
         elif mime_type.startswith("image/"):
-            # print(mime_type)
             image = Image.open(fh).convert("RGB")
         else:
             raise Exception(f"Unsupported MIME type: {mime_type}")
@@ -140,6 +135,7 @@ def download_drive_image_as_bytes(file_id, drive_service):
     except Exception as e:
         print(f"Error downloading file from Drive: {e}")
         return None
+
 async def download_image_from_drive(file_id: str, cred) -> bytes | None:
     """Async wrapper for Drive download with credentials refresh"""
     async with DRIVE_SEMAPHORE:
@@ -158,8 +154,12 @@ async def download_image_from_drive(file_id: str, cred) -> bytes | None:
 
 
 def process_image_with_gemini(image_bytes, prompt):
+    """
+    Configure the Google Generative AI client and process the given image bytes with a text prompt.
+    Returns the generated raw text from the model.
+    """
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel(GEMINI_MODEL)
     try:
         image = Image.open(BytesIO(image_bytes))
         contents = [image, prompt]
