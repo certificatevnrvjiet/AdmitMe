@@ -88,6 +88,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
     const [rotationAngle, setRotationAngle] = useState(0); // Add rotation state
     const [comparisonResults, setComparisonResults] = useState([]);
     const [engineStatus, setEngineStatus] = useState("");
+    const [engineRunning, setEngineRunning] = useState(false);
+    const enginePollRef = React.useRef(null);
 
     // Use custom hook to disable browser zoom when modal is open
     useDisableBrowserZoom(isOpen);
@@ -209,15 +211,55 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
         }
     };
 
+    // Cleanup polling on unmount
+    React.useEffect(() => {
+        return () => {
+            if (enginePollRef.current) clearInterval(enginePollRef.current);
+        };
+    }, []);
+
+    const pollTaskUntilDone = React.useCallback((taskId) => {
+        if (enginePollRef.current) clearInterval(enginePollRef.current);
+        setEngineRunning(true);
+        enginePollRef.current = setInterval(async () => {
+            try {
+                const { data } = await API.get(`/task-status/${taskId}`);
+                const taskRow = Array.isArray(data) ? data[0] : data;
+                const taskStatus = taskRow?.status || 'unknown';
+                if (taskStatus === 'completed') {
+                    clearInterval(enginePollRef.current);
+                    enginePollRef.current = null;
+                    setEngineRunning(false);
+                    setEngineStatus('Extraction complete. Results refreshed.');
+                    await fetchComparisonResults();
+                } else if (taskStatus === 'failed') {
+                    clearInterval(enginePollRef.current);
+                    enginePollRef.current = null;
+                    setEngineRunning(false);
+                    setEngineStatus(`Extraction failed: ${taskRow?.error || 'Unknown error'}`);
+                } else {
+                    const pct = taskRow?.progress ?? '';
+                    setEngineStatus(`Extracting from documents… ${pct ? pct + '%' : ''}`);
+                }
+            } catch {
+                // keep polling
+            }
+        }, 3000);
+    }, [fetchComparisonResults]);
+
     const handleRunEngines = async () => {
         const studentId = editedStudent?.aadhaar_card_number;
         if (!studentId) return;
         try {
-            setEngineStatus("Engine run queued...");
+            setEngineStatus('Queuing extraction engine…');
+            setEngineRunning(true);
             const { data } = await API.post(`/students/${studentId}/engine-runs`, { force: true });
-            setEngineStatus(`Engine run queued. Task ID: ${data.task_id}`);
+            const taskId = data.task_id;
+            setEngineStatus(`Engine queued (task ${taskId}). Extracting…`);
+            pollTaskUntilDone(taskId);
         } catch (error) {
-            setEngineStatus(error.response?.data?.detail || error.message || "Failed to start engine run");
+            setEngineRunning(false);
+            setEngineStatus(error.response?.data?.detail || error.message || 'Failed to start engine run');
         }
     };
 
@@ -671,24 +713,42 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                 const mismatches = comparisonResults.filter((row) => row.match_status !== 'match' && !row.reviewer_override);
                 return (
                     <div className="space-y-4">
-                        <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                        <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-sm font-semibold text-gray-800">Engine Comparison</p>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-sm font-semibold text-gray-800 dark:text-white">Document Extraction</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
                                         {comparisonResults.length
-                                            ? `${mismatches.length} fields need attention out of ${comparisonResults.length}.`
-                                            : 'No comparison results yet.'}
+                                            ? `${mismatches.length} field${mismatches.length !== 1 ? 's' : ''} need attention out of ${comparisonResults.length} checked.`
+                                            : 'No extraction results yet. Click "Run Extraction" to extract data from uploaded documents.'}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={handleRunEngines}
-                                    className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-                                >
-                                    Run Engines
-                                </button>
+                                <div className="flex gap-2">
+                                    {comparisonResults.length > 0 && (
+                                        <button
+                                            onClick={fetchComparisonResults}
+                                            disabled={engineRunning}
+                                            className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                                        >
+                                            ↻ Refresh
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleRunEngines}
+                                        disabled={engineRunning}
+                                        className="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 flex items-center gap-1"
+                                    >
+                                        {engineRunning ? (
+                                            <><svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Extracting…</>
+                                        ) : 'Run Extraction'}
+                                    </button>
+                                </div>
                             </div>
-                            {engineStatus && <p className="mt-2 text-xs text-blue-700">{engineStatus}</p>}
+                            {engineStatus && (
+                                <p className={`mt-2 text-xs ${engineRunning ? 'text-blue-600 dark:text-blue-400' : engineStatus.includes('failed') || engineStatus.includes('Failed') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                    {engineStatus}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             {comparisonResults.map((row) => {

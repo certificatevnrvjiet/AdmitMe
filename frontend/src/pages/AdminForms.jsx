@@ -136,12 +136,12 @@ export default function AdminForms() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900 dark:bg-gray-900 dark:text-white">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Admission Forms</h1>
-            <p className="text-sm text-gray-600">Create, publish, and review student admission form responses.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Create, publish, and review student admission form responses.</p>
           </div>
           <button onClick={createNew} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
             New Form
@@ -149,15 +149,15 @@ export default function AdminForms() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-lg border border-gray-200 bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase text-gray-500">Forms</h2>
+          <aside className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase text-gray-500 dark:text-gray-400">Forms</h2>
             {loading && <p className="text-sm text-gray-500">Loading...</p>}
             <div className="space-y-2">
               {forms.map((form) => (
                 <button
                   key={form.id}
                   onClick={() => setSelectedId(form.id)}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${selectedId === form.id ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${selectedId === form.id ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300"}`}
                 >
                   <div className="font-medium">{form.title}</div>
                   <div className="text-xs opacity-80">/{form.slug} - {form.status}</div>
@@ -167,18 +167,18 @@ export default function AdminForms() {
           </aside>
 
           <main className="space-y-6">
-            <section className="rounded-lg border border-gray-200 bg-white p-5">
+            <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
               {selectedForm && (
-                <div className="mb-5 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+                <div className="mb-5 rounded-md border border-blue-100 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20 p-4 text-sm text-blue-900 dark:text-blue-300">
                   <div className="font-semibold">{selectedForm.title}</div>
                   <div className="mt-2 grid gap-2 md:grid-cols-3">
-                    <a className="rounded-md bg-white px-3 py-2 text-blue-700 hover:underline" href={studentFormUrl} target="_blank" rel="noreferrer">
+                    <a className="rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-blue-700 dark:text-blue-300 hover:underline" href={studentFormUrl} target="_blank" rel="noreferrer">
                       Student login link
                     </a>
-                    <a className="rounded-md bg-white px-3 py-2 text-blue-700 hover:underline" href={portalUrl} target="_blank" rel="noreferrer">
+                    <a className="rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-blue-700 dark:text-blue-300 hover:underline" href={portalUrl} target="_blank" rel="noreferrer">
                       Direct portal link
                     </a>
-                    <a className="rounded-md bg-white px-3 py-2 text-blue-700 hover:underline" href={publicApiUrl} target="_blank" rel="noreferrer">
+                    <a className="rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-blue-700 dark:text-blue-300 hover:underline" href={publicApiUrl} target="_blank" rel="noreferrer">
                       Public form API
                     </a>
                   </div>
@@ -191,43 +191,43 @@ export default function AdminForms() {
               )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium">Title</span>
-                  <input disabled={isDefaultForm} value={editor.title} onChange={(e) => setEditor((prev) => ({ ...prev, title: e.target.value }))} className="w-full rounded-md border px-3 py-2 disabled:bg-gray-100" />
+                  <span className="mb-1 block text-sm font-medium dark:text-gray-300">Title</span>
+                  <input disabled={isDefaultForm} value={editor.title} onChange={(e) => setEditor((prev) => ({ ...prev, title: e.target.value }))} className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 disabled:bg-gray-100 dark:disabled:bg-gray-900" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium">Slug</span>
-                  <input disabled={isDefaultForm} value={editor.slug} onChange={(e) => setEditor((prev) => ({ ...prev, slug: e.target.value }))} className="w-full rounded-md border px-3 py-2 disabled:bg-gray-100" />
+                  <span className="mb-1 block text-sm font-medium dark:text-gray-300">Slug</span>
+                  <input disabled={isDefaultForm} value={editor.slug} onChange={(e) => setEditor((prev) => ({ ...prev, slug: e.target.value }))} className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 disabled:bg-gray-100 dark:disabled:bg-gray-900" />
                 </label>
                 <label className="block md:col-span-2">
-                  <span className="mb-1 block text-sm font-medium">Description</span>
-                  <textarea disabled={isDefaultForm} value={editor.description} onChange={(e) => setEditor((prev) => ({ ...prev, description: e.target.value }))} className="min-h-20 w-full rounded-md border px-3 py-2 disabled:bg-gray-100" />
+                  <span className="mb-1 block text-sm font-medium dark:text-gray-300">Description</span>
+                  <textarea disabled={isDefaultForm} value={editor.description} onChange={(e) => setEditor((prev) => ({ ...prev, description: e.target.value }))} className="min-h-20 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 disabled:bg-gray-100 dark:disabled:bg-gray-900" />
                 </label>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button onClick={saveForm} disabled={isDefaultForm} className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Save Form</button>
                 {selectedId && !isDefaultForm && (
-                  <button onClick={publishToggle} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700">
+                  <button onClick={publishToggle} className="rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     {editor.status === "published" ? "Unpublish" : "Publish"}
                   </button>
                 )}
               </div>
             </section>
 
-            <section className="rounded-lg border border-gray-200 bg-white p-5">
+            <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Fields</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Fields</h2>
                 <button onClick={addField} disabled={isDefaultForm} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Add Field</button>
               </div>
               <div className="space-y-3">
                 {editor.fields.map((field, index) => (
-                  <div key={`${field.field_key}-${index}`} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-6">
-                    <input disabled={isDefaultForm} placeholder="Section" value={field.section || ""} onChange={(e) => updateField(index, "section", e.target.value)} className="rounded-md border px-2 py-2 text-sm disabled:bg-gray-100" />
-                    <input disabled={isDefaultForm} placeholder="Field key" value={field.field_key || ""} onChange={(e) => updateField(index, "field_key", e.target.value)} className="rounded-md border px-2 py-2 text-sm disabled:bg-gray-100" />
-                    <input disabled={isDefaultForm} placeholder="Label" value={field.label || ""} onChange={(e) => updateField(index, "label", e.target.value)} className="rounded-md border px-2 py-2 text-sm md:col-span-2 disabled:bg-gray-100" />
-                    <select disabled={isDefaultForm} value={field.field_type || "text"} onChange={(e) => updateField(index, "field_type", e.target.value)} className="rounded-md border px-2 py-2 text-sm disabled:bg-gray-100">
-                      {["text", "email", "tel", "date", "number", "select", "textarea", "file"].map((type) => <option key={type}>{type}</option>)}
+                  <div key={`${field.field_key}-${index}`} className="grid gap-3 rounded-md border border-gray-200 dark:border-gray-700 p-3 md:grid-cols-6">
+                    <input disabled={isDefaultForm} placeholder="Section" value={field.section || ""} onChange={(e) => updateField(index, "section", e.target.value)} className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-900" />
+                    <input disabled={isDefaultForm} placeholder="Field key" value={field.field_key || ""} onChange={(e) => updateField(index, "field_key", e.target.value)} className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-900" />
+                    <input disabled={isDefaultForm} placeholder="Label" value={field.label || ""} onChange={(e) => updateField(index, "label", e.target.value)} className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-2 text-sm md:col-span-2 disabled:bg-gray-100 dark:disabled:bg-gray-900" />
+                    <select disabled={isDefaultForm} value={field.field_type || "text"} onChange={(e) => updateField(index, "field_type", e.target.value)} className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-900">
+                      {["text", "email", "tel", "date", "number", "select", "textarea", "file"].map((type) => <option key={type} className="dark:bg-gray-800">{type}</option>)}
                     </select>
-                    <label className="flex items-center gap-2 text-sm">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input disabled={isDefaultForm} type="checkbox" checked={Boolean(field.required)} onChange={(e) => updateField(index, "required", e.target.checked)} />
                       Required
                     </label>
@@ -236,7 +236,7 @@ export default function AdminForms() {
                       disabled={isDefaultForm}
                       value={Array.isArray(field.options) ? field.options.join(", ") : field.options || ""}
                       onChange={(e) => updateField(index, "options", e.target.value)}
-                      className="rounded-md border px-2 py-2 text-sm md:col-span-5 disabled:bg-gray-100"
+                      className="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-2 text-sm md:col-span-5 disabled:bg-gray-100 dark:disabled:bg-gray-900"
                     />
                     <button
                       disabled={isDefaultForm}
@@ -250,11 +250,11 @@ export default function AdminForms() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-gray-200 bg-white p-5">
-              <h2 className="mb-3 text-lg font-semibold">Responses</h2>
+            <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+              <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Responses</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-100 text-left text-gray-600">
+                  <thead className="bg-gray-100 dark:bg-gray-900 text-left text-gray-600 dark:text-gray-400">
                     <tr>
                       <th className="px-3 py-2">Student ID</th>
                       <th className="px-3 py-2">Submitted By</th>
@@ -264,7 +264,7 @@ export default function AdminForms() {
                   </thead>
                   <tbody>
                     {responses.map((response) => (
-                      <tr key={response.id} className="border-t">
+                      <tr key={response.id} className="border-t dark:border-gray-700">
                         <td className="px-3 py-2">{response.student_id}</td>
                         <td className="px-3 py-2">{response.submitted_by}</td>
                         <td className="px-3 py-2">{response.status}</td>

@@ -20,8 +20,6 @@ function Vnrheader() {
 
     const handleThemeToggle = () => {
         toggleTheme();
-        // Force a re-render of the document
-        document.documentElement.classList.toggle('dark', !isDarkMode);
     };
 
     const handleLogout = () => {

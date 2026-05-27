@@ -111,11 +111,11 @@ const StudentLoginPage = ({ initialMode = "login" }) => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-65px)] bg-slate-50 px-4 py-10">
+    <div className="min-h-[calc(100vh-65px)] bg-slate-50 dark:bg-gray-900 px-4 py-10">
       <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-[1fr_420px] md:items-center">
         <div className="hidden md:block">
-          <h1 className="text-4xl font-bold text-gray-900">Student Admission Login</h1>
-          <p className="mt-4 max-w-xl text-lg text-gray-600">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Student Admission Login</h1>
+          <p className="mt-4 max-w-xl text-lg text-gray-600 dark:text-gray-300">
             Sign in with your student account to view the admission form, upload documents, and submit your application.
           </p>
           <div className="mt-6 max-w-xl space-y-3">
@@ -126,8 +126,8 @@ const StudentLoginPage = ({ initialMode = "login" }) => {
                 onClick={() => setSelectedFormSlug(form.slug)}
                 className={`w-full rounded-md border p-4 text-left transition ${
                   selectedFormSlug === form.slug
-                    ? "border-blue-500 bg-blue-50 text-blue-900"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-blue-300"
+                    ? "border-blue-500 bg-blue-50 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-500"
                 }`}
               >
                 <div className="font-semibold">{form.title}</div>
@@ -163,7 +163,7 @@ const StudentLoginPage = ({ initialMode = "login" }) => {
             </select>
           </label>
 
-          <div className="mt-5 grid grid-cols-2 rounded-md border border-gray-200 bg-gray-100 p-1 text-sm font-semibold">
+          <div className="mt-5 grid grid-cols-2 rounded-md border border-gray-200 bg-gray-100 p-1 text-sm font-semibold dark:border-gray-700 dark:bg-gray-900">
             <button
               type="button"
               onClick={() => {
@@ -171,7 +171,7 @@ const StudentLoginPage = ({ initialMode = "login" }) => {
                 resetMessages();
               }}
               className={`flex items-center justify-center gap-2 rounded px-3 py-2 ${
-                mode === "login" ? "bg-white text-blue-700 shadow-sm" : "text-gray-600"
+                mode === "login" ? "bg-white text-blue-700 shadow-sm dark:bg-gray-800 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"
               }`}
             >
               <FiLogIn /> Login
@@ -183,7 +183,7 @@ const StudentLoginPage = ({ initialMode = "login" }) => {
                 resetMessages();
               }}
               className={`flex items-center justify-center gap-2 rounded px-3 py-2 ${
-                mode === "register" ? "bg-white text-blue-700 shadow-sm" : "text-gray-600"
+                mode === "register" ? "bg-white text-blue-700 shadow-sm dark:bg-gray-800 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"
               }`}
             >
               <FiUserPlus /> Register

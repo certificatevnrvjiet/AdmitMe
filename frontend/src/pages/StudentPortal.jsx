@@ -323,17 +323,17 @@ export default function StudentPortal() {
   const renderField = (field) => {
     if (field.field_type === "file") {
       return (
-        <label key={field.field_key} className="block rounded-md border border-gray-200 p-3">
-          <span className="mb-2 block text-sm font-medium text-gray-700">
+        <label key={field.field_key} className="block rounded-md border border-gray-200 dark:border-gray-700 p-3">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             {field.label}{field.required ? " *" : ""}
           </span>
           <input
             type="file"
             accept=".pdf,image/*"
             onChange={(event) => setFiles((prev) => ({ ...prev, [field.field_key]: event.target.files?.[0] || null }))}
-            className="w-full text-sm"
+            className="w-full text-sm text-gray-700 dark:text-gray-300"
           />
-          {field.help_text && <p className="mt-1 text-xs text-gray-500">{field.help_text}</p>}
+          {field.help_text && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{field.help_text}</p>}
         </label>
       );
     }
@@ -342,16 +342,16 @@ export default function StudentPortal() {
     if (field.field_type === "select" || options.length) {
       return (
         <label key={field.field_key} className="block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">
+          <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             {field.label}{field.required ? " *" : ""}
           </span>
           <select
             value={form[field.field_key] || ""}
             onChange={(event) => updateField(field.field_key, event.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none"
           >
             {options.map((option) => (
-              <option key={option} value={option}>{String(option).toUpperCase()}</option>
+              <option key={option} value={option} className="dark:bg-gray-800">{String(option).toUpperCase()}</option>
             ))}
           </select>
         </label>
@@ -360,14 +360,14 @@ export default function StudentPortal() {
 
     return (
       <label key={field.field_key} className="block">
-        <span className="mb-1 block text-sm font-medium text-gray-700">
+        <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
           {field.label}{field.required ? " *" : ""}
         </span>
         {field.field_type === "textarea" ? (
           <textarea
             value={form[field.field_key] || ""}
             onChange={(event) => updateField(field.field_key, event.target.value)}
-            className="min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            className="min-h-24 w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none"
           />
         ) : (
           <input
@@ -376,7 +376,7 @@ export default function StudentPortal() {
             pattern={field.field_type === "tel" || digitOnlyFields.has(field.field_key) ? "[0-9]*" : undefined}
             value={form[field.field_key] || ""}
             onChange={(event) => updateField(field.field_key, event.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none"
           />
         )}
       </label>
@@ -388,7 +388,7 @@ export default function StudentPortal() {
     const documentByType = new Map((submittedResponse?.documents || []).map((doc) => [doc.doc_type, doc]));
     return (
       <div className="mt-6 space-y-5">
-        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+        <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20 p-4 text-sm text-green-900 dark:text-green-300">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-semibold">Submitted application</p>
@@ -406,7 +406,7 @@ export default function StudentPortal() {
                 setShowSubmittedView(false);
                 setError("");
               }}
-              className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-green-800 shadow-sm hover:bg-green-100"
+              className="rounded-md bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-green-800 dark:text-green-200 shadow-sm hover:bg-green-100 dark:hover:bg-gray-600"
             >
               Edit / Resubmit
             </button>
@@ -422,7 +422,7 @@ export default function StudentPortal() {
             <button
               type="button"
               onClick={() => downloadBlob(`/forms/${formDefinition.id}/responses/me/documents.pdf`, "uploaded-documents.pdf")}
-              className="rounded-md border border-green-300 bg-white px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-100"
+              className="rounded-md border border-green-300 dark:border-green-800 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-gray-600"
             >
               Download All Documents PDF
             </button>
@@ -430,8 +430,8 @@ export default function StudentPortal() {
         </div>
 
         {sections.map((section) => (
-          <section key={section.name} className="rounded-md border border-gray-200 bg-white p-4">
-            <h2 className="text-lg font-semibold text-gray-900">{section.name}</h2>
+          <section key={section.name} className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{section.name}</h2>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               {section.fields.map((field) => {
                 const doc = documentByType.get(field.field_key);
@@ -439,10 +439,10 @@ export default function StudentPortal() {
                   ? (doc ? `${doc.status || "uploaded"} (${doc.mime_type || doc.provider || "document"})` : "Not uploaded")
                   : responseData[field.field_key];
                 return (
-                  <div key={field.field_key} className="rounded-md bg-gray-50 px-3 py-2">
-                    <p className="text-xs font-medium uppercase text-gray-500">{field.label}</p>
+                  <div key={field.field_key} className="rounded-md bg-gray-50 dark:bg-gray-900/50 px-3 py-2">
+                    <p className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">{field.label}</p>
                     <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="break-words text-sm text-gray-900">{String(value || "-")}</p>
+                      <p className="break-words text-sm text-gray-900 dark:text-white">{String(value || "-")}</p>
                       {field.field_type === "file" && doc && (
                         <button
                           type="button"
@@ -450,7 +450,7 @@ export default function StudentPortal() {
                             `/forms/${formDefinition.id}/responses/me/documents/${field.field_key}/download`,
                             documentDownloadName(field, doc)
                           )}
-                          className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                          className="shrink-0 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
                         >
                           Download
                         </button>
@@ -472,20 +472,20 @@ export default function StudentPortal() {
 
   if (isFormsHome) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-900 px-4 py-8">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h1 className="text-2xl font-bold text-gray-900">Student Admission Forms</h1>
-            <p className="mt-1 text-sm text-gray-600">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Admission Forms</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
               Select a published form, view submitted applications, or continue editing a form.
             </p>
             {formsLoading && (
-              <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+              <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 dark:border-blue-900/55 dark:bg-blue-950/20 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
                 Loading your forms...
               </div>
             )}
             {error && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 dark:border-red-900/55 dark:bg-red-950/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                 {error}
               </div>
             )}
@@ -493,20 +493,20 @@ export default function StudentPortal() {
               {(availableForms.length ? availableForms : [fallbackAdmissionForm]).map((formItem) => {
                 const response = formResponses[formItem.id];
                 return (
-                  <article key={formItem.id || formItem.slug} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                  <article key={formItem.id || formItem.slug} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900">{formItem.title}</h2>
-                        <p className="mt-1 text-sm text-gray-600">{formItem.description}</p>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{formItem.title}</h2>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{formItem.description}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                        response ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                        response ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
                       }`}>
                         {response ? "Submitted" : "Not filled"}
                       </span>
                     </div>
                     {response && (
-                      <div className="mt-4 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                      <div className="mt-4 rounded-md bg-gray-50 dark:bg-gray-900/50 p-3 text-sm text-gray-700 dark:text-gray-300">
                         <p>Student ID: <strong>{response.student_id || "-"}</strong></p>
                         <p>Status: <strong>{response.status || "submitted"}</strong></p>
                         {response.application_reference && <p>Reference: <strong>{response.application_reference}</strong></p>}
@@ -517,7 +517,7 @@ export default function StudentPortal() {
                         <button
                           type="button"
                           onClick={() => navigate(`/student-portal/${formItem.slug}?view=submitted`)}
-                          className="rounded-md border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                          className="rounded-md border border-blue-200 dark:border-blue-800 px-3 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                         >
                           View Submitted
                         </button>
@@ -546,22 +546,22 @@ export default function StudentPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900">{formDefinition?.title || "Student Admissions Portal"}</h1>
-        <p className="mt-1 text-sm text-gray-600">{formDefinition?.description}</p>
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900 px-4 py-8">
+      <div className="mx-auto max-w-5xl rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{formDefinition?.title || "Student Admissions Portal"}</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{formDefinition?.description}</p>
         {submittedLoading && (
-          <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 dark:border-blue-900/55 dark:bg-blue-950/20 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
             Checking your submitted form...
           </div>
         )}
         {submittedResponse && !showSubmittedView && (
-          <div className="mt-4 flex flex-col gap-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-800 md:flex-row md:items-center md:justify-between">
+          <div className="mt-4 flex flex-col gap-3 rounded-md border border-blue-100 bg-blue-50 dark:border-blue-900/55 dark:bg-blue-950/20 px-3 py-3 text-sm text-blue-800 dark:text-blue-300 md:flex-row md:items-center md:justify-between">
             <span>You already submitted this form. You can view it any time.</span>
             <button
               type="button"
               onClick={() => setShowSubmittedView(true)}
-              className="rounded-md bg-white px-3 py-2 font-semibold text-blue-700 shadow-sm"
+              className="rounded-md bg-white dark:bg-gray-700 px-3 py-2 font-semibold text-blue-700 dark:text-blue-300 shadow-sm"
             >
               View Submitted Form
             </button>
@@ -578,22 +578,22 @@ export default function StudentPortal() {
               onClick={() => {
                 if (index <= step || validateSection()) setStep(index);
               }}
-              className={`rounded-md px-3 py-2 text-center font-medium ${step >= index ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
+              className={`rounded-md px-3 py-2 text-center font-medium ${step >= index ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}
             >
               {section.name}
             </button>
           ))}
         </div>
 
-        {error && <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+        {error && <div className="mt-4 rounded-md border border-red-200 bg-red-50 dark:border-red-900/55 dark:bg-red-950/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">{error}</div>}
         {result && (
-          <div className="mt-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <div className="mt-4 rounded-md border border-green-200 bg-green-50 dark:border-green-900/55 dark:bg-green-950/20 px-3 py-2 text-sm text-green-800 dark:text-green-300">
             Application submitted successfully. Reference: <strong>{result.application_reference}</strong>, Student ID:{" "}
             <strong>{result.student_id}</strong>
           </div>
         )}
 
-        <h2 className="mt-6 text-lg font-semibold text-gray-900">{activeSection?.name}</h2>
+        <h2 className="mt-6 text-lg font-semibold text-gray-900 dark:text-white">{activeSection?.name}</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           {(activeSection?.fields || []).map(renderField)}
           {activeSection?.name === "Documents" && (

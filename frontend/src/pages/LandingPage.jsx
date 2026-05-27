@@ -79,7 +79,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className="min-h-[calc(100vh-65px)] text-gray-900 relative overflow-x-hidden"
+      className="min-h-[calc(100vh-65px)] text-gray-900 dark:text-gray-100 relative overflow-x-hidden"
       style={{
         backgroundImage: 'url(https://vnrvjiet.ac.in/assets/images/Numbers-Image.png)',
         backgroundSize: 'cover',
@@ -87,23 +87,23 @@ export default function LandingPage() {
       }}
     >
       {/* subtle overlay like LoginPage */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-blue-50/60 to-indigo-100/60" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-blue-50/60 to-indigo-100/60 dark:from-gray-950/80 dark:to-gray-900/70" />
 
       {/* HERO */}
       <section className="min-h-[75vh] flex items-center justify-center">
         <div className={`text-center px-6 transition-all duration-700 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           {/* <HeroIcon /> */}
-          <h1 className="font-extrabold text-gray-900 mt-6" style={{ transform: `scale(${scale})`, transition: 'transform 200ms ease-out', fontSize: 'clamp(48px, 8vw, 88px)' }}>
+          <h1 className="font-extrabold text-gray-900 dark:text-white mt-6" style={{ transform: `scale(${scale})`, transition: 'transform 200ms ease-out', fontSize: 'clamp(48px, 8vw, 88px)' }}>
             AdmitMe
           </h1>
-          <p className="text-gray-600 mt-4 text-lg max-w-2xl mx-auto">Simplify admissions — submit, verify, and track applications.</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-4 text-lg max-w-2xl mx-auto">Simplify admissions — submit, verify, and track applications.</p>
         </div>
       </section>
 
       {/* ABOUT - white cards grid */}
       <section className="py-12 px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-semibold text-center mb-8">What is AdmitMe?</h2>
+          <h2 className="text-2xl font-semibold text-center mb-8 text-gray-900 dark:text-white">What is AdmitMe?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {features.map((f) => (
               <FeatureCard key={f.title} icon={f.icon} title={f.title} description={f.description} />
@@ -117,8 +117,8 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto flex justify-center">
           <Card variant="transparent" className="w-full rounded-2xl shadow-lg p-10 transform hover:scale-105 transition-all duration-300">
             <div className="flex flex-col items-center text-center gap-6">
-              <h3 className="text-3xl font-semibold">Student Portal</h3>
-              <p className="text-gray-600 max-w-xl">Submit your application, upload documents, and track your admission status in real time.</p>
+              <h3 className="text-3xl font-semibold text-gray-900 dark:text-white">Student Portal</h3>
+              <p className="text-gray-600 dark:text-gray-300 max-w-xl">Submit your application, upload documents, and track your admission status in real time.</p>
                 <div>
                 <Button onClick={() => navigate('/student-login')} variant="red">Student Login</Button>
                 </div>
