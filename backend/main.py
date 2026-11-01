@@ -103,3 +103,11 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
             await websocket.receive_text()
     except WebSocketDisconnect:
         remove_connection(username)
+
+
+if __name__ == "__main__":
+    import os
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+
