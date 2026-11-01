@@ -8,7 +8,8 @@ from database import supabase
 from models.ApplicationModel import StudentApplicationRequest, StudentApplicationResponse
 from models.DocumentModel import DocumentUploadResponse
 from services.auth_service import get_current_user, is_student_owner, is_student_user
-from services.catalog_service import to_db_branch_code, to_db_program_level
+from services.catalog_service import to_db_branch_code
+from services.admissions_2026 import ADMISSIONS_TABLE
 from services.status_service import normalize_status
 from services.document_service import (
     LEGACY_DOC_FIELD_MAP,
@@ -63,21 +64,14 @@ async def _create_application_core(
             detail="Student users can submit applications only for their own email",
         )
 
-    student_id = payload.aadhaar_card_number
+    applicant = payload.to_admissions2026()
+    student_id = applicant.aadhaar_card_number
     application_reference = _build_application_reference(student_id)
 
-    parent_email = payload.father_email
-    parent_phone = payload.father_phone
-    if (payload.primary_contact_person or "").strip().lower() == "mother":
-        parent_email = payload.mother_email
-        parent_phone = payload.mother_phone
-
-    branch_code = to_db_branch_code(payload.branch_code)
-    degree_code = to_db_branch_code(payload.degree_code or payload.branch_code)
-    program_level = to_db_program_level(payload.program_level)
+    branch = to_db_branch_code(payload.branch)
 
     existing = (
-        supabase.table("students2025")
+        supabase.table(ADMISSIONS_TABLE)
         .select("aadhaar_card_number,student_email,application_reference")
         .eq("aadhaar_card_number", student_id)
         .limit(1)
@@ -93,66 +87,25 @@ async def _create_application_core(
             )
         application_reference = existing_row.get("application_reference") or application_reference
 
-    student_row = {
-        "student_name": payload.student_name,
-        "father_name": payload.father_name,
-        "mother_name": payload.mother_name,
-        "date_of_birth": payload.date_of_birth,
-        "gender": payload.gender,
-        "aadhaar_card_number": payload.aadhaar_card_number,
-        "program_level": program_level,
-        "degree_code": degree_code,
-        "branch_code": branch_code,
-        "admission_category": payload.admission_category,
+    student_row = applicant.to_student_record(
+        branch=branch,
+        source_system="admitme_application",
+    )
+    student_row.update({
         "application_reference": application_reference,
         "status": normalize_status("submitted"),
-        "Time_updated": _db_now(),
-        "tenth_board_name": payload.tenth_board_name,
-        "twelfth_board_name": payload.twelfth_board_name,
-        "eapcet_ht_no": payload.eapcet_ht_no,
-        "eapcet_rank": payload.eapcet_rank,
-        "jee_ht_no": payload.jee_ht_no,
-        "jee_mains_rank": payload.jee_mains_rank,
-        "mother_tongue": payload.mother_tongue,
-        "student_phone": payload.student_phone,
-        "father_phone": payload.father_phone,
-        "mother_phone": payload.mother_phone,
         "student_email": student_email,
-        "father_email": str(payload.father_email or ""),
-        "mother_email": str(payload.mother_email or ""),
-        "parent_email": str(parent_email or ""),
-        "parent_phone": str(parent_phone or ""),
-        "father_profession_and_designation": payload.father_profession_and_designation,
-        "mother_profession_and_designation": payload.mother_profession_and_designation,
-        "address_dno": payload.address_dno,
-        "address_street": payload.address_street,
-        "address_village_town": payload.address_village_town,
-        "address_mandal": payload.address_mandal,
-        "address_district": payload.address_district,
-        "address_state": payload.address_state,
-        "address_pincode": payload.address_pincode,
-        "rural_urban": payload.rural_urban,
-        "ews_status": payload.ews_status,
-        "category_name": payload.category_name,
-        "caste_as_per_tc": payload.caste_as_per_tc,
-        "ebc_status": payload.ebc_status,
-        "income": payload.income,
-        "minority": payload.minority,
-        "blood_group": payload.blood_group,
-        "ph_status": payload.ph_status,
-        "scribe": payload.scribe,
-        "student_type": "regular",
-    }
+    })
 
     if existing_row:
         (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .update(student_row)
             .eq("aadhaar_card_number", student_id)
             .execute()
         )
     else:
-        supabase.table("students2025").insert(student_row).execute()
+        supabase.table(ADMISSIONS_TABLE).insert(student_row).execute()
 
     return StudentApplicationResponse(
         application_reference=application_reference,
@@ -211,7 +164,7 @@ async def _upload_application_document_core(
     legacy_field = LEGACY_DOC_FIELD_MAP.get(normalized_doc_type)
     if legacy_field:
         (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .update({
                 legacy_field: f"{storage.name}:{saved_key}",
                 "Time_updated": _db_now(),

@@ -8,7 +8,10 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 
 from database import supabase
+from models.Admissions2026 import Admissions2026Applicant
 from models.FormModel import AdmissionFormCreate, AdmissionFormUpdate, FormField
+from services.catalog_service import to_db_branch_code
+from services.admissions_2026 import ADMISSIONS_TABLE
 from services.status_service import normalize_status
 
 
@@ -23,8 +26,8 @@ STUDENT_FIELD_KEYS = {
     "category_name", "caste_as_per_tc", "ebc_status", "income", "minority",
     "blood_group", "ph_status", "scribe", "tenth_board_name",
     "twelfth_board_name", "eapcet_ht_no", "eapcet_rank", "jee_ht_no",
-    "jee_mains_rank", "program_level", "branch_code", "degree_code",
-    "admission_category",
+    "jee_mains_rank", "branch",
+    "admission_category", "consent",
 }
 
 PHONE_FIELD_KEYS = {"student_phone", "father_phone", "mother_phone", "parent_phone"}
@@ -64,8 +67,7 @@ DEFAULT_FORM_FIELDS = [
     FormField(section="Category", field_key="blood_group", label="Blood Group", field_type="select", required=True, options=["A +", "A -", "B +", "B -", "O +", "O -", "AB +", "AB -"], sort_order=310),
     FormField(section="Category", field_key="ph_status", label="PH Status", field_type="select", required=True, options=["Yes", "No"], sort_order=320),
     FormField(section="Category", field_key="scribe", label="PH Scribe", field_type="select", required=True, options=["Yes", "No"], sort_order=330),
-    FormField(section="Academic", field_key="program_level", label="Program", field_type="select", required=True, options=["BTECH", "MTECH"], sort_order=340),
-    FormField(section="Academic", field_key="branch_code", label="Branch", required=True, sort_order=350),
+    FormField(section="Academic", field_key="branch", label="Branch", field_type="select", required=True, sort_order=340),
     FormField(section="Academic", field_key="tenth_board_name", label="10th Board", field_type="select", required=True, options=["TG BSE", "CBSE", "AP BSE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order=360),
     FormField(section="Academic", field_key="twelfth_board_name", label="12th Board", field_type="select", required=True, options=["TG BIE", "CBSE", "AP BIE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order=370),
     FormField(section="Academic", field_key="eapcet_ht_no", label="EAPCET Hall Ticket No", sort_order=380),
@@ -78,6 +80,7 @@ DEFAULT_FORM_FIELDS = [
     FormField(section="Documents", field_key="transfer_certificate", label="Transfer Certificate / Bonafide", field_type="file", required=True, maps_to_student_field=False, sort_order=450),
     FormField(section="Documents", field_key="eapcet_rank_card", label="EAPCET Rank Card", field_type="file", maps_to_student_field=False, sort_order=460),
     FormField(section="Documents", field_key="jee_rank_card", label="JEE Rank Card", field_type="file", maps_to_student_field=False, sort_order=470),
+    FormField(section="Declaration", field_key="consent", label="Consent", field_type="select", required=True, options=["I Consent"], sort_order=480),
 ]
 
 
@@ -288,8 +291,6 @@ def submit_form_response(form_id: str, response_data: dict[str, Any], current_us
         "application_reference": application_reference,
         "student_email": student_email,
         "status": normalize_status("submitted"),
-        "student_type": "regular",
-        "Time_updated": _db_now(),
     }
     custom_data: dict[str, Any] = {}
     for field in form.get("fields", []):
@@ -301,10 +302,22 @@ def submit_form_response(form_id: str, response_data: dict[str, Any], current_us
             student_row[key] = value
         else:
             custom_data[key] = value
-    if not student_row.get("degree_code"):
-        student_row["degree_code"] = student_row.get("branch_code", "")
-    if not student_row.get("program_level"):
-        student_row["program_level"] = "BTECH"
+
+    # Normalise form submissions through the exact DTO used by the Google
+    # Sheets importer. This prevents the form and import paths from drifting.
+    applicant = Admissions2026Applicant.from_application_payload(student_row)
+    normalised_values = applicant.model_dump()
+    for key in STUDENT_FIELD_KEYS:
+        if key in student_row and key in normalised_values:
+            student_row[key] = normalised_values[key]
+
+    try:
+        branch = to_db_branch_code(str(student_row.get("branch") or ""))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    student_row["branch"] = branch
+    student_row["source_system"] = "admitme_form"
     primary_contact = str(response_data.get("primary_contact_person") or "").strip().lower()
     if primary_contact == "mother":
         student_row["parent_phone"] = str(response_data.get("mother_phone") or "")
@@ -314,7 +327,7 @@ def submit_form_response(form_id: str, response_data: dict[str, Any], current_us
         student_row["parent_email"] = str(response_data.get("father_email") or "")
 
     existing = (
-        supabase.table("students2025")
+        supabase.table(ADMISSIONS_TABLE)
         .select("aadhaar_card_number,student_email,application_reference")
         .eq("aadhaar_card_number", student_id)
         .limit(1)
@@ -328,9 +341,9 @@ def submit_form_response(form_id: str, response_data: dict[str, Any], current_us
             raise HTTPException(status_code=403, detail="You are not allowed to modify this application")
         if existing[0].get("application_reference"):
             student_row["application_reference"] = existing[0]["application_reference"]
-        supabase.table("students2025").update(student_row).eq("aadhaar_card_number", student_id).execute()
+        supabase.table(ADMISSIONS_TABLE).update(student_row).eq("aadhaar_card_number", student_id).execute()
     else:
-        supabase.table("students2025").insert(student_row).execute()
+        supabase.table(ADMISSIONS_TABLE).insert(student_row).execute()
 
     response_id = _new_id()
     response_row = {
@@ -395,7 +408,7 @@ def get_student_form_response(
     if not response_row and form.get("id") == "default-admission":
         try:
             students = (
-                supabase.table("students2025")
+                supabase.table(ADMISSIONS_TABLE)
                 .select("*")
                 .eq("student_email", actor_email)
                 .order("Time_updated", desc=True)
@@ -425,6 +438,9 @@ def get_student_form_response(
             "updated_at": student.get("updated_at") or student.get("Time_updated"),
             "application_reference": student.get("application_reference"),
         }
+
+    if not response_row:
+        return None
 
     documents: list[dict[str, Any]] = []
     student_id = response_row.get("student_id")

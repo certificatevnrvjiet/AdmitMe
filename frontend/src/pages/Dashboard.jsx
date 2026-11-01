@@ -16,6 +16,15 @@ import FilterBar from "../components/dashboard/FilterBar";
 import StudentTable from "../components/dashboard/StudentTable";
 
 const Dashboard = () => {
+  const savedExtractAllTask = () => {
+    try {
+      const raw = localStorage.getItem('extractAllTask');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // State Declarations
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -35,8 +44,11 @@ const Dashboard = () => {
   const [TenthboardFilter, setTenthBoardFilter] = useState('all');
   const [TwelfthboardFilter, setTwelfthBoardFilter] = useState('all');
   const [SavingtoDrive, setSavingtoDrive] = useState(false);
+  const [extractAllLoading, setExtractAllLoading] = useState(false);
+  const [extractAllTask, setExtractAllTask] = useState(savedExtractAllTask);
   const [StudenttypeFilter, setStudentTypeFilter] = useState('regular'); // Default to Regular
   const [admissionCategoryFilter, setAdmissionCategoryFilter] = useState('all');
+  const [branchAliases, setBranchAliases] = useState({});
 
   // Context & Hooks
   const { isDarkMode } = useTheme();
@@ -69,6 +81,12 @@ const Dashboard = () => {
   }, [isAuthenticated, logout, navigate]);
 
   useEffect(() => {
+    API.get('/meta/programs-branches')
+      .then(({ data }) => setBranchAliases(data?.aliases || {}))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (department) {
       fetchStudents();
     }
@@ -92,6 +110,37 @@ const Dashboard = () => {
         toast.error(data.message || "Sync failed!");
         setSyncStatus(data.message);
         await fetchStudents();
+      } else if (data.type?.startsWith("extract_all_")) {
+        setExtractAllTask((current) => {
+          const merged = {
+            ...(current || {}),
+            id: data.task_id || current?.id,
+            task_id: data.task_id || current?.task_id,
+            batch_job_id: data.batch_job_id || current?.batch_job_id,
+            batch_state: data.batch_state || current?.batch_state,
+            progress: data.progress ?? current?.progress ?? 0,
+            total_students: data.total_students ?? current?.total_students,
+            total_documents: data.total_documents ?? current?.total_documents,
+            completed_documents: data.completed_documents ?? current?.completed_documents,
+            failed_documents: data.failed_documents ?? current?.failed_documents,
+            message: data.message || current?.message,
+            status: data.type === "extract_all_complete" ? "completed" : data.type === "extract_all_failed" ? "failed" : current?.status || "processing",
+          };
+          if (merged.status === "completed" || merged.status === "failed") {
+            localStorage.removeItem('extractAllTask');
+          } else {
+            localStorage.setItem('extractAllTask', JSON.stringify(merged));
+          }
+          return merged;
+        });
+
+        if (data.type === "extract_all_complete") {
+          toast.success(data.message || "Bulk extraction completed!");
+          await fetchStudents();
+        } else if (data.type === "extract_all_failed") {
+          toast.error(data.message || "Bulk extraction failed!");
+          await fetchStudents();
+        }
       }
     };
 
@@ -103,6 +152,39 @@ const Dashboard = () => {
       ws.close();
     };
   }, []);
+
+  const normalizeTaskResponse = (payload) => {
+    if (Array.isArray(payload)) return payload[0] || null;
+    return payload && !payload.error ? payload : null;
+  };
+
+  const refreshExtractAllTask = async (taskId) => {
+    if (!taskId) return;
+    const { data } = await API.get(`/task-status/${taskId}`);
+    const row = normalizeTaskResponse(data);
+    if (!row) return;
+
+    setExtractAllTask(row);
+    if (row.status === "completed" || row.status === "failed") {
+      localStorage.removeItem('extractAllTask');
+      await fetchStudents();
+    } else {
+      localStorage.setItem('extractAllTask', JSON.stringify(row));
+    }
+  };
+
+  useEffect(() => {
+    const taskId = extractAllTask?.id || extractAllTask?.task_id;
+    if (!taskId || ["completed", "failed"].includes((extractAllTask?.status || "").toLowerCase())) {
+      return undefined;
+    }
+
+    refreshExtractAllTask(taskId).catch(() => {});
+    const timer = window.setInterval(() => {
+      refreshExtractAllTask(taskId).catch(() => {});
+    }, 12000);
+    return () => window.clearInterval(timer);
+  }, [extractAllTask?.id, extractAllTask?.task_id, extractAllTask?.status]);
 
   const fetchStudents = async () => {
     try {
@@ -151,6 +233,10 @@ const Dashboard = () => {
 
   // Data Processing (Sorting & Filtering)
   const studentList = students.map((s) => s.data || s);
+  const normalizeBranch = (value) => {
+    const compact = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^ug/, '');
+    return branchAliases[compact] || compact;
+  };
   const sortData = (data) => {
     return [...data].sort((a, b) => {
       const aVal = a[sortConfig.key]?.toLowerCase?.() || '';
@@ -162,9 +248,9 @@ const Dashboard = () => {
   const filteredStudents = sortData(
     studentList.filter((s) => {
       const matchesSearch = s.student_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDepartment = department === 'admin' ? true : s.branch_code?.toLowerCase() === department;
+      const matchesDepartment = department === 'admin' ? true : normalizeBranch(s.branch) === normalizeBranch(department);
       const matchesStatus = statusFilter === 'all' ? true : s.status?.toLowerCase() === statusFilter;
-      const matchesBranch = branchFilter === 'all' ? true : s.branch_code?.toLowerCase() === branchFilter;
+      const matchesBranch = branchFilter === 'all' ? true : normalizeBranch(s.branch) === normalizeBranch(branchFilter);
       const matchesGender = GenderFilter === 'all' ? true : s.gender?.toLowerCase() === GenderFilter;
       const matchesTenthBoard = TenthboardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === TenthboardFilter;
       const matchesTwelfthBoard = TwelfthboardFilter === 'all' ? true : s.twelfth_board_name?.toLowerCase() === TwelfthboardFilter;
@@ -298,6 +384,52 @@ const Dashboard = () => {
     }
   };
 
+  const handleExtractAllPending = async () => {
+    setExtractAllLoading(true);
+    try {
+      const { data } = await API.post('/extract-all');
+      toast.success(data.message || 'Bulk extraction started!');
+      const task = {
+        id: data.task_id,
+        task_id: data.task_id,
+        batch_job_id: data.batch_job_id,
+        status: data.batch_job_id ? 'submitted' : 'completed',
+        progress: data.batch_job_id ? 20 : 100,
+        total_students: data.total_students,
+        total_documents: data.total_documents,
+        completed_documents: 0,
+        failed_documents: 0,
+        batch_state: data.batch_job_id ? 'JOB_STATE_PENDING' : 'completed',
+        message: data.message,
+      };
+      setExtractAllTask(task);
+      if (task.status === 'completed') {
+        localStorage.removeItem('extractAllTask');
+      } else {
+        localStorage.setItem('extractAllTask', JSON.stringify(task));
+      }
+      setSyncStatus(`Extraction submitted! Task ID: ${data.task_id}`);
+      refreshExtractAllTask(data.task_id).catch(() => {});
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.message || 'Bulk extraction failed');
+    } finally {
+      setExtractAllLoading(false);
+    }
+  };
+
+  const handleExtractStudent = async (studentId) => {
+    try {
+      toast.info('Queuing extraction for student...');
+      const { data } = await API.post(`/students/${studentId}/engine-runs`, {
+        force: true,
+        doc_types: []
+      });
+      toast.success(`Extraction queued! Task ID: ${data.task_id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.message || 'Extraction failed to queue');
+    }
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -313,6 +445,10 @@ const Dashboard = () => {
   if (error) {
     return <div className={`min-h-[calc(100vh-65px)] p-6 ${isDarkMode ? 'bg-gray-800 text-red-300' : 'bg-gray-100 text-red-700'}`}>Error: {error}</div>;
   }
+
+  const extractProgress = Math.max(0, Math.min(100, Number(extractAllTask?.progress || 0)));
+  const extractStatus = (extractAllTask?.status || '').toLowerCase();
+  const showExtractProgress = userRole === 'admin' && extractAllTask;
 
   return (
     <div className={`min-h-[calc(100vh-65px)] ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -347,6 +483,8 @@ const Dashboard = () => {
               SavingtoDrive={SavingtoDrive}
               handleSavetoDrive={handleSavetoDrive}
               isDarkMode={isDarkMode}
+              handleExtractAllPending={handleExtractAllPending}
+              extractAllLoading={extractAllLoading}
             />
 
             <StatsCards
@@ -359,6 +497,53 @@ const Dashboard = () => {
               total_students_processed={total_students_processed}
             />
           </div>
+
+          {showExtractProgress && (
+            <div className={`mt-6 overflow-hidden rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200 text-gray-800'}`}>
+              <div className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-medium">Extract All Progress</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                      {extractAllTask.message || `State: ${extractAllTask.batch_state || extractAllTask.status || 'queued'}`}
+                    </p>
+                  </div>
+                  <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-semibold ${
+                    extractStatus === 'completed'
+                      ? 'bg-green-100 text-green-800'
+                      : extractStatus === 'failed'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    {extractAllTask.batch_state || extractAllTask.status || 'queued'}
+                  </span>
+                </div>
+
+                <div className={`mt-4 h-3 rounded-full overflow-hidden ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                  <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${extractProgress}%` }} />
+                </div>
+
+                <div className={`mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                  <div>
+                    <div className="font-semibold">{extractProgress}%</div>
+                    <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Progress</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">{extractAllTask.total_documents ?? 0}</div>
+                    <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Submitted docs</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">{extractAllTask.completed_documents ?? 0} / {extractAllTask.total_documents ?? 0}</div>
+                    <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Processed</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">{extractAllTask.failed_documents ?? 0}</div>
+                    <div className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Failed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <FilterBar
             searchTerm={searchTerm} setSearchTerm={setSearchTerm}
@@ -380,6 +565,7 @@ const Dashboard = () => {
             getSortIcon={getSortIcon}
             handleStudentClick={handleStudentClick}
             formatDateDMY={formatDateDMY}
+            handleExtractStudent={handleExtractStudent}
           />
         </div>
       </main>

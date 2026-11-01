@@ -27,7 +27,7 @@ const StatsCards = ({
             'cse', 'ece', 'eee', 'me', 'ce', 'aids', 'ae', 'csbs', 'aiml', 'cseds', 'csecys', 'cseiot', 'eie', 'it', 'vlsi', 'biotechnology', 'roboticsandai'
         ];
         return departments.map(dept => {
-            const deptStudents = students.filter(s => (s.branch_code || '').toLowerCase() === dept);
+            const deptStudents = students.filter(s => (s.branch || '').toLowerCase() === dept);
             return {
                 name: getDepartmentName(dept),
                 total: deptStudents.length,

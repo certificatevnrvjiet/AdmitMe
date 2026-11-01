@@ -3,10 +3,10 @@ from pydantic import BaseModel
 from models.SheetModel import SheetStudent
 from models.SheetModelLE import SheetStudentLE
 from models.SheetModelB import SheetModelB
+from models.Admissions2026 import Admissions2026Applicant
 from datetime import datetime
 
 class Student(BaseModel):
-    degree_code: Optional[str] = ""
     ht_no: Optional[str] = ""
     student_name: Optional[str] = ""
     father_name: Optional[str] = ""
@@ -82,9 +82,8 @@ class Student(BaseModel):
     address_pincode: Optional[str] = ""
     rural_urban: Optional[str] = ""
     admission_category: Optional[str] = ""
-    program_level: Optional[str] = ""
     section: Optional[str] = ""
-    branch_code: Optional[str] = ""
+    branch: Optional[str] = ""
     college_code: Optional[str] = "07"
     ph_status: Optional[str] = ""
     scribe: Optional[str] = ""
@@ -98,8 +97,15 @@ class Student(BaseModel):
     twelfth_memo_link: Optional[str] = ""
     jee_rank_card_link: Optional[str] = ""
     eapcet_rank_card_link: Optional[str] = ""
+    consent: Optional[str] = ""
     student_type: Optional[str]=""
     Time_updated: Optional[datetime] = None  # Timestamp for last update
+    extraction_status: Optional[str] = "pending"
+
+    @classmethod
+    def from_admissions2026(cls, applicant: Admissions2026Applicant) -> 'Student':
+        """Create a database student from the canonical 2026 admission DTO."""
+        return cls(**applicant.to_student_record(branch=applicant.branch or ""))
 
     @classmethod
     def from_flat_student(cls, flat_student: SheetStudent) -> 'Student':

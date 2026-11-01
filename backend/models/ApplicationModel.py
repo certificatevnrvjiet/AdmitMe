@@ -1,11 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
-from services.catalog_service import (
-    normalize_branch_code,
-    normalize_program_level,
-    validate_program_branch,
-)
+from services.catalog_service import normalize_branch_code
+from models.Admissions2026 import Admissions2026Applicant
 
 
 class StudentApplicationRequest(BaseModel):
@@ -59,10 +56,9 @@ class StudentApplicationRequest(BaseModel):
     scribe: str
 
     # Admission
-    program_level: str = "BTECH"
-    branch_code: str = "cse"
-    degree_code: Optional[str] = None
+    branch: str
     admission_category: str = "Convenor"
+    consent: str = ""
 
     @field_validator("gender")
     @classmethod
@@ -81,29 +77,14 @@ class StudentApplicationRequest(BaseModel):
             raise ValueError("Aadhaar must be 12 digits")
         return cleaned
 
-    @field_validator("program_level")
+    @field_validator("branch")
     @classmethod
-    def validate_program_level(cls, value: str) -> str:
-        return normalize_program_level(value)
-
-    @field_validator("branch_code")
-    @classmethod
-    def validate_branch_code(cls, value: str) -> str:
+    def validate_branch(cls, value: str) -> str:
         return normalize_branch_code(value)
 
-    @field_validator("degree_code")
-    @classmethod
-    def validate_degree_code(cls, value: Optional[str]) -> Optional[str]:
-        if value is None or not str(value).strip():
-            return None
-        return normalize_branch_code(value)
-
-    @model_validator(mode="after")
-    def validate_program_branch_pair(self):
-        validate_program_branch(self.program_level, self.branch_code)
-        if not self.degree_code:
-            self.degree_code = self.branch_code
-        return self
+    def to_admissions2026(self) -> Admissions2026Applicant:
+        """Expose the same canonical DTO used by Google Form imports."""
+        return Admissions2026Applicant.from_application_payload(self.model_dump())
 
 
 class StudentApplicationResponse(BaseModel):

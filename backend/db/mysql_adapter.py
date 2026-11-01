@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import MetaData, Table, create_engine, desc, or_, select, update as sa_update, insert as sa_insert, delete as sa_delete
+from sqlalchemy import MetaData, Table, create_engine, desc, or_, select, text, update as sa_update, insert as sa_insert, delete as sa_delete
 
 
 @dataclass
@@ -16,6 +16,46 @@ class MySQLClient:
         self.engine = create_engine(url, pool_pre_ping=True, future=True)
         self.metadata = MetaData()
         self._tables: dict[str, Table] = {}
+        self._ensure_schema()
+
+    def _ensure_schema(self):
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS gemini_batch_jobs (
+                  id VARCHAR(50) PRIMARY KEY,
+                  task_id VARCHAR(100) NOT NULL,
+                  gemini_job_name TEXT NOT NULL,
+                  input_file_name TEXT,
+                  output_file_name TEXT,
+                  model VARCHAR(100),
+                  state VARCHAR(50) NOT NULL DEFAULT 'JOB_STATE_PENDING',
+                  total_students INT DEFAULT 0,
+                  total_documents INT DEFAULT 0,
+                  completed_documents INT DEFAULT 0,
+                  failed_documents INT DEFAULT 0,
+                  submitted_by VARCHAR(255),
+                  error TEXT,
+                  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  submitted_at DATETIME,
+                  completed_at DATETIME
+                );
+                """))
+                try:
+                    conn.execute(text("ALTER TABLE students2025 ADD COLUMN extraction_status VARCHAR(30) DEFAULT 'pending'"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE extraction_runs ADD COLUMN batch_job_id VARCHAR(50)"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE extraction_runs ADD COLUMN batch_key VARCHAR(120)"))
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def table(self, table_name: str) -> "MySQLTableQuery":
         return MySQLTableQuery(self, table_name)
@@ -62,6 +102,11 @@ class MySQLTableQuery:
 
     def eq(self, column: str, value: Any) -> "MySQLTableQuery":
         self._filters.append((column, value))
+        return self
+
+    def is_(self, column: str, value: Any) -> "MySQLTableQuery":
+        if str(value).lower() == "null":
+            self._filters.append((column, None))
         return self
 
     def or_(self, expression: str) -> "MySQLTableQuery":

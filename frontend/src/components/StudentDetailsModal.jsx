@@ -584,9 +584,8 @@ const StudentDetailsModal = ({ isOpen, onClose, onSave, student, headerHeightVh 
                         <div>
                             <h5 className="font-medium mb-4">Basic Details</h5>
                             {renderField('College Code', 'college_code')}
-                            {renderField('Branch Code', 'branch_code', 'text', false, branchCodes)}
+                            {renderField('Branch Code', 'branch', 'text', false, branchCodes)}
                             {renderField('Admission Category', 'admission_category')}
-                            {renderField('UG Code', 'degree_code')}
                         </div>
                         {/* Academic sub-section selector */}
                         <div className="flex space-x-2 mb-2">

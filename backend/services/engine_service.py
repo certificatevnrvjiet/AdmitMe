@@ -7,6 +7,13 @@ from uuid import uuid4
 
 from database import supabase
 from extractor import extract_from_document_ref, prompts
+from schemas.extraction_schemas import (
+    AadhaarSchema,
+    JeeEamcetSchema,
+    SSCMemoSchema,
+    TCSchema,
+    TwelfthMemoSchema,
+)
 from services.document_service import (
     LEGACY_DOC_FIELD_MAP,
     fetch_student,
@@ -46,6 +53,18 @@ DOC_PROMPT_INDEX = {
     "twelfth_memo": 4,
     "jee_rank_card": 2,
     "eapcet_rank_card": 2,
+}
+
+SCHEMA_MAPPING = {
+    0: SSCMemoSchema,
+    1: AadhaarSchema,
+    2: JeeEamcetSchema,
+    3: TCSchema,
+    4: TwelfthMemoSchema,
+    5: TwelfthMemoSchema,
+    6: TwelfthMemoSchema,
+    7: TwelfthMemoSchema,
+    8: TwelfthMemoSchema,
 }
 
 
@@ -112,11 +131,15 @@ def _first(raw: dict[str, Any], *keys: str) -> str:
     for key in keys:
         if key in raw and raw.get(key) not in (None, ""):
             return _as_text(raw.get(key))
-    lowered = {str(k).lower(): v for k, v in raw.items()}
+            
+    # Normalize keys by lowercasing and replacing underscores with spaces
+    normalized_raw = {str(k).lower().replace("_", " ").strip(): v for k, v in raw.items()}
     for key in keys:
-        value = lowered.get(key.lower())
+        norm_key = str(key).lower().replace("_", " ").strip()
+        value = normalized_raw.get(norm_key)
         if value not in (None, ""):
             return _as_text(value)
+            
     return ""
 
 
@@ -128,7 +151,9 @@ def parse_extraction(doc_type: str, raw: dict[str, Any]) -> dict[str, str]:
     if not isinstance(raw, dict) or raw.get("error"):
         return {}
 
-    scores = raw.get("Subject Scores") if isinstance(raw.get("Subject Scores"), dict) else {}
+    scores = raw.get("Subject Scores") or raw.get("subject_scores")
+    if not isinstance(scores, dict):
+        scores = {}
     parsed: dict[str, str] = {}
 
     if doc_type == "tenth_memo":
@@ -140,8 +165,8 @@ def parse_extraction(doc_type: str, raw: dict[str, Any]) -> dict[str, str]:
             "tenth_board_name": _first(raw, "tenth_board_name", "Board Name"),
             "tenth_school_name": _first(raw, "tenth_school_name"),
             "tenth_ht_no": _first(raw, "tenth_hall_ticket_no", "Hall Ticket Number"),
-            "tenth_total_marks_cgpa": _first(raw, "tenth_total_marks/CGPA", "Total Marks"),
-            "tenth_maximum_marks": _first(raw, "tenth_max_marks/CGPA", "Max Marks"),
+            "tenth_total_marks_cgpa": _first(raw, "tenth_total_marks_cgpa", "tenth_total_marks/CGPA", "Total Marks"),
+            "tenth_maximum_marks": _first(raw, "tenth_max_marks_cgpa", "tenth_max_marks/CGPA", "Max Marks"),
             "tenth_percentage": _first(raw, "tenth_percentage", "Percentage"),
             "tenth_month_year": _first(raw, "tenth_month_year", "Month_year"),
             "identification_mark_1": _first(raw, "identification_marks1"),
@@ -167,16 +192,16 @@ def parse_extraction(doc_type: str, raw: dict[str, Any]) -> dict[str, str]:
             "twelfth_total_marks": _first(raw, "Total Marks", "'Total Marks'"),
             "twelfth_percentage": _first(raw, "Percentage"),
             "twelfth_month_year": _first(raw, "Month_year", "Month_Passing"),
-            "m1": _as_text(scores.get("M1")),
-            "m2": _as_text(scores.get("M2")),
-            "m3": _as_text(scores.get("M3")),
-            "m4": _as_text(scores.get("M4")),
-            "p1": _as_text(scores.get("P1")),
-            "p2": _as_text(scores.get("P2")),
-            "ch1": _as_text(scores.get("C1")),
-            "ch2": _as_text(scores.get("C2")),
-            "plab": _as_text(scores.get("P_Practicals")),
-            "chlab": _as_text(scores.get("C_Practicals")),
+            "m1": _first(scores, "M1"),
+            "m2": _first(scores, "M2"),
+            "m3": _first(scores, "M3"),
+            "m4": _first(scores, "M4"),
+            "p1": _first(scores, "P1"),
+            "p2": _first(scores, "P2"),
+            "ch1": _first(scores, "C1"),
+            "ch2": _first(scores, "C2"),
+            "plab": _first(scores, "P_Practicals", "plab", "p_practicals"),
+            "chlab": _first(scores, "C_Practicals", "clab", "c_practicals"),
         })
     elif doc_type == "jee_rank_card":
         parsed.update({
@@ -225,16 +250,17 @@ def _get_document_rows(student: dict[str, Any], doc_types: list[str] | None = No
     return rows
 
 
-def _prompt_for_doc(doc_type: str, student: dict[str, Any]) -> str:
+def _prompt_for_doc(doc_type: str, student: dict[str, Any]) -> tuple[str, type]:
+    idx = DOC_PROMPT_INDEX.get(doc_type, 4)
     if doc_type == "twelfth_memo":
         board = (student.get("twelfth_board_name") or "").strip()
         if board == "ACE and A Level":
-            return prompts[5]
-        if board == "ICSE":
-            return prompts[6]
-        if board == "CBSE":
-            return prompts[7]
-    return prompts[DOC_PROMPT_INDEX.get(doc_type, 4)]
+            idx = 5
+        elif board == "ICSE":
+            idx = 6
+        elif board == "CBSE":
+            idx = 7
+    return prompts[idx], SCHEMA_MAPPING[idx]
 
 
 def replace_comparison_results(student: dict[str, Any], parsed_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -307,6 +333,8 @@ async def run_engine_for_student(
     if not student:
         raise ValueError("Student not found")
 
+    supabase.table("students2025").update({"extraction_status": "processing"}).eq("aadhaar_card_number", student_id).execute()
+
     providers = getattr(app.state, "storage_providers", {})
     document_rows = _get_document_rows(student, doc_types)
     parsed_rows: list[dict[str, Any]] = []
@@ -326,10 +354,12 @@ async def run_engine_for_student(
             "created_at": _db_now(),
             "updated_at": _db_now(),
         })
+        prompt, schema = _prompt_for_doc(doc_type, student)
         raw_output = await extract_from_document_ref(
             f"{document['provider']}:{document['object_key']}",
-            _prompt_for_doc(doc_type, student),
+            prompt,
             providers,
+            schema
         )
         status = "failed" if isinstance(raw_output, dict) and raw_output.get("error") else "completed"
         supabase.table("extraction_runs").update({
@@ -342,6 +372,9 @@ async def run_engine_for_student(
         extraction_runs.append(run)
 
         parsed_fields = parse_extraction(doc_type, raw_output if isinstance(raw_output, dict) else {})
+        if parsed_fields:
+            supabase.table("students2025").update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
+            
         parsed_row = _insert("parsed_extractions", {
             "extraction_run_id": run["id"],
             "student_id": student_id,
@@ -353,6 +386,11 @@ async def run_engine_for_student(
         parsed_rows.append(parsed_row)
 
     comparison_rows = replace_comparison_results(student, parsed_rows or _list_rows("parsed_extractions", student_id))
+    
+    has_errors = any(run.get("status") == "failed" for run in extraction_runs)
+    final_status = "failed" if has_errors else "completed"
+    supabase.table("students2025").update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
+    
     return {
         "student_id": student_id,
         "extraction_runs": extraction_runs,

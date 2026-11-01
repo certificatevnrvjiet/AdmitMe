@@ -10,12 +10,16 @@ create table if not exists extraction_runs (
   status varchar(50) not null default 'queued',
   raw_output json,
   error text,
+  batch_job_id varchar(50),
+  batch_key varchar(120),
   created_at datetime default current_timestamp,
   updated_at datetime default current_timestamp on update current_timestamp
 );
 
 create index idx_extraction_runs_student_id on extraction_runs(student_id);
 create index idx_extraction_runs_doc_type on extraction_runs(doc_type);
+create index idx_extraction_runs_batch_job_id on extraction_runs(batch_job_id);
+create unique index uq_extraction_runs_batch_key on extraction_runs(batch_key);
 
 create table if not exists parsed_extractions (
   id char(36) primary key default (uuid()),

@@ -11,6 +11,7 @@ from models.StudentModel import Student
 from models.DocumentModel import DocumentUploadResponse
 from models.VerificationModel import VerificationUpdate
 from services.catalog_service import normalize_branch_code, program_branch_catalog, normalize_student_branch_fields
+from services.admissions_2026 import ADMISSIONS_TABLE
 from services.status_service import normalize_status, is_transition_allowed, canonicalize_student_status
 from services.document_service import (
     normalize_doc_type,
@@ -151,11 +152,10 @@ async def update_student_verification(
         "verification_remarks": payload.remarks or "",
         "reviewed_by": payload.reviewed_by or current_user.get("username"),
         "reviewed_at": _db_datetime(payload.reviewed_at),
-        "Time_updated": _db_datetime(),
     }
 
     response = (
-        supabase.table("students2025")
+        supabase.table(ADMISSIONS_TABLE)
         .update(update_payload)
         .eq("aadhaar_card_number", student_id)
         .execute()

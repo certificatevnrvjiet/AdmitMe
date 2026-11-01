@@ -106,11 +106,18 @@ create table if not exists students2025 (
   jee_rank_card_link text,
   eapcet_rank_card_link text,
   student_type text,
+  extraction_status text default 'pending',
   Time_updated timestamptz,
   verification_remarks text,
   reviewed_by text,
   reviewed_at timestamptz,
   application_reference text,
+  source_system text,
+  source_spreadsheet_id text,
+  source_sheet_tab text,
+  source_response_timestamp text,
+  source_response_email text,
+  consent text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

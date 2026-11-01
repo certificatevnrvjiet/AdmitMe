@@ -11,7 +11,9 @@ const QuickActions = ({
     handleDownloadExcel,
     SavingtoDrive,
     handleSavetoDrive,
-    isDarkMode
+    isDarkMode,
+    handleExtractAllPending,
+    extractAllLoading
 }) => {
     return (
         <div className={`overflow-hidden shadow-sm rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
@@ -27,6 +29,15 @@ const QuickActions = ({
                             disabled={syncLoading}
                         >
                             {syncLoading ? 'Syncing...' : 'Extract and Fill 71 fields'}
+                        </button>
+                    }
+                    {userRole === 'admin' && handleExtractAllPending &&
+                        <button
+                            className={`w-full px-4 py-2 rounded-md ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'} ${extractAllLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={handleExtractAllPending}
+                            disabled={extractAllLoading}
+                        >
+                            {extractAllLoading ? 'Starting Extraction...' : 'Extract All Pending'}
                         </button>
                     }
                     {syncStatus && (

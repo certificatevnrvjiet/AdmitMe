@@ -5,11 +5,6 @@ import "react-toastify/dist/ReactToastify.css";
 import API from "../api";
 import { useAuth } from "../auth/AuthContext";
 
-const branchOptions = [
-  "aids", "ae", "ce", "csbs", "cse", "aiml", "cseds", "csecys", "cseiot",
-  "eee", "ece", "eie", "it", "me", "vlsi", "biotechnology", "roboticsandai",
-];
-
 const digitOnlyFields = new Set([
   "student_phone",
   "father_phone",
@@ -19,10 +14,9 @@ const digitOnlyFields = new Set([
 ]);
 
 const defaultValueFor = (field) => {
+  if (field.field_key === "consent") return "";
   if (field.field_type === "select" && field.options?.length) return field.options[0];
-  if (field.field_key === "branch_code") return "cse";
-  if (field.field_key === "degree_code") return "cse";
-  if (field.field_key === "program_level") return "BTECH";
+  if (field.field_key === "branch") return "";
   if (field.field_key === "admission_category") return "Convenor";
   return "";
 };
@@ -52,8 +46,7 @@ const fallbackAdmissionForm = {
     { section: "Address", field_key: "address_district", label: "District", field_type: "text", required: true, sort_order: 160 },
     { section: "Address", field_key: "address_state", label: "State", field_type: "text", required: true, sort_order: 170 },
     { section: "Address", field_key: "address_pincode", label: "Pincode", field_type: "text", required: true, sort_order: 180 },
-    { section: "Academic", field_key: "program_level", label: "Program", field_type: "select", required: true, options: ["BTECH", "MTECH"], sort_order: 190 },
-    { section: "Academic", field_key: "branch_code", label: "Branch", field_type: "select", required: true, options: branchOptions, sort_order: 200 },
+    { section: "Academic", field_key: "branch", label: "Branch", field_type: "select", required: true, options: [], sort_order: 200 },
     { section: "Category", field_key: "caste_as_per_tc", label: "Caste as per TC", field_type: "text", required: true, sort_order: 205 },
     { section: "Academic", field_key: "tenth_board_name", label: "10th Board", field_type: "select", required: true, options: ["TG BSE", "CBSE", "AP BSE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order: 210 },
     { section: "Academic", field_key: "twelfth_board_name", label: "12th Board", field_type: "select", required: true, options: ["TG BIE", "CBSE", "AP BIE", "ACE and A Level", "IBDP", "ICSE", "Other"], sort_order: 220 },
@@ -61,6 +54,7 @@ const fallbackAdmissionForm = {
     { section: "Documents", field_key: "twelfth_memo", label: "12th Memo", field_type: "file", required: true, maps_to_student_field: false, sort_order: 240 },
     { section: "Documents", field_key: "aadhaar", label: "Aadhaar Card", field_type: "file", required: true, maps_to_student_field: false, sort_order: 250 },
     { section: "Documents", field_key: "transfer_certificate", label: "Transfer Certificate / Bonafide", field_type: "file", required: true, maps_to_student_field: false, sort_order: 260 },
+    { section: "Declaration", field_key: "consent", label: "Consent", field_type: "select", required: true, options: ["I Consent"], sort_order: 270 },
   ],
 };
 
@@ -99,6 +93,7 @@ export default function StudentPortal() {
   const [submittedResponse, setSubmittedResponse] = useState(null);
   const [submittedLoading, setSubmittedLoading] = useState(false);
   const [showSubmittedView, setShowSubmittedView] = useState(false);
+  const [programCatalog, setProgramCatalog] = useState({ programs: [], aliases: {} });
   const { isAuthenticated, role } = useAuth();
   const isFormsHome = !slug;
   const isEditMode = searchParams.get("mode") === "edit";
@@ -123,6 +118,18 @@ export default function StudentPortal() {
       mounted = false;
     };
   }, [isFormsHome, slug]);
+
+  useEffect(() => {
+    let mounted = true;
+    API.get("/meta/programs-branches")
+      .then(({ data }) => {
+        if (mounted) setProgramCatalog(data || { programs: [], aliases: {} });
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isFormsHome || !isAuthenticated || role !== "student") return undefined;
@@ -177,6 +184,10 @@ export default function StudentPortal() {
   }, [formDefinition]);
 
   const activeSection = sections[step] || sections[0];
+  const branchOptions = useMemo(() => {
+    const matchingProgram = (programCatalog.programs || []).find((item) => item.code === "BTECH");
+    return matchingProgram?.branches || [];
+  }, [programCatalog]);
 
   const fetchSubmittedResponse = async (formId) => {
     if (!formId || !isAuthenticated || role !== "student") return;
@@ -212,8 +223,8 @@ export default function StudentPortal() {
   const updateField = (field, value) => {
     const nextValue = digitOnlyFields.has(field) ? String(value || "").replace(/\D/g, "") : value;
     setForm((prev) => {
-      if (field === "branch_code") {
-        return { ...prev, branch_code: String(nextValue || "").toLowerCase(), degree_code: String(nextValue || "").toLowerCase() };
+      if (field === "branch") {
+        return { ...prev, branch: String(nextValue || "").toLowerCase() };
       }
       return { ...prev, [field]: nextValue };
     });
@@ -258,9 +269,7 @@ export default function StudentPortal() {
       const responseData = {
         ...form,
         aadhaar_card_number: String(form.aadhaar_card_number || "").replace(/\D/g, ""),
-        branch_code: String(form.branch_code || "").toLowerCase(),
-        degree_code: String(form.degree_code || form.branch_code || "").toLowerCase(),
-        program_level: String(form.program_level || "BTECH").toUpperCase(),
+        branch: String(form.branch || "").toLowerCase(),
       };
       const response = await API.post(`/forms/${formDefinition.id}/responses`, {
         response_data: responseData,
@@ -338,7 +347,7 @@ export default function StudentPortal() {
       );
     }
 
-    const options = field.field_key === "branch_code" && !field.options?.length ? branchOptions : field.options || [];
+    const options = field.field_key === "branch" && !field.options?.length ? branchOptions : field.options || [];
     if (field.field_type === "select" || options.length) {
       return (
         <label key={field.field_key} className="block">
@@ -350,9 +359,14 @@ export default function StudentPortal() {
             onChange={(event) => updateField(field.field_key, event.target.value)}
             className="w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 focus:border-blue-500 focus:outline-none"
           >
-            {options.map((option) => (
-              <option key={option} value={option} className="dark:bg-gray-800">{String(option).toUpperCase()}</option>
-            ))}
+            {field.required && <option value="">Select {field.label}</option>}
+            {options.map((option) => {
+              const value = typeof option === "string" ? option : option.code;
+              const label = typeof option === "string" ? option.toUpperCase() : option.label;
+              return (
+              <option key={value} value={value} className="dark:bg-gray-800">{label}</option>
+              );
+            })}
           </select>
         </label>
       );

@@ -107,11 +107,18 @@ create table if not exists students2025 (
   jee_rank_card_link text,
   eapcet_rank_card_link text,
   student_type text,
+  extraction_status varchar(30) default 'pending',
   Time_updated datetime,
   verification_remarks text,
   reviewed_by text,
   reviewed_at datetime,
   application_reference text,
+  source_system varchar(50),
+  source_spreadsheet_id varchar(255),
+  source_sheet_tab varchar(255),
+  source_response_timestamp varchar(100),
+  source_response_email varchar(320),
+  consent text,
   created_at datetime default current_timestamp,
   updated_at datetime default current_timestamp on update current_timestamp
 );

@@ -118,6 +118,6 @@ def can_access_student_record(current_user: dict[str, Any], student: dict[str, A
         return is_student_owner(current_user, student)
 
     role_branch = _normalized_branch(role)
-    student_branch = _normalized_branch((student or {}).get("branch_code"))
-    student_degree = _normalized_branch((student or {}).get("degree_code"))
+    student_branch = _normalized_branch((student or {}).get("branch"))
+    student_degree = student_branch
     return role_branch in {student_branch, student_degree}

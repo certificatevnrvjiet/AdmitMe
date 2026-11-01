@@ -12,6 +12,7 @@ from storage.base import DocumentRef
 from storage.gdrive import GoogleDriveStorageProvider
 from services.catalog_service import normalize_branch_code, normalize_student_branch_fields
 from services.status_service import canonicalize_student_status, normalize_status
+from services.admissions_2026 import ADMISSIONS_TABLE
 
 
 LEGACY_DOC_FIELD_MAP = {
@@ -134,7 +135,7 @@ def validate_upload_and_detect_mime(
 def fetch_student(student_id: str) -> dict[str, Any] | None:
     try:
         response = (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .select("*")
             .eq("aadhaar_card_number", student_id)
             .limit(1)
@@ -152,10 +153,10 @@ def list_students_for_role(current_user: dict[str, Any]) -> list[dict[str, Any]]
     username = (current_user.get("username") or "").strip().lower()
 
     if role == "admin":
-        query = supabase.table("students2025").select("*")
+        query = supabase.table(ADMISSIONS_TABLE).select("*")
     elif role == "student":
         query = (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .select("*")
             .eq("student_email", username)
         )
@@ -166,9 +167,9 @@ def list_students_for_role(current_user: dict[str, Any]) -> list[dict[str, Any]]
             pass
 
         query = (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .select("*")
-            .or_(f"degree_code.eq.{role.upper()},branch_code.eq.{role.upper()}")
+            .eq("branch", role.upper())
         )
 
     all_rows: list[dict[str, Any]] = []

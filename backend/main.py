@@ -9,6 +9,7 @@ from storage import get_storage_provider
 from storage.gdrive import GoogleDriveStorageProvider
 from storage.local import LocalStorageProvider
 from jose import jwt, JWTError
+import asyncio
 import logging
 
 # Configure logging
@@ -37,6 +38,13 @@ async def lifespan(app: FastAPI):
     app.state.storage = get_storage_provider(app.state.drive_service)
     storage_providers[app.state.storage.name] = app.state.storage
     app.state.storage_providers = storage_providers
+
+    try:
+        from services.gemini_batch_service import resume_unfinished_batch_jobs
+
+        asyncio.create_task(resume_unfinished_batch_jobs(app))
+    except Exception as e:
+        logger.warning(f"Could not schedule Gemini batch resume: {e}")
     
     yield
     # Shutdown logic

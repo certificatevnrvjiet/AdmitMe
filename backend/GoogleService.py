@@ -153,7 +153,7 @@ async def download_image_from_drive(file_id: str, cred) -> bytes | None:
 
 
 
-def process_image_with_gemini(image_bytes, prompt):
+def process_image_with_gemini(image_bytes, prompt, response_schema=None):
     """
     Configure the Google Generative AI client and process the given image bytes with a text prompt.
     Returns the generated raw text from the model.
@@ -163,7 +163,18 @@ def process_image_with_gemini(image_bytes, prompt):
     try:
         image = Image.open(BytesIO(image_bytes))
         contents = [image, prompt]
-        response = model.generate_content(contents)
+        
+        generation_config = None
+        if response_schema:
+            generation_config = genai.types.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=response_schema
+            )
+            
+        response = model.generate_content(
+            contents,
+            generation_config=generation_config
+        )
         return response.text
     except Exception as e:
-        return f"Error processing image with Gemini: {e}"
+        return json.dumps({"error": f"Error processing image with Gemini: {str(e)}"})

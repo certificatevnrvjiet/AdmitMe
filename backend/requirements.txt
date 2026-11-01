@@ -9,6 +9,7 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-generativeai
+google-genai
 bcrypt
 openpyxl
 requests

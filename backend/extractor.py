@@ -127,17 +127,16 @@ just Dictionary no other stuff.
 
 prompts=[prompt_SSC,prompt_uidai,prompt_jee_and_eamcet,prompt_TC, prompt_SSC_Inter, prompt_IGCSE_Inter, prompt_ISC_Inter, prompt_CBSE_Inter,prompt_Diploma]
 
-def _parse_gemini_json(response_text: str) -> dict:
+
+def parse_gemini_json(response_text: str) -> dict:
     """
-    Parses the raw text response from the Gemini model and returns a JSON dictionary.
-    Gracefully handles direct JSON, Markdown-fenced blocks, and raw nested objects.
-    Raises ValueError if parsing completely fails.
+    Parse Gemini text as a JSON object. Handles direct JSON, fenced JSON,
+    and object-shaped text, but raises if no usable object is present.
     """
     text = (response_text or "").strip()
     if not text:
-        return {}
+        raise ValueError("Gemini returned empty output")
 
-    # 1) Direct JSON
     try:
         parsed = json.loads(text)
         if isinstance(parsed, dict):
@@ -145,7 +144,6 @@ def _parse_gemini_json(response_text: str) -> dict:
     except Exception:
         pass
 
-    # 2) Fenced JSON block
     fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
     if fence_match:
         try:
@@ -155,7 +153,6 @@ def _parse_gemini_json(response_text: str) -> dict:
         except Exception:
             pass
 
-    # 3) Largest object-looking block
     object_match = re.search(r"(\{.*\})", text, flags=re.DOTALL)
     if object_match:
         try:
@@ -171,17 +168,18 @@ def _parse_gemini_json(response_text: str) -> dict:
 
 
 
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
-async def extract(linkstr: str, prompt: str, drive_service) -> dict:
+async def extract(linkstr: str, prompt: str, drive_service, schema=None) -> dict:
     """Process single image with retry logic"""
     providers = {
         "gdrive": GoogleDriveStorageProvider(drive_service)
     }
-    return await extract_from_document_ref(linkstr, prompt, providers)
+    return await extract_from_document_ref(linkstr, prompt, providers, schema)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1))
-async def extract_from_document_ref(document_ref: str, prompt: str, storage_providers: dict) -> dict:
+async def extract_from_document_ref(document_ref: str, prompt: str, storage_providers: dict, schema=None) -> dict:
     """Process a document using provider:key ref or legacy URL."""
     try:
         parsed_ref = parse_document_ref(document_ref)
@@ -212,11 +210,14 @@ async def extract_from_document_ref(document_ref: str, prompt: str, storage_prov
         response_text = await asyncio.to_thread(
             process_image_with_gemini, 
             image_bytes, 
-            prompt
+            prompt,
+            schema
         )
         
-        # Parse response
-        return _parse_gemini_json(response_text)
+        try:
+            return parse_gemini_json(response_text)
+        except Exception as e:
+            return {"error": str(e), "raw_text": response_text or ""}
     
     except Exception as e:
         logging.error(f"Extract failed: {document_ref} - {str(e)}")

@@ -2,46 +2,63 @@ from __future__ import annotations
 
 from typing import Any
 
+# These codes are the canonical branch identifiers for the 2026 master
+# workbook. Store their upper-case form in the database and use the same code
+# in dashboard roles, API paths, and Google Sheet tab resolution.
 BRANCH_LABELS: dict[str, str] = {
-    "aids": "AIDS",
-    "ae": "AE",
-    "ce": "CE",
-    "csbs": "CSBS",
+    "aid": "AID",
+    "aut": "AUT",
+    "bio": "BIO",
+    "civ": "CIV",
+    "csb": "CSB",
+    "csc": "CSC",
+    "csd": "CSD",
     "cse": "CSE",
-    "aiml": "AIML",
-    "cseds": "CSE-DS",
-    "csecys": "CSE-CYS",
-    "cseiot": "CSE-IOT",
-    "eee": "EEE",
+    "csm": "CSM",
+    "cso": "CSO",
     "ece": "ECE",
+    "eee": "EEE",
     "eie": "EIE",
-    "it": "IT",
-    "me": "ME",
-    "vlsi": "VLSI",
-    "biotechnology": "Biotechnology",
-    "roboticsandai": "Robotics and AI",
+    "evl": "EVL",
+    "inf": "INF",
+    "mec": "MEC",
+    "rai": "RAI",
 }
 
+# Keep previously-issued forms and existing users working while normalising all
+# future writes to the workbook's 2026 codes.
 BRANCH_ALIASES: dict[str, str] = {
-    "aml": "aiml",
-    "rai": "roboticsandai",
+    "aids": "aid",
+    "ae": "aut",
+    "ce": "civ",
+    "csbs": "csb",
+    "aiml": "csm",
+    "aml": "csm",
+    "cseds": "csd",
+    "csecys": "csc",
+    "cseiot": "cso",
+    "it": "inf",
+    "me": "mec",
+    "vlsi": "evl",
+    "biotechnology": "bio",
+    "roboticsandai": "rai",
 }
 
 ALL_BRANCH_CODES = list(BRANCH_LABELS.keys())
 
 PROGRAM_BRANCH_MAP: dict[str, list[str]] = {
     "BTECH": ALL_BRANCH_CODES,
-    "MTECH": ["cse", "ece", "eee", "me", "vlsi"],
 }
 
 PROGRAM_LABELS: dict[str, str] = {
     "BTECH": "B.Tech",
-    "MTECH": "M.Tech",
 }
 
 
 def normalize_branch_code(code: str | None) -> str:
-    value = (code or "").strip().lower()
+    value = "".join(character for character in (code or "").lower() if character.isalnum())
+    if value.startswith("ug") and value[2:] in BRANCH_LABELS:
+        value = value[2:]
     if not value:
         raise ValueError("Branch code is required")
 

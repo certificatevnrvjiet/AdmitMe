@@ -93,7 +93,7 @@ function Vnrheader() {
         <header id="app-header" className={`sticky top-0 left-0 w-full z-50 border-b px-5 py-2 ${
             isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
         }`}>
-            <div className='flex justify-between items-center max-w-6xl mx-auto'>
+            <div className='flex flex-wrap justify-between items-center w-full mx-auto gap-y-2 lg:gap-y-0'>
                 {showBackButton && (
                     <button
                         type="button"
