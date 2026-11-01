@@ -13,7 +13,8 @@ google-genai
 bcrypt
 openpyxl
 requests
-pydantic
+pydantic[email]
+email-validator
 python-dotenv
 tenacity
 PyMuPDF
