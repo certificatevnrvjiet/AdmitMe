@@ -17,6 +17,7 @@ from PIL import Image
 
 from config.settings import GEMINI_BATCH_POLL_INTERVAL, GEMINI_MODEL, GOOGLE_API_KEY
 from database import supabase
+from services.admissions_2026 import ADMISSIONS_TABLE
 from extractor import parse_gemini_json
 from services.document_service import fetch_student, parse_document_ref
 from services.engine_service import (
@@ -327,7 +328,7 @@ async def submit_batch_extraction_for_students(
 
         doc_rows = _get_document_rows(student)
         if doc_rows:
-            supabase.table("students2025").update({"extraction_status": "submitted"}).eq("aadhaar_card_number", student_id).execute()
+            supabase.table(ADMISSIONS_TABLE).update({"extraction_status": "submitted"}).eq("aadhaar_card_number", student_id).execute()
 
         for doc in doc_rows:
             doc_type = doc["doc_type"]
@@ -553,7 +554,7 @@ async def _finalize_batch_results(batch_job_id: str, raw_results: list[dict[str,
 
         parsed_fields = parse_extraction(doc_type, raw_output)
         if parsed_fields:
-            supabase.table("students2025").update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
+            supabase.table(ADMISSIONS_TABLE).update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
 
         parsed_row = _insert(
             "parsed_extractions",
@@ -588,7 +589,7 @@ async def _finalize_batch_results(batch_job_id: str, raw_results: list[dict[str,
         parsed_rows = student_parsed_rows.get(student_id) or _list_rows("parsed_extractions", student_id)
         replace_comparison_results(student, parsed_rows)
         final_status = "failed" if student_has_failures.get(student_id) else "completed"
-        supabase.table("students2025").update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
+        supabase.table(ADMISSIONS_TABLE).update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
 
     total_docs = int(batch_job.get("total_documents") or len(runs))
     _update_batch_job(

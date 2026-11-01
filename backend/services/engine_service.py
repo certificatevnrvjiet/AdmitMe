@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from database import supabase
+from services.admissions_2026 import ADMISSIONS_TABLE
 from extractor import extract_from_document_ref, prompts
 from schemas.extraction_schemas import (
     AadhaarSchema,
@@ -333,7 +334,7 @@ async def run_engine_for_student(
     if not student:
         raise ValueError("Student not found")
 
-    supabase.table("students2025").update({"extraction_status": "processing"}).eq("aadhaar_card_number", student_id).execute()
+    supabase.table(ADMISSIONS_TABLE).update({"extraction_status": "processing"}).eq("aadhaar_card_number", student_id).execute()
 
     providers = getattr(app.state, "storage_providers", {})
     document_rows = _get_document_rows(student, doc_types)
@@ -373,7 +374,7 @@ async def run_engine_for_student(
 
         parsed_fields = parse_extraction(doc_type, raw_output if isinstance(raw_output, dict) else {})
         if parsed_fields:
-            supabase.table("students2025").update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
+            supabase.table(ADMISSIONS_TABLE).update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
             
         parsed_row = _insert("parsed_extractions", {
             "extraction_run_id": run["id"],
@@ -389,7 +390,7 @@ async def run_engine_for_student(
     
     has_errors = any(run.get("status") == "failed" for run in extraction_runs)
     final_status = "failed" if has_errors else "completed"
-    supabase.table("students2025").update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
+    supabase.table(ADMISSIONS_TABLE).update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
     
     return {
         "student_id": student_id,
