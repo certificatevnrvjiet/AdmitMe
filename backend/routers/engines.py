@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from database import supabase
+from services.admissions_2026 import ADMISSIONS_TABLE
 from models.EngineModel import ComparisonOverrideRequest, EngineRunRequest
 from services.auth_service import can_access_student_record, get_current_user
 from services.document_service import fetch_student
@@ -143,7 +144,7 @@ from services.gemini_batch_service import (
 
 
 def _get_pending_extraction_student_ids() -> list[str]:
-    all_students = supabase.table("students2025").select("aadhaar_card_number, extraction_status").execute().data or []
+    all_students = supabase.table(ADMISSIONS_TABLE).select("aadhaar_card_number, extraction_status").execute().data or []
     pending_ids = [
         r["aadhaar_card_number"]
         for r in all_students

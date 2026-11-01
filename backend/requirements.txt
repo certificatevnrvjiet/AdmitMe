@@ -18,6 +18,7 @@ python-dotenv
 tenacity
 PyMuPDF
 Pillow
+pillow-heif
 boto3
 SQLAlchemy
 PyMySQL

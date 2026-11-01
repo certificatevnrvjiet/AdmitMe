@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import concurrent.futures
 import json
 import logging
 import mimetypes
@@ -14,6 +15,11 @@ from uuid import uuid4
 
 import fitz
 from PIL import Image
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 
 from config.settings import GEMINI_BATCH_POLL_INTERVAL, GEMINI_MODEL, GOOGLE_API_KEY
 from database import supabase
@@ -32,6 +38,28 @@ from services.engine_service import (
 from services.notification_service import notify_user
 
 logger = logging.getLogger(__name__)
+
+VALID_ADMISSIONS_COLUMNS = {
+    "aadhaar_link", "address_district", "address_dno", "address_mandal",
+    "address_pincode", "address_state", "address_street", "address_village_town",
+    "admission_category", "admission_year", "allotment_order", "application_reference",
+    "blood_group", "branch", "candidate_pic", "caste_as_per_tc", "category_name",
+    "ch1", "ch2", "chlab", "consent", "date_of_birth", "eapcet_ht_no", "eapcet_rank",
+    "eapcet_rank_card_link", "ebc_status", "ews_status", "extraction_status",
+    "father_email", "father_name", "father_phone", "father_profession_and_designation",
+    "gender", "identification_mark_1", "identification_mark_2", "income",
+    "jee_ht_no", "jee_mains_rank", "jee_rank_card_link", "joining_report",
+    "m1", "m2", "m3", "m4", "minority", "mother_email", "mother_name",
+    "mother_phone", "mother_profession_and_designation", "mother_tongue",
+    "nationality", "p1", "p2", "parent_email", "parent_phone", "ph_status",
+    "plab", "religion", "rural_urban", "scribe", "student_email", "student_name",
+    "student_phone", "tenth_board_name", "tenth_ht_no", "tenth_maximum_marks",
+    "tenth_memo_link", "tenth_month_year", "tenth_percentage", "tenth_school_name",
+    "tenth_total_marks_cgpa", "transfer_certificate_link", "twelfth_board_name",
+    "twelfth_college_name", "twelfth_ht_no", "twelfth_maximum_marks",
+    "twelfth_memo_link", "twelfth_month_year", "twelfth_percentage",
+    "twelfth_total_marks", "verification_remarks"
+}
 
 TERMINAL_STATES = {
     "JOB_STATE_SUCCEEDED",
@@ -78,7 +106,6 @@ def _batch_job_for_task(task_id: str) -> dict[str, Any] | None:
 
 
 def _update_task(task_id: str, payload: dict[str, Any]) -> None:
-    payload = {**payload, "updated_at": _now()}
     supabase.table("tasks").update(payload).eq("id", task_id).execute()
 
 
@@ -133,11 +160,17 @@ def _get_image_bytes_from_ref(ref_str: str, storage_providers: dict[str, Any]) -
                 return None
             page = doc[0]
             pix = page.get_pixmap(dpi=150)
-            return pix.tobytes("png"), "image/png"
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        else:
+            img = Image.open(BytesIO(content))
 
-        img = Image.open(BytesIO(content))
         if img.mode != "RGB":
             img = img.convert("RGB")
+
+        max_dim = 1800
+        if max(img.size) > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+
         out_buf = BytesIO()
         img.save(out_buf, format="JPEG", quality=85)
         return out_buf.getvalue(), "image/jpeg"
@@ -212,22 +245,21 @@ def _extract_batch_state(job: Any) -> str:
 
 
 def _extract_output_file_name(job: Any) -> str | None:
-    dest = getattr(job, "dest", None)
-    if dest is not None:
-        file_name = getattr(dest, "file_name", None) or getattr(dest, "fileName", None)
-        if file_name:
-            return str(file_name)
-
-    output = getattr(job, "output", None)
-    if output is not None:
-        file_name = getattr(output, "responses_file", None) or getattr(output, "responsesFile", None)
-        if file_name:
-            return str(file_name)
+    for attr in ("dest", "output", "output_info", "outputInfo"):
+        obj = getattr(job, attr, None)
+        if obj is not None:
+            for field in ("file_name", "fileName", "responses_file", "responsesFile"):
+                val = getattr(obj, field, None)
+                if val:
+                    return str(val)
 
     data = _to_dict(job)
-    dest_data = data.get("dest") or data.get("output") or {}
-    if isinstance(dest_data, dict):
-        return dest_data.get("fileName") or dest_data.get("file_name") or dest_data.get("responsesFile") or dest_data.get("responses_file")
+    for key in ("dest", "output", "output_info", "outputInfo"):
+        dest_data = data.get(key)
+        if isinstance(dest_data, dict):
+            val = dest_data.get("fileName") or dest_data.get("file_name") or dest_data.get("responsesFile") or dest_data.get("responses_file")
+            if val:
+                return str(val)
     return None
 
 
@@ -250,11 +282,11 @@ class GeminiBatchService:
         self.api_key = api_key or GOOGLE_API_KEY
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY is not set.")
+        from google import genai
+        self.client = genai.Client(api_key=self.api_key)
 
     def _client(self):
-        from google import genai
-
-        return genai.Client(api_key=self.api_key)
+        return self.client
 
     def submit_batch_job(self, jsonl_file_path: str, display_name: str, model: str = GEMINI_MODEL) -> tuple[str, str]:
         client = self._client()
@@ -281,7 +313,8 @@ class GeminiBatchService:
         return str(job_name), str(uploaded_name)
 
     def get_batch_status(self, job_name: str) -> tuple[str, str | None]:
-        job = self._client().batches.get(name=job_name)
+        client = self._client()
+        job = client.batches.get(name=job_name)
         return _extract_batch_state(job), _extract_output_file_name(job)
 
     def download_batch_results(self, output_file_name: str) -> list[dict[str, Any]]:
@@ -314,54 +347,87 @@ async def submit_batch_extraction_for_students(
     providers = getattr(app.state, "storage_providers", {})
     batch_service = GeminiBatchService()
     batch_job_id = str(uuid4())
-    batch_entries: list[dict[str, Any]] = []
-    student_ids_with_docs: set[str] = set()
     temp_dir = tempfile.mkdtemp(prefix="admitme-gemini-batch-")
     jsonl_path = os.path.join(temp_dir, f"{task_id}.jsonl")
 
     _update_task(task_id, {"status": "processing", "progress": 5})
 
+    # 1. Fetch student profiles in bulk
+    students_list: list[dict[str, Any]] = []
+    for i in range(0, len(student_ids), 200):
+        chunk_ids = student_ids[i:i + 200]
+        try:
+            res = supabase.table(ADMISSIONS_TABLE).select("*").in_("aadhaar_card_number", chunk_ids).execute()
+            students_list.extend(res.data or [])
+        except Exception:
+            logger.exception("Failed to bulk fetch students for batch submission")
+
+    students_by_id: dict[str, dict[str, Any]] = {}
+    for s in students_list:
+        clean = "".join(c for c in str(s.get("aadhaar_card_number") or "") if c.isdigit())
+        if clean:
+            students_by_id[clean] = s
+        raw = str(s.get("aadhaar_card_number") or "").strip()
+        if raw:
+            students_by_id[raw] = s
+
+    # 2. Collect work items for all documents
+    work_items: list[tuple[str, dict[str, Any], dict[str, Any], str, str]] = []
     for student_id in student_ids:
-        student = fetch_student(student_id)
+        clean = "".join(c for c in str(student_id or "") if c.isdigit())
+        student = students_by_id.get(clean) or students_by_id.get(student_id)
         if not student:
             continue
-
         doc_rows = _get_document_rows(student)
-        if doc_rows:
-            supabase.table(ADMISSIONS_TABLE).update({"extraction_status": "submitted"}).eq("aadhaar_card_number", student_id).execute()
-
         for doc in doc_rows:
             doc_type = doc["doc_type"]
-            ref_str = f"{doc['provider']}:{doc['object_key']}"
-            img_data = await asyncio.to_thread(_get_image_bytes_from_ref, ref_str, providers)
-            if not img_data:
-                continue
-
-            img_bytes, mime_type = img_data
             prompt, _ = _prompt_for_doc(doc_type, student)
             batch_key = f"{batch_job_id}:{uuid4().hex}"
-            run = _insert(
-                "extraction_runs",
-                {
-                    "student_id": student_id,
-                    "document_id": doc.get("document_id"),
-                    "doc_type": doc_type,
-                    "provider": doc.get("provider"),
-                    "object_key": doc.get("object_key"),
-                    "status": "submitted",
-                    "raw_output": {},
-                    "error": "",
-                    "batch_job_id": batch_job_id,
-                    "batch_key": batch_key,
-                    "created_at": _db_now(),
-                    "updated_at": _db_now(),
-                },
-            )
-            if not run:
-                continue
+            work_items.append((clean or student_id, student, doc, prompt, batch_key))
 
-            batch_entries.append(create_batch_request_payload(batch_key, prompt, img_bytes, mime_type))
-            student_ids_with_docs.add(student_id)
+    # 3. Fetch images and build batch payloads in parallel (up to 10 workers)
+    def _fetch_worker(item: tuple[str, dict[str, Any], dict[str, Any], str, str]):
+        s_id, stud, doc, prmt, b_key = item
+        ref_str = f"{doc['provider']}:{doc['object_key']}"
+        try:
+            img_data = _get_image_bytes_from_ref(ref_str, providers)
+            if not img_data:
+                return None
+            img_bytes, mime_type = img_data
+            run_payload = {
+                "id": str(uuid4()),
+                "student_id": s_id,
+                "document_id": doc.get("document_id"),
+                "doc_type": doc["doc_type"],
+                "provider": doc.get("provider"),
+                "object_key": doc.get("object_key"),
+                "status": "submitted",
+                "raw_output": {},
+                "error": "",
+                "batch_job_id": batch_job_id,
+                "batch_key": b_key,
+                "created_at": _db_now(),
+                "updated_at": _db_now(),
+            }
+            entry = create_batch_request_payload(b_key, prmt, img_bytes, mime_type)
+            return s_id, run_payload, entry
+        except Exception:
+            logger.exception("Failed to process document %s for student %s", ref_str, s_id)
+            return None
+
+    processed_runs: list[dict[str, Any]] = []
+    batch_entries: list[dict[str, Any]] = []
+    student_ids_with_docs: set[str] = set()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        results = await asyncio.to_thread(lambda: list(executor.map(_fetch_worker, work_items)))
+
+    for res in results:
+        if res:
+            s_id, run_payload, entry = res
+            processed_runs.append(run_payload)
+            batch_entries.append(entry)
+            student_ids_with_docs.add(s_id)
 
     total_documents = len(batch_entries)
     total_students = len(student_ids_with_docs)
@@ -374,6 +440,23 @@ async def submit_batch_extraction_for_students(
             "total_students": 0,
             "total_documents": 0,
         }
+
+    # 4. Bulk insert extraction_runs in chunks of 200
+    for i in range(0, len(processed_runs), 200):
+        chunk = processed_runs[i:i + 200]
+        try:
+            supabase.table("extraction_runs").insert(chunk).execute()
+        except Exception:
+            logger.exception("Failed to bulk insert extraction_runs chunk")
+
+    # 5. Bulk update extraction_status to 'submitted' for students with docs
+    active_ids = list(student_ids_with_docs)
+    for i in range(0, len(active_ids), 200):
+        chunk_ids = active_ids[i:i + 200]
+        try:
+            supabase.table(ADMISSIONS_TABLE).update({"extraction_status": "submitted"}).in_("aadhaar_card_number", chunk_ids).execute()
+        except Exception:
+            logger.exception("Failed to bulk update extraction_status to submitted")
 
     with open(jsonl_path, "w", encoding="utf-8") as handle:
         for entry in batch_entries:
@@ -519,10 +602,30 @@ async def _finalize_batch_results(batch_job_id: str, raw_results: list[dict[str,
         raise ValueError("Batch job not found")
 
     task_id = batch_job["task_id"]
-    runs = supabase.table("extraction_runs").select("*").eq("batch_job_id", batch_job_id).execute().data or []
+    page_size = 1000
+    runs: list[dict[str, Any]] = []
+    start = 0
+    while True:
+        chunk = (
+            supabase.table("extraction_runs")
+            .select("*")
+            .eq("batch_job_id", batch_job_id)
+            .range(start, start + page_size - 1)
+            .execute()
+            .data
+            or []
+        )
+        if not chunk:
+            break
+        runs.extend(chunk)
+        if len(chunk) < page_size:
+            break
+        start += page_size
     runs_by_key = {row.get("batch_key"): row for row in runs if row.get("batch_key")}
     student_parsed_rows: dict[str, list[dict[str, Any]]] = {}
     student_has_failures: dict[str, bool] = {}
+    student_field_updates: dict[str, dict[str, Any]] = {}
+    all_parsed_rows: list[dict[str, Any]] = []
     completed_docs = 0
     failed_docs = 0
 
@@ -543,53 +646,71 @@ async def _finalize_batch_results(batch_job_id: str, raw_results: list[dict[str,
             failed_docs += 1
             student_has_failures[student_id] = True
 
-        supabase.table("extraction_runs").update(
-            {
-                "status": status,
-                "raw_output": raw_output,
-                "error": raw_output.get("error", ""),
-                "updated_at": _db_now(),
-            }
-        ).eq("id", run["id"]).execute()
-
         parsed_fields = parse_extraction(doc_type, raw_output)
+        parsed_fields.pop("aadhaar_card_number", None)
         if parsed_fields:
-            supabase.table(ADMISSIONS_TABLE).update(parsed_fields).eq("aadhaar_card_number", student_id).execute()
+            student_field_updates.setdefault(student_id, {}).update(parsed_fields)
 
-        parsed_row = _insert(
-            "parsed_extractions",
-            {
-                "extraction_run_id": run["id"],
-                "student_id": student_id,
-                "doc_type": doc_type,
-                "parsed_fields": parsed_fields,
-                "confidence": {key: "extracted" for key in parsed_fields},
-                "created_at": _db_now(),
-            },
-        )
+        parsed_row = {
+            "id": str(uuid4()),
+            "extraction_run_id": run["id"],
+            "student_id": student_id,
+            "doc_type": doc_type,
+            "parsed_fields": parsed_fields,
+            "confidence": {key: "extracted" for key in parsed_fields},
+            "created_at": _db_now(),
+        }
+        all_parsed_rows.append(parsed_row)
         student_parsed_rows.setdefault(student_id, []).append(parsed_row)
+
+    # 1. Bulk insert parsed_extractions in chunks of 200
+    for i in range(0, len(all_parsed_rows), 200):
+        chunk = all_parsed_rows[i:i + 200]
+        try:
+            supabase.table("parsed_extractions").insert(chunk).execute()
+        except Exception:
+            logger.exception("Failed to bulk insert parsed_extractions chunk")
+
+    # 2. Update admissions_2026 once per student with all merged extracted fields
+    for student_id, fields in student_field_updates.items():
+        clean_id = "".join(c for c in str(student_id or "") if c.isdigit())
+        safe_fields = {
+            k: str(v).strip()
+            for k, v in fields.items()
+            if k in VALID_ADMISSIONS_COLUMNS and k != "aadhaar_card_number" and v not in (None, "")
+        }
+        if not safe_fields:
+            continue
+        try:
+            res = supabase.table(ADMISSIONS_TABLE).update(safe_fields).eq("aadhaar_card_number", clean_id).execute()
+            if not res.data and student_id != clean_id:
+                supabase.table(ADMISSIONS_TABLE).update(safe_fields).eq("aadhaar_card_number", student_id).execute()
+        except Exception:
+            logger.exception("Failed to update admissions_2026 for student %s", student_id)
 
     missing_runs = [row for key, row in runs_by_key.items() if key not in {item.get("key") or item.get("custom_id") for item in raw_results}]
     for run in missing_runs:
         failed_docs += 1
         student_has_failures[run["student_id"]] = True
-        supabase.table("extraction_runs").update(
-            {
-                "status": "failed",
-                "raw_output": {"error": "No batch result returned"},
-                "error": "No batch result returned",
-                "updated_at": _db_now(),
-            }
-        ).eq("id", run["id"]).execute()
 
+    # 3. Update comparison_results and final extraction_status once per student
     for student_id in {row["student_id"] for row in runs}:
         student = fetch_student(student_id)
         if not student:
             continue
-        parsed_rows = student_parsed_rows.get(student_id) or _list_rows("parsed_extractions", student_id)
-        replace_comparison_results(student, parsed_rows)
+        parsed_rows = student_parsed_rows.get(student_id) or []
+        try:
+            replace_comparison_results(student, parsed_rows)
+        except Exception:
+            logger.exception("Failed comparison results for student %s", student_id)
         final_status = "failed" if student_has_failures.get(student_id) else "completed"
-        supabase.table(ADMISSIONS_TABLE).update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
+        clean_id = "".join(c for c in str(student_id or "") if c.isdigit())
+        try:
+            res = supabase.table(ADMISSIONS_TABLE).update({"extraction_status": final_status}).eq("aadhaar_card_number", clean_id).execute()
+            if not res.data and student_id != clean_id:
+                supabase.table(ADMISSIONS_TABLE).update({"extraction_status": final_status}).eq("aadhaar_card_number", student_id).execute()
+        except Exception:
+            logger.exception("Failed to update extraction_status for student %s", student_id)
 
     total_docs = int(batch_job.get("total_documents") or len(runs))
     _update_batch_job(

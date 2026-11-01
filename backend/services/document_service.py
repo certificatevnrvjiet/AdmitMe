@@ -134,15 +134,29 @@ def validate_upload_and_detect_mime(
 
 def fetch_student(student_id: str) -> dict[str, Any] | None:
     try:
-        response = (
-            supabase.table(ADMISSIONS_TABLE)
-            .select("*")
-            .eq("aadhaar_card_number", student_id)
-            .limit(1)
-            .execute()
-        )
-        if response.data:
-            return _normalize_student_record(response.data[0])
+        clean_id = "".join(c for c in str(student_id or "") if c.isdigit())
+        if clean_id:
+            response = (
+                supabase.table(ADMISSIONS_TABLE)
+                .select("*")
+                .eq("aadhaar_card_number", clean_id)
+                .limit(1)
+                .execute()
+            )
+            if response.data:
+                return _normalize_student_record(response.data[0])
+
+        raw_id = str(student_id or "").strip()
+        if raw_id:
+            response = (
+                supabase.table(ADMISSIONS_TABLE)
+                .select("*")
+                .eq("aadhaar_card_number", raw_id)
+                .limit(1)
+                .execute()
+            )
+            if response.data:
+                return _normalize_student_record(response.data[0])
     except Exception:
         return None
     return None

@@ -4,6 +4,11 @@ from googleapiclient.discovery import build
 from io import BytesIO
 from googleapiclient.http import MediaIoBaseDownload
 from PIL import Image
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 import google.generativeai as genai
 from google.oauth2 import service_account
 from googleapiclient.errors import HttpError
@@ -36,8 +41,13 @@ SCOPES = [
 
 
 
+_CACHED_CREDENTIALS = None
+
 def authenticate_service_account():
     """Authenticates with Google APIs using a service account."""
+    global _CACHED_CREDENTIALS
+    if _CACHED_CREDENTIALS is not None:
+        return _CACHED_CREDENTIALS
     try:
         creds_dict = _load_creds_dict()
         if not creds_dict:
@@ -45,9 +55,8 @@ def authenticate_service_account():
 
         credentials = service_account.Credentials.from_service_account_info(
             creds_dict, scopes=SCOPES
-
         )
-        print("Authentication successful using service account.")
+        _CACHED_CREDENTIALS = credentials
         return credentials
     except FileNotFoundError:
         print(f"Error: The service account file '{GOOGLE_CREDENTIALS}' was not found.")

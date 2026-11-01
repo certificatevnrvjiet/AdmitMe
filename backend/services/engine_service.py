@@ -19,6 +19,7 @@ from services.document_service import (
     LEGACY_DOC_FIELD_MAP,
     fetch_student,
     get_document_row,
+    parse_document_ref,
     resolve_student_document_ref,
 )
 
@@ -80,7 +81,10 @@ def _new_id() -> str:
 def _as_text(value: Any) -> str:
     if value is None:
         return ""
-    return str(value).strip()
+    text = str(value).strip()
+    if text.lower() in ("null", "none", "n/a", "na", "undefined"):
+        return ""
+    return text
 
 
 def _normalize_name(value: Any) -> str:
@@ -175,7 +179,6 @@ def parse_extraction(doc_type: str, raw: dict[str, Any]) -> dict[str, str]:
         })
     elif doc_type == "aadhaar":
         parsed.update({
-            "aadhaar_card_number": _first(raw, "Number", "Aadhaar Number"),
             "gender": _first(raw, "Gender"),
         })
     elif doc_type == "transfer_certificate":
@@ -236,14 +239,16 @@ def _list_rows(table: str, student_id: str) -> list[dict[str, Any]]:
 def _get_document_rows(student: dict[str, Any], doc_types: list[str] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     wanted = doc_types or list(LEGACY_DOC_FIELD_MAP.keys())
-    student_id = student.get("aadhaar_card_number")
     for doc_type in wanted:
-        ref = resolve_student_document_ref(student, student_id, doc_type)
+        legacy_field = LEGACY_DOC_FIELD_MAP.get(doc_type)
+        legacy_value = (student or {}).get(legacy_field) if legacy_field else None
+        if not legacy_value:
+            continue
+        ref = parse_document_ref(legacy_value)
         if not ref:
             continue
-        document_row = get_document_row(student_id, doc_type) or {}
         rows.append({
-            "document_id": document_row.get("id"),
+            "document_id": None,
             "doc_type": doc_type,
             "provider": ref.provider,
             "object_key": ref.key,
@@ -300,6 +305,7 @@ def replace_comparison_results(student: dict[str, Any], parsed_rows: list[dict[s
             match_status = "mismatch"
 
         payload = {
+            "id": _new_id(),
             "student_id": student_id,
             "field_name": field,
             "filled_value": filled_value,
@@ -313,7 +319,13 @@ def replace_comparison_results(student: dict[str, Any], parsed_rows: list[dict[s
             "created_at": _db_now(),
             "updated_at": _db_now(),
         }
-        results.append(_insert("comparison_results", payload))
+        results.append(payload)
+
+    if results:
+        try:
+            supabase.table("comparison_results").insert(results).execute()
+        except Exception:
+            logger.exception("Failed to bulk insert comparison results for student %s", student_id)
     return results
 
 
