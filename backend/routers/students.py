@@ -23,6 +23,7 @@ from services.document_service import (
     migrate_legacy_documents,
     resolve_student_document_ref,
     validate_upload_and_detect_mime,
+    _normalize_student_record,
 )
 from routers.engines import queue_engine_run
 
@@ -364,16 +365,12 @@ async def get_students_by_department(
 
         # Build base query
         if normalized_department == "admin":
-            query = supabase.table("students2025").select("*")
+            query = supabase.table(ADMISSIONS_TABLE).select("*")
         else:
-            query = (
-                supabase.table("students2025")
-                .select("*")
-                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
-            )
+            query = supabase.table(ADMISSIONS_TABLE).select("*").eq("branch", normalized_department.upper())
 
         students = fetch_all_students(query)
-        students = [normalize_student_branch_fields(canonicalize_student_status(s)) for s in students]
+        students = [_normalize_student_record(s) for s in students]
 
         return {"students": students}
 
@@ -424,7 +421,7 @@ def update_student(
     try:
         # Attempt to update the student in Supabase
         response = (
-            supabase.table("students2025")
+            supabase.table(ADMISSIONS_TABLE)
             .update(student_dict)
             .eq("aadhaar_card_number", aadhaar_card_number)
             .execute()
@@ -491,10 +488,9 @@ async def export_students_excel(
 
         # Get students from database (with pagination)
         if normalized_department == "admin":
-            base_query = supabase.table("students2025").select("*")
+            base_query = supabase.table(ADMISSIONS_TABLE).select("*")
         else:
-            base_query = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
+            base_query = supabase.table(ADMISSIONS_TABLE).select("*").eq("branch", normalized_department.upper())
 
         students_data = fetch_all_students(base_query)
         
@@ -632,10 +628,9 @@ async def save_to_drive_sheet(
 
         # Get students from database (with pagination)
         if normalized_department == "admin":
-            base_query = supabase.table("students2025").select("*")
+            base_query = supabase.table(ADMISSIONS_TABLE).select("*")
         else:
-            base_query = supabase.table("students2025").select("*") \
-                .or_(f"degree_code.eq.{normalized_department.upper()},branch_code.eq.{normalized_department.upper()}")
+            base_query = supabase.table(ADMISSIONS_TABLE).select("*").eq("branch", normalized_department.upper())
         students_data = fetch_all_students(base_query)
 
         # Apply filters

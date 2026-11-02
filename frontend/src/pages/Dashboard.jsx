@@ -254,7 +254,7 @@ const Dashboard = () => {
       const matchesGender = GenderFilter === 'all' ? true : s.gender?.toLowerCase() === GenderFilter;
       const matchesTenthBoard = TenthboardFilter === 'all' ? true : s.tenth_board_name?.toLowerCase() === TenthboardFilter;
       const matchesTwelfthBoard = TwelfthboardFilter === 'all' ? true : s.twelfth_board_name?.toLowerCase() === TwelfthboardFilter;
-      const matchesStudentType = StudenttypeFilter === 'all' ? true : s.student_type?.toLowerCase() === StudenttypeFilter;
+      const matchesStudentType = StudenttypeFilter === 'all' ? true : (s.student_type?.toLowerCase() || 'regular') === StudenttypeFilter;
       const matchesAdmissionCategory = admissionCategoryFilter === 'all' ? true : s.admission_category?.toLowerCase() === admissionCategoryFilter.toLowerCase();
       return matchesSearch && matchesDepartment && matchesStatus && matchesBranch && matchesGender && matchesTenthBoard && matchesTwelfthBoard && matchesStudentType && matchesAdmissionCategory;
     })

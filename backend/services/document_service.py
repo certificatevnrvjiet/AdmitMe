@@ -34,6 +34,21 @@ def _db_now() -> str:
 def _normalize_student_record(student: dict[str, Any]) -> dict[str, Any]:
     row = canonicalize_student_status(student)
     row = normalize_student_branch_fields(row)
+    if not row.get("student_type"):
+        row["student_type"] = "regular"
+    if not row.get("ht_no"):
+        row["ht_no"] = (
+            row.get("eapcet_ht_no")
+            or row.get("jee_ht_no")
+            or row.get("application_reference")
+            or row.get("aadhaar_card_number")
+        )
+    if not row.get("branch_code"):
+        row["branch_code"] = row.get("branch")
+    if not row.get("degree_code"):
+        row["degree_code"] = row.get("branch")
+    if not row.get("program_level"):
+        row["program_level"] = "BTECH"
     return row
 
 
