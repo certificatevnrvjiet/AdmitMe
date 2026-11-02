@@ -37,7 +37,7 @@ const StudentTable = ({
                             className={`${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'} cursor-pointer`}
                             onClick={() => handleStudentClick(s)}
                         >
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.ht_no || s.eapcet_ht_no || s.jee_ht_no || s.application_reference || s.aadhaar_card_number}</td>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.ht_no || ''}</td>
                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{s.student_name}</td>
                             <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{formatDateDMY(s.date_of_birth)}</td>
                             <td className="px-6 py-4 whitespace-nowrap">

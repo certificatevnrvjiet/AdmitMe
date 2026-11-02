@@ -416,13 +416,48 @@ def update_student(
                 student_dict[field] = normalize_branch_code(student_dict[field]).upper()
             except ValueError:
                 pass
-    student_dict["Time_updated"] = _db_datetime()
+
+    # Validate ht_no regex if provided
+    ht_no_val = (student_dict.get("ht_no") or "").strip()
+    if ht_no_val:
+        import re
+        if not re.fullmatch(r"^\d{5}[a-zA-Z0-9]{5}$", ht_no_val):
+            raise HTTPException(
+                status_code=400,
+                detail="Student ID must be empty or 10 characters long with first 5 digits and remaining alphanumeric"
+            )
+        student_dict["ht_no"] = ht_no_val.upper()
+    else:
+        student_dict["ht_no"] = None
+
+    ADMISSIONS_COLUMNS = {
+        'aadhaar_card_number', 'aadhaar_link', 'address_district', 'address_dno', 'address_mandal',
+        'address_pincode', 'address_state', 'address_street', 'address_village_town', 'admission_category',
+        'admission_year', 'allotment_order', 'application_reference', 'blood_group', 'branch',
+        'candidate_pic', 'caste_as_per_tc', 'category_name', 'ch1', 'ch2', 'chlab', 'consent',
+        'date_of_birth', 'eapcet_ht_no', 'eapcet_rank', 'eapcet_rank_card_link', 'ebc_status',
+        'ews_status', 'extraction_status', 'father_email', 'father_name', 'father_phone',
+        'father_profession_and_designation', 'gender', 'ht_no', 'identification_mark_1',
+        'identification_mark_2', 'income', 'jee_ht_no', 'jee_mains_rank', 'jee_rank_card_link',
+        'joining_report', 'm1', 'm2', 'm3', 'm4', 'minority', 'mother_email', 'mother_name',
+        'mother_phone', 'mother_profession_and_designation', 'mother_tongue', 'nationality',
+        'p1', 'p2', 'parent_email', 'parent_phone', 'ph_status', 'plab', 'religion',
+        'reviewed_at', 'reviewed_by', 'rural_urban', 'scribe', 'source_response_email',
+        'source_response_timestamp', 'source_sheet_tab', 'source_spreadsheet_id', 'source_system',
+        'status', 'student_email', 'student_name', 'student_phone', 'tenth_board_name',
+        'tenth_ht_no', 'tenth_maximum_marks', 'tenth_memo_link', 'tenth_month_year',
+        'tenth_percentage', 'tenth_school_name', 'tenth_total_marks_cgpa', 'transfer_certificate_link',
+        'twelfth_board_name', 'twelfth_college_name', 'twelfth_ht_no', 'twelfth_maximum_marks',
+        'twelfth_memo_link', 'twelfth_month_year', 'twelfth_percentage', 'twelfth_total_marks',
+        'verification_remarks'
+    }
+    safe_dict = {k: v for k, v in student_dict.items() if k in ADMISSIONS_COLUMNS}
 
     try:
         # Attempt to update the student in Supabase
         response = (
             supabase.table(ADMISSIONS_TABLE)
-            .update(student_dict)
+            .update(safe_dict)
             .eq("aadhaar_card_number", aadhaar_card_number)
             .execute()
         )
