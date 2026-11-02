@@ -3,7 +3,7 @@ services:
     name: admitme-api-2026
     runtime: python
     region: singapore
-    branch: codex/admissions2026
+    branch: main
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
@@ -14,8 +14,6 @@ services:
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
-        sync: false
-      - key: GOOGLE_API_KEY
         sync: false
       - key: GOOGLE_CREDENTIALS
         sync: false
@@ -31,7 +29,7 @@ services:
   - type: web
     name: admitme-portal-2026
     runtime: static
-    branch: codex/admissions2026
+    branch: main
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
